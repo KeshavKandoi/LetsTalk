@@ -156,10 +156,10 @@ export function NearbyPlacesMap({
                 icon: {
                   path: 'M0,-28 C15,-28 28,-15 28,0 C28,15 15,28 0,28 C-15,28 -28,15 -28,0 C-28,-15 -15,-28 0,-28 z',
                   fillColor: isSelected
-                    ? '#0f172a'
+                    ? '#123f35'
                     : place.readyCount > 0
-                      ? '#10b981'
-                      : '#64748b',
+                      ? '#0b5d49'
+                      : '#6e8f80',
                   fillOpacity: 1,
                   strokeColor: '#ffffff',
                   strokeWeight: 2,
@@ -208,7 +208,7 @@ export function NearbyPlacesMap({
                 title: 'Your location',
                 icon: {
                   path: 'M0,-12 C6.627,-12 12,-6.627 12,0 C12,6.627 6.627,12 0,12 C-6.627,12 -12,6.627 -12,0 C-12,-6.627 -6.627,-12 0,-12 z',
-                  fillColor: '#0ea5e9',
+                  fillColor: '#1b8d6d',
                   fillOpacity: 1,
                   strokeColor: '#ffffff',
                   strokeWeight: 3,
@@ -274,24 +274,24 @@ export function NearbyPlacesMap({
   }, [])
 
   return (
-    <div className="mt-4 overflow-hidden rounded-[2rem] border border-stone-200 bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.18),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(245,158,11,0.16),_transparent_34%),linear-gradient(180deg,_rgba(248,250,252,1),_rgba(241,245,249,0.96))] p-4 shadow-sm">
+    <div className="mt-4 overflow-hidden rounded-[2rem] border border-[var(--rt-border)] bg-[radial-gradient(circle_at_top_left,_rgba(18,63,53,0.14),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(11,93,73,0.14),_transparent_34%),linear-gradient(180deg,rgba(248,252,248,1),rgba(234,245,236,0.98))] p-4 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold text-slate-900">Map view</p>
-          <p className="mt-1 text-sm leading-6 text-slate-600">
-            Real map. Real nearby places. Tap a pin to choose where you are.
+          <p className="text-sm font-semibold text-[var(--rt-ink)]">Nearby map</p>
+          <p className="mt-1 text-sm leading-6 text-[var(--rt-ink-soft)]">
+            Tap a place pin to preview it.
           </p>
         </div>
-        <div className="rounded-full bg-white/75 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-600">
+        <div className="rounded-full bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--rt-accent)]">
           Live nearby
         </div>
       </div>
 
-      <div className="relative mt-4 overflow-hidden rounded-[1.75rem] border border-white/80 bg-slate-100 shadow-inner">
+      <div className="relative mt-4 overflow-hidden rounded-[1.75rem] border border-white/80 bg-[#dcebdc] shadow-inner">
         <div ref={mapElementRef} className="aspect-[4/3] w-full" />
 
         {loadingState === 'config-loading' || loadingState === 'script-loading' ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white/75 text-slate-700 backdrop-blur-sm">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white/75 text-[var(--rt-ink-soft)] backdrop-blur-sm">
             <LoaderCircle className="h-6 w-6 animate-spin" />
             <p className="text-sm font-medium">
               {loadingState === 'config-loading'
@@ -302,7 +302,7 @@ export function NearbyPlacesMap({
         ) : null}
 
         {loadingState === 'idle' ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white/70 text-slate-700 backdrop-blur-sm">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white/70 text-[var(--rt-ink-soft)] backdrop-blur-sm">
             <MapPinned className="h-7 w-7" />
             <p className="text-sm font-medium">
               {loadError ?? 'Preparing nearby places map...'}
@@ -332,10 +332,10 @@ function buildPlaceMarkerNode({
   marker.className =
     'flex min-h-11 min-w-11 items-center justify-center rounded-full border-2 border-white px-3 text-sm font-bold text-white shadow-lg'
   marker.style.backgroundColor = isSelected
-    ? '#0f172a'
+    ? '#123f35'
     : readyCount > 0
-      ? '#10b981'
-      : '#64748b'
+      ? '#0b5d49'
+      : '#6e8f80'
   marker.textContent = String(readyCount)
   return marker
 }
@@ -343,6 +343,6 @@ function buildPlaceMarkerNode({
 function buildLocationMarkerNode() {
   const marker = document.createElement('div')
   marker.className =
-    'h-5 w-5 rounded-full border-[3px] border-white bg-sky-500 shadow-lg'
+    'h-5 w-5 rounded-full border-[3px] border-white bg-[#1b8d6d] shadow-lg'
   return marker
 }

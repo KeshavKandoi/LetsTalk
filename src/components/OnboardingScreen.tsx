@@ -2,10 +2,8 @@ import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import {
   ArrowLeft,
-  Compass,
   MessageCircle,
   MapPin,
-  QrCode,
   Users,
 } from 'lucide-react'
 import { authClient } from '../lib/auth-client'
@@ -298,152 +296,88 @@ export function OnboardingScreen({
   }
 
   return (
-    <main className="min-h-screen bg-[#f4efe6] text-slate-950">
-      <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-8 px-5 py-8 sm:px-6 lg:flex-row lg:items-start lg:justify-between lg:gap-12 lg:px-8">
-        <section className="w-full max-w-2xl">
-          <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-white/80 px-4 py-2 text-sm font-medium text-amber-800 shadow-sm">
-            <Compass className="h-4 w-4" />
-            Same place. Same moment. Consent first.
-          </div>
-
-          <h1 className="mt-5 text-4xl font-black leading-none tracking-[-0.05em] sm:text-5xl">
-            See who is ready nearby, {username}.
-          </h1>
-          <p className="mt-4 max-w-xl text-base leading-7 text-slate-700 sm:text-lg">
-            Open the app, share your location, and check which places are alive
-            before you walk in. When one feels right, claim your spot and set
-            the tone there.
-          </p>
-
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
-            <StepCard
-              icon={<MapPin className="h-5 w-5" />}
-              title="1. Share location"
-              description="You can sign up without it, but nearby readiness stays locked until location is enabled."
-            />
-            <StepCard
-              icon={<Users className="h-5 w-5" />}
-              title="2. Check nearby"
-              description="See which cafes or spots already have people ready before you choose a place."
-            />
-            <StepCard
-              icon={<QrCode className="h-5 w-5" />}
-              title="3. Join and talk"
-              description="Set your vibe for that place, then use your QR once you actually want to connect."
-            />
-          </div>
-
-          <div className="mt-8 rounded-[2rem] border border-stone-200 bg-white/78 p-5 text-sm text-slate-700 shadow-sm">
-            {locationStatus === 'granted' && places.length > 0 ? (
-              <>
-                <p className="font-semibold text-slate-950">Nearby right now</p>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-3xl border border-stone-200 bg-stone-50 px-4 py-4">
-                    <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
-                      Across these places
-                    </p>
-                    <p className="mt-2 text-3xl font-black tracking-[-0.04em] text-slate-950">
-                      {totalReadyCount}
-                    </p>
-                    <p className="mt-2 text-sm leading-6 text-slate-600">
-                      people marked ready nearby
-                    </p>
-                  </div>
-                  <div className="rounded-3xl border border-stone-200 bg-stone-50 px-4 py-4">
-                    <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
-                      Most active place
-                    </p>
-                    <p className="mt-2 text-lg font-semibold text-slate-950">
-                      {busiestPlace?.name ?? 'No nearby place yet'}
-                    </p>
-                    <p className="mt-2 text-sm leading-6 text-slate-600">
-                      {busiestPlace
-                        ? busiestPlace.readyCount === 1
-                          ? '1 person ready there now'
-                          : `${busiestPlace.readyCount} people ready there now`
-                        : 'Move a little closer to a venue.'}
-                    </p>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <>
-                <p className="font-semibold text-slate-950">What happens next</p>
-                <p className="mt-2 leading-6">
-                  Once you pick a place and save your intro, you are checked in
-                  there as <span className="font-medium text-slate-950">present</span>.
-                  The next screen is your live place view.
-                </p>
-              </>
-            )}
-          </div>
-        </section>
-
-        <section className="w-full max-w-xl rounded-[2rem] border border-stone-200 bg-white/92 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.12)] sm:p-8">
+    <main className="min-h-screen px-4 py-5 sm:px-6">
+      <div className="mx-auto flex min-h-[calc(100vh-2.5rem)] w-full max-w-xl flex-col gap-4">
+        <section className="rounded-[2rem] border border-[var(--rt-border)] bg-[var(--rt-surface)] p-5 shadow-[0_28px_80px_rgba(17,52,44,0.12)] backdrop-blur-xl sm:p-6">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-sm uppercase tracking-[0.24em] text-amber-700">
-                {selectedPlace ? 'Join place' : 'Nearby now'}
+              <div className="inline-flex items-center gap-2 rounded-full border border-[var(--rt-border-strong)] bg-[var(--rt-accent-soft)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--rt-accent)]">
+                <MapPin className="h-3.5 w-3.5" />
+                Nearby now
+              </div>
+              <h1 className="mt-4 text-3xl font-black tracking-[-0.05em] text-[var(--rt-ink)] sm:text-4xl">
+                Find people ready to talk nearby, {username}.
+              </h1>
+              <p className="mt-3 text-sm leading-6 text-[var(--rt-ink-soft)] sm:text-base">
+                Start with nearby places. Pick one that feels active, then add
+                a quick vibe before you join it.
               </p>
-              <h2 className="mt-2 text-3xl font-bold">
-                {selectedPlace ? 'Set your vibe here' : 'Nearby map and list'}
-              </h2>
             </div>
 
             <button
               type="button"
               onClick={handleSignOut}
               disabled={pendingAction === 'sign-out'}
-              className="rounded-full border border-stone-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-stone-300 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
+              className="shrink-0 rounded-full border border-[var(--rt-border)] bg-white/80 px-4 py-2 text-sm font-medium text-[var(--rt-ink-soft)] transition hover:border-[var(--rt-border-strong)] hover:text-[var(--rt-ink)] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {pendingAction === 'sign-out' ? 'Signing out...' : 'Sign out'}
             </button>
           </div>
 
-          <div className="mt-6 rounded-3xl border border-stone-200 bg-stone-50 p-5">
-            <p className="text-sm font-semibold text-slate-900">
-              Location permission
-            </p>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              Ready to Talk needs your live location so scans only work for
-              people who are actually in the same place.
-            </p>
+          <div className="mt-5 rounded-[1.75rem] border border-[var(--rt-border)] bg-[linear-gradient(180deg,rgba(220,239,227,0.85),rgba(248,252,248,0.92))] p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold text-[var(--rt-ink)]">
+                  Your location
+                </p>
+                <p className="mt-1 text-sm leading-6 text-[var(--rt-ink-soft)]">
+                  Needed to show nearby places and keep conversations local.
+                </p>
+              </div>
+              {locationStatus === 'granted' ? (
+                <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--rt-accent)]">
+                  Live
+                </span>
+              ) : null}
+            </div>
 
             <button
               type="button"
               onClick={handleEnableLocation}
               disabled={locationStatus === 'requesting'}
-              className="mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+              className="mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-[var(--rt-accent)] px-5 py-3 font-semibold text-white transition hover:bg-[var(--rt-accent-strong)] disabled:cursor-not-allowed disabled:opacity-70"
             >
               {locationStatus === 'requesting'
                 ? 'Checking location...'
                 : locationStatus === 'granted'
-                  ? 'Refresh my place'
+                  ? 'Refresh nearby places'
                   : 'Enable location'}
             </button>
 
             {locationError ? (
               <p className="mt-3 text-sm text-rose-700">{locationError}</p>
             ) : null}
-            {locationStatus === 'granted' ? (
-              <p className="mt-3 text-sm text-emerald-700">
-                Location enabled. Nearby places are live below.
-              </p>
-            ) : null}
           </div>
 
-          {isChoosingPlace ? (
-            <div className="mt-6">
-              <p className="text-sm font-semibold text-slate-900">
-                Nearby places
-              </p>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                We use Google Places for the MVP. Start with the map, then pick
-                the place that feels right for right now.
-              </p>
+          {locationStatus === 'granted' && places.length > 0 ? (
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <ToplineMetric
+                label="Ready nearby"
+                value={String(totalReadyCount)}
+                detail="across nearby places"
+              />
+              <ToplineMetric
+                label="Most active"
+                value={busiestPlace?.readyCount ? String(busiestPlace.readyCount) : '0'}
+                detail={busiestPlace?.name ?? 'No place yet'}
+              />
+            </div>
+          ) : null}
 
+          {isChoosingPlace ? (
+            <div className="mt-5">
               {placesLoading ? (
-                <div className="mt-4 rounded-3xl border border-dashed border-stone-200 px-4 py-5 text-sm text-slate-500">
+                <div className="rounded-3xl border border-dashed border-[var(--rt-border)] bg-white/70 px-4 py-5 text-sm text-[var(--rt-ink-soft)]">
                   Loading nearby places...
                 </div>
               ) : null}
@@ -474,9 +408,9 @@ export function OnboardingScreen({
               {!placesLoading &&
               locationStatus === 'granted' &&
               places.length === 0 ? (
-                <div className="mt-4 rounded-3xl border border-dashed border-stone-200 px-4 py-5 text-sm text-slate-500">
-                  No nearby place matched yet. Try again when you are closer to
-                  a venue.
+                <div className="rounded-3xl border border-dashed border-[var(--rt-border)] bg-white/70 px-4 py-5 text-sm text-[var(--rt-ink-soft)]">
+                  No nearby place matched yet. Move closer to a cafe or venue
+                  and try again.
                 </div>
               ) : null}
 
@@ -487,27 +421,27 @@ export function OnboardingScreen({
           ) : null}
 
           {selectedPlace ? (
-            <div className="mt-6 rounded-3xl border border-stone-200 bg-stone-50 p-5">
+            <div className="mt-5 rounded-[1.75rem] border border-[var(--rt-border)] bg-white/86 p-4 sm:p-5">
               <button
                 type="button"
                 onClick={() => setSelectedPlaceId(null)}
-                className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-stone-300 hover:text-slate-950"
+                className="inline-flex items-center gap-2 rounded-full border border-[var(--rt-border)] bg-[var(--rt-surface-strong)] px-4 py-2 text-sm font-medium text-[var(--rt-ink-soft)] transition hover:border-[var(--rt-border-strong)] hover:text-[var(--rt-ink)]"
               >
                 <ArrowLeft className="h-4 w-4" />
-                Back to nearby places
+                Back to places
               </button>
 
-              <div className="mt-4 rounded-3xl border border-stone-200 bg-white px-4 py-4">
+              <div className="mt-4 rounded-3xl border border-[var(--rt-border)] bg-[var(--rt-accent-soft)] px-4 py-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-lg font-semibold text-slate-950">
+                    <p className="text-lg font-semibold text-[var(--rt-ink)]">
                       {selectedPlace.name}
                     </p>
-                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                    <p className="mt-2 text-sm leading-6 text-[var(--rt-ink-soft)]">
                       {selectedPlace.address}
                     </p>
                   </div>
-                  <span className="shrink-0 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">
+                  <span className="shrink-0 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-[var(--rt-accent)]">
                     {selectedPlace.readyCount === 1
                       ? '1 ready'
                       : `${selectedPlace.readyCount} ready`}
@@ -515,25 +449,25 @@ export function OnboardingScreen({
                 </div>
               </div>
 
-              <div className="mt-5 rounded-3xl border border-stone-200 bg-white px-4 py-4">
+              <div className="mt-4 rounded-3xl border border-[var(--rt-border)] bg-[var(--rt-surface-strong)] px-4 py-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">
-                      Live here now
+                    <p className="text-sm font-semibold text-[var(--rt-ink)]">
+                      Place preview
                     </p>
-                    <p className="mt-2 text-sm leading-6 text-slate-600">
-                      Preview the room before you step in.
+                    <p className="mt-2 text-sm leading-6 text-[var(--rt-ink-soft)]">
+                      See how active it is before you join.
                     </p>
                   </div>
                   {placePreview ? (
-                    <span className="shrink-0 rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                    <span className="shrink-0 rounded-full bg-[var(--rt-accent-soft)] px-3 py-1 text-xs font-semibold text-[var(--rt-accent)]">
                       {placePreview.checkedInCount} here now
                     </span>
                   ) : null}
                 </div>
 
                 {placePreviewLoading ? (
-                  <div className="mt-4 rounded-3xl border border-dashed border-stone-200 bg-stone-50 px-4 py-5 text-sm text-slate-500">
+                  <div className="mt-4 rounded-3xl border border-dashed border-[var(--rt-border)] bg-white px-4 py-5 text-sm text-[var(--rt-ink-soft)]">
                     Loading place preview...
                   </div>
                 ) : null}
@@ -562,7 +496,7 @@ export function OnboardingScreen({
                     </div>
 
                     <div className="mt-4">
-                      <p className="text-sm font-semibold text-slate-900">
+                      <p className="text-sm font-semibold text-[var(--rt-ink)]">
                         Ready to talk here
                       </p>
                       {placePreview.readyParticipants.length > 0 ? (
@@ -570,12 +504,12 @@ export function OnboardingScreen({
                           {placePreview.readyParticipants.map((participant) => (
                             <div
                               key={participant.userId}
-                              className="rounded-3xl border border-stone-200 bg-stone-50 px-4 py-4"
+                              className="rounded-3xl border border-[var(--rt-border)] bg-[var(--rt-accent-soft)] px-4 py-4"
                             >
-                              <p className="text-sm font-semibold text-slate-950">
+                              <p className="text-sm font-semibold text-[var(--rt-ink)]">
                                 {participant.username}
                               </p>
-                              <p className="mt-2 text-sm leading-6 text-slate-700">
+                              <p className="mt-2 text-sm leading-6 text-[var(--rt-ink-soft)]">
                                 {participant.moodEmoji}{' '}
                                 {participant.intentSummary ||
                                   'Open to a nearby conversation.'}
@@ -584,8 +518,8 @@ export function OnboardingScreen({
                           ))}
                         </div>
                       ) : (
-                        <div className="mt-3 rounded-3xl border border-dashed border-stone-200 bg-stone-50 px-4 py-5 text-sm text-slate-500">
-                          No one is marked ready here at the moment.
+                        <div className="mt-3 rounded-3xl border border-dashed border-[var(--rt-border)] bg-white px-4 py-5 text-sm text-[var(--rt-ink-soft)]">
+                          No one is marked ready here right now.
                         </div>
                       )}
                     </div>
@@ -599,13 +533,13 @@ export function OnboardingScreen({
                 ) : null}
               </div>
 
-              <div className="mt-5">
-                <p className="text-sm font-semibold text-slate-900">
-                  Mood and intro
+              <div className="mt-4">
+                <p className="text-sm font-semibold text-[var(--rt-ink)]">
+                  Your vibe for this place
                 </p>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  This becomes your short summary for the first version. AI can
-                  refine it later, but we are stubbing that part for now.
+                <p className="mt-2 text-sm leading-6 text-[var(--rt-ink-soft)]">
+                  Keep it short. People nearby will see this before they talk to
+                  you.
                 </p>
 
                 <div className="mt-4 flex flex-wrap gap-3">
@@ -619,8 +553,8 @@ export function OnboardingScreen({
                         onClick={() => setMoodEmoji(option)}
                         className={`rounded-2xl border px-4 py-3 text-2xl transition ${
                           isSelected
-                            ? 'border-slate-900 bg-slate-950 text-white'
-                            : 'border-stone-200 bg-white hover:border-stone-300'
+                            ? 'border-[var(--rt-accent)] bg-[var(--rt-accent)] text-white'
+                            : 'border-[var(--rt-border)] bg-white hover:border-[var(--rt-border-strong)]'
                         }`}
                         aria-pressed={isSelected}
                       >
@@ -631,7 +565,7 @@ export function OnboardingScreen({
                 </div>
 
                 <label className="mt-4 block">
-                  <span className="mb-2 block text-sm font-medium text-slate-700">
+                  <span className="mb-2 block text-sm font-medium text-[var(--rt-ink-soft)]">
                     What do you want to talk about?
                   </span>
                   <textarea
@@ -639,16 +573,12 @@ export function OnboardingScreen({
                     onChange={(event) => setIntentText(event.target.value)}
                     rows={4}
                     placeholder="Coffee break, startup ideas, a quiet walk, meeting someone new..."
-                    className="w-full rounded-3xl border border-stone-200 bg-white px-4 py-3 text-base text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-200"
+                    className="w-full rounded-3xl border border-[var(--rt-border)] bg-[var(--rt-surface-strong)] px-4 py-3 text-base text-[var(--rt-ink)] outline-none transition placeholder:text-[color:rgba(69,104,90,0.55)] focus:border-[var(--rt-accent-strong)] focus:ring-2 focus:ring-[var(--rt-accent-soft-strong)]"
                   />
                 </label>
 
-                <p className="mt-4 text-sm text-slate-600">
-                  Saving for{' '}
-                  <span className="font-medium text-slate-950">
-                    {selectedPlace.name}
-                  </span>
-                  .
+                <p className="mt-4 text-sm text-[var(--rt-ink-soft)]">
+                  Joining <span className="font-medium text-[var(--rt-ink)]">{selectedPlace.name}</span>.
                 </p>
 
                 {saveError ? (
@@ -659,7 +589,7 @@ export function OnboardingScreen({
                   type="button"
                   onClick={handleSaveProfile}
                   disabled={pendingAction === 'save' || placePreviewLoading}
-                  className="mt-5 inline-flex w-full items-center justify-center rounded-2xl bg-amber-500 px-5 py-3 font-semibold text-white transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-70"
+                  className="mt-5 inline-flex w-full items-center justify-center rounded-2xl bg-[var(--rt-accent)] px-5 py-3 font-semibold text-white transition hover:bg-[var(--rt-accent-strong)] disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {pendingAction === 'save'
                     ? 'Saving intro...'
@@ -674,22 +604,24 @@ export function OnboardingScreen({
   )
 }
 
-function StepCard({
-  icon,
-  title,
-  description,
+function ToplineMetric({
+  label,
+  value,
+  detail,
 }: {
-  icon: ReactNode
-  title: string
-  description: string
+  label: string
+  value: string
+  detail: string
 }) {
   return (
-    <div className="rounded-3xl border border-stone-200 bg-white/78 p-5 shadow-sm">
-      <div className="inline-flex rounded-2xl border border-amber-100 bg-amber-50 p-3 text-amber-700">
-        {icon}
-      </div>
-      <h3 className="mt-4 text-lg font-semibold">{title}</h3>
-      <p className="mt-2 text-sm leading-7 text-slate-700">{description}</p>
+    <div className="rounded-3xl border border-[var(--rt-border)] bg-white/82 px-4 py-4 shadow-sm">
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--rt-ink-soft)]">
+        {label}
+      </p>
+      <p className="mt-2 text-3xl font-black tracking-[-0.04em] text-[var(--rt-ink)]">
+        {value}
+      </p>
+      <p className="mt-1 text-sm leading-6 text-[var(--rt-ink-soft)]">{detail}</p>
     </div>
   )
 }
@@ -704,12 +636,12 @@ function PreviewMetricCard({
   value: string
 }) {
   return (
-    <div className="rounded-3xl border border-stone-200 bg-stone-50 px-4 py-4">
-      <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-600">
+    <div className="rounded-3xl border border-[var(--rt-border)] bg-[var(--rt-accent-soft)] px-4 py-4">
+      <div className="inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--rt-ink-soft)]">
         {icon}
         {label}
       </div>
-      <p className="mt-3 text-lg font-semibold text-slate-950">{value}</p>
+      <p className="mt-3 text-lg font-semibold text-[var(--rt-ink)]">{value}</p>
     </div>
   )
 }
@@ -729,8 +661,8 @@ function PlaceChoiceCard({
       onClick={onSelect}
       className={`w-full rounded-3xl border px-4 py-4 text-left transition ${
         isSelected
-          ? 'border-slate-900 bg-slate-950 text-white shadow-lg'
-          : 'border-stone-200 bg-white text-slate-900 hover:border-stone-300'
+          ? 'border-[var(--rt-accent)] bg-[var(--rt-accent)] text-white shadow-lg'
+          : 'border-[var(--rt-border)] bg-white/86 text-[var(--rt-ink)] hover:border-[var(--rt-border-strong)]'
       }`}
     >
       <div className="flex items-start justify-between gap-3">
@@ -740,8 +672,8 @@ function PlaceChoiceCard({
             isSelected
               ? 'bg-white/15 text-white'
               : place.readyCount > 0
-                ? 'bg-emerald-100 text-emerald-800'
-                : 'bg-stone-100 text-slate-600'
+                ? 'bg-[var(--rt-accent-soft)] text-[var(--rt-accent)]'
+                : 'bg-[var(--rt-bg-strong)] text-[var(--rt-ink-soft)]'
           }`}
         >
           {place.readyCount === 1 ? '1 ready' : `${place.readyCount} ready`}
@@ -749,14 +681,14 @@ function PlaceChoiceCard({
       </div>
       <p
         className={`mt-1 text-sm leading-6 ${
-          isSelected ? 'text-slate-200' : 'text-slate-600'
+          isSelected ? 'text-white/80' : 'text-[var(--rt-ink-soft)]'
         }`}
       >
         {place.address}
       </p>
       <p
         className={`mt-3 text-xs font-medium uppercase tracking-[0.16em] ${
-          isSelected ? 'text-slate-300' : 'text-slate-500'
+          isSelected ? 'text-white/65' : 'text-[var(--rt-ink-soft)]'
         }`}
       >
         {place.readyCount > 0 ? 'People are ready here now' : 'Quiet right now'}

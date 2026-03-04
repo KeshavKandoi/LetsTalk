@@ -91,40 +91,40 @@ export function ScanJoinScreen({
   }
 
   return (
-    <main className="min-h-screen bg-[#f4efe6] text-slate-950">
-      <div className="mx-auto flex min-h-screen w-full max-w-4xl flex-col justify-center gap-8 px-5 py-8 sm:px-6 lg:px-8">
-        <section className="rounded-[2rem] border border-stone-200 bg-white/92 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.12)] sm:p-8">
-          <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-800">
+    <main className="min-h-screen px-4 py-5 sm:px-6">
+      <div className="mx-auto flex min-h-[calc(100vh-2.5rem)] w-full max-w-xl flex-col justify-center gap-4">
+        <section className="rounded-[2rem] border border-[var(--rt-border)] bg-[var(--rt-surface)] p-6 shadow-[0_24px_80px_rgba(17,52,44,0.12)] sm:p-8">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[var(--rt-border-strong)] bg-[var(--rt-accent-soft)] px-4 py-2 text-sm font-medium text-[var(--rt-accent)]">
             <QrCode className="h-4 w-4" />
             Scan-first join
           </div>
 
-          <h1 className="mt-5 text-4xl font-black leading-none tracking-[-0.05em] sm:text-5xl">
+          <h1 className="mt-5 text-4xl font-black leading-none tracking-[-0.05em] text-[var(--rt-ink)] sm:text-5xl">
             You found someone nearby, {username}.
           </h1>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-slate-700 sm:text-lg">
+          <p className="mt-4 max-w-2xl text-base leading-7 text-[var(--rt-ink-soft)] sm:text-lg">
             You do not need to check in first. We can drop you into their place
             now, then start the conversation from there.
           </p>
 
           {loading ? (
-            <div className="mt-8 rounded-3xl border border-stone-200 bg-stone-50 p-6 text-sm text-slate-600">
+            <div className="mt-8 rounded-3xl border border-[var(--rt-border)] bg-[var(--rt-surface-strong)] p-6 text-sm text-[var(--rt-ink-soft)]">
               Reading the QR code...
             </div>
           ) : preview ? (
-            <div className="mt-8 rounded-3xl border border-stone-200 bg-stone-50 p-6">
-              <div className="flex items-center gap-3 text-slate-900">
+            <div className="mt-8 rounded-3xl border border-[var(--rt-border)] bg-[var(--rt-accent-soft)] p-6">
+              <div className="flex items-center gap-3 text-[var(--rt-ink)]">
                 <MessageCircle className="h-5 w-5" />
                 <p className="text-sm font-semibold">You are about to meet</p>
               </div>
-              <p className="mt-4 text-3xl font-semibold">
+              <p className="mt-4 text-3xl font-semibold text-[var(--rt-ink)]">
                 {preview.counterpart.username}
               </p>
-              <p className="mt-3 text-base leading-7 text-slate-700">
+              <p className="mt-3 text-base leading-7 text-[var(--rt-ink-soft)]">
                 {preview.counterpart.moodEmoji} {preview.counterpart.intentSummary}
               </p>
 
-              <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm text-slate-700">
+              <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm text-[var(--rt-ink-soft)]">
                 <MapPin className="h-4 w-4" />
                 {preview.placeName}
               </div>
@@ -134,7 +134,7 @@ export function ScanJoinScreen({
                   type="button"
                   onClick={handleJoin}
                   disabled={joining}
-                  className="inline-flex w-full items-center justify-center rounded-2xl bg-emerald-600 px-5 py-3 font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
+                  className="inline-flex w-full items-center justify-center rounded-2xl bg-[var(--rt-accent)] px-5 py-3 font-semibold text-white transition hover:bg-[var(--rt-accent-strong)] disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {joining ? 'Joining place...' : 'Join this place and talk'}
                 </button>
@@ -144,7 +144,7 @@ export function ScanJoinScreen({
                   onClick={() => {
                     void clearScanToken()
                   }}
-                  className="inline-flex w-full items-center justify-center rounded-2xl border border-stone-200 bg-white px-5 py-3 font-semibold text-slate-900 transition hover:border-stone-300"
+                  className="inline-flex w-full items-center justify-center rounded-2xl border border-[var(--rt-border)] bg-white px-5 py-3 font-semibold text-[var(--rt-ink)] transition hover:border-[var(--rt-border-strong)]"
                 >
                   Not now
                 </button>

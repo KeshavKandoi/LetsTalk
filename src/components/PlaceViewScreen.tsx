@@ -484,8 +484,8 @@ export function PlaceViewScreen({
       margin: 1,
       width: 512,
       color: {
-        dark: '#0f172a',
-        light: '#f8fafc',
+        dark: '#123f35',
+        light: '#f8fcf8',
       },
     }).then((nextQrDataUrl: string) => {
       if (!cancelled) {
@@ -813,21 +813,20 @@ export function PlaceViewScreen({
   }
 
   return (
-    <main className="min-h-screen bg-[#f4efe6] text-slate-950">
-      <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-8 px-5 py-8 sm:px-6 lg:flex-row lg:items-start lg:justify-between lg:gap-12 lg:px-8">
-        <section className="w-full max-w-2xl">
-          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white/80 px-4 py-2 text-sm font-medium text-emerald-800 shadow-sm">
+    <main className="min-h-screen px-4 py-5 sm:px-6">
+      <div className="mx-auto flex min-h-[calc(100vh-2.5rem)] w-full max-w-xl flex-col gap-4">
+        <section className="rounded-[2rem] border border-[var(--rt-border)] bg-[var(--rt-surface)] p-5 shadow-[0_28px_80px_rgba(17,52,44,0.12)] backdrop-blur-xl sm:p-6">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[var(--rt-border-strong)] bg-[var(--rt-accent-soft)] px-4 py-2 text-sm font-medium text-[var(--rt-accent)] shadow-sm">
             <Radio className="h-4 w-4" />
-            Live place prototype
+            Live place
           </div>
 
-          <h1 className="mt-5 text-4xl font-black leading-none tracking-[-0.05em] sm:text-5xl">
+          <h1 className="mt-5 text-4xl font-black leading-none tracking-[-0.05em] text-[var(--rt-ink)] sm:text-5xl">
             {currentPlace.place.name}
           </h1>
-          <p className="mt-4 max-w-xl text-base leading-7 text-slate-700 sm:text-lg">
-            You are checked in here as {username}. This is the calm MVP place
-            view: confirm the place, decide whether you are ready, then show a
-            QR code when you want someone nearby to connect.
+          <p className="mt-4 max-w-xl text-base leading-7 text-[var(--rt-ink-soft)] sm:text-lg">
+            You are here as {username}. Watch the room, go ready when you want,
+            and share your QR when a nearby conversation feels right.
           </p>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
@@ -857,29 +856,29 @@ export function PlaceViewScreen({
             />
           </div>
 
-          <div className="mt-8 rounded-[2rem] border border-stone-200 bg-white/78 p-6 shadow-sm">
-            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">
+          <div className="mt-8 rounded-[2rem] border border-[var(--rt-border)] bg-white/82 p-6 shadow-sm">
+            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--rt-ink-soft)]">
               Your intro
             </p>
-            <p className="mt-4 text-2xl font-semibold">
+            <p className="mt-4 text-2xl font-semibold text-[var(--rt-ink)]">
               {profile.moodEmoji} {profile.intentSummary}
             </p>
-            <p className="mt-3 text-sm leading-6 text-slate-600">
+            <p className="mt-3 text-sm leading-6 text-[var(--rt-ink-soft)]">
               {currentPlace.place.address}
             </p>
           </div>
 
-          <div className="mt-6 rounded-[2rem] border border-stone-200 bg-white/78 p-6 shadow-sm">
+          <div className="mt-6 rounded-[2rem] border border-[var(--rt-border)] bg-white/82 p-6 shadow-sm">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">
+                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--rt-ink-soft)]">
                   Who is ready here
                 </p>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
+                <p className="mt-2 text-sm leading-6 text-[var(--rt-ink-soft)]">
                   You can see who is open to a conversation before you scan.
                 </p>
               </div>
-              <div className="rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-900">
+              <div className="rounded-full bg-[var(--rt-accent-soft)] px-3 py-1 text-sm font-semibold text-[var(--rt-accent)]">
                 {readyCount} ready
               </div>
             </div>
@@ -906,7 +905,7 @@ export function PlaceViewScreen({
                 ))}
               </div>
             ) : (
-              <div className="mt-5 rounded-3xl border border-dashed border-stone-200 bg-stone-50 px-4 py-5 text-sm text-slate-500">
+              <div className="mt-5 rounded-3xl border border-dashed border-[var(--rt-border)] bg-[var(--rt-surface-strong)] px-4 py-5 text-sm text-[var(--rt-ink-soft)]">
                 No one is marked ready here yet.
               </div>
             )}
@@ -931,28 +930,30 @@ export function PlaceViewScreen({
           </div>
         </section>
 
-        <section className="w-full max-w-xl rounded-[2rem] border border-stone-200 bg-white/92 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.12)] sm:p-8">
+        <section className="rounded-[2rem] border border-[var(--rt-border)] bg-[var(--rt-surface)] p-6 shadow-[0_24px_80px_rgba(17,52,44,0.12)] sm:p-8">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-sm uppercase tracking-[0.24em] text-emerald-700">
+              <p className="text-sm uppercase tracking-[0.24em] text-[var(--rt-accent)]">
                 Place View
               </p>
-              <h2 className="mt-2 text-3xl font-bold">Ready when you want</h2>
+              <h2 className="mt-2 text-3xl font-bold text-[var(--rt-ink)]">
+                Ready when you want
+              </h2>
             </div>
 
             <button
               type="button"
               onClick={handleSignOut}
               disabled={pendingAction === 'sign-out'}
-              className="rounded-full border border-stone-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-stone-300 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-full border border-[var(--rt-border)] bg-white/80 px-4 py-2 text-sm font-medium text-[var(--rt-ink-soft)] transition hover:border-[var(--rt-border-strong)] hover:text-[var(--rt-ink)] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {pendingAction === 'sign-out' ? 'Signing out...' : 'Sign out'}
             </button>
           </div>
 
-          <div className="mt-6 rounded-3xl border border-stone-200 bg-stone-50 p-5">
-            <p className="text-sm font-semibold text-slate-900">Status</p>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
+          <div className="mt-6 rounded-3xl border border-[var(--rt-border)] bg-[var(--rt-accent-soft)] p-5">
+            <p className="text-sm font-semibold text-[var(--rt-ink)]">Status</p>
+            <p className="mt-2 text-sm leading-6 text-[var(--rt-ink-soft)]">
               {isInConversation
                 ? `You are currently talking${resolvedActiveConnection ? ` with ${resolvedActiveConnection.counterpart.username}` : ''}, so your QR and ready state are paused.`
                 : isReady
@@ -965,7 +966,7 @@ export function PlaceViewScreen({
                 type="button"
                 onClick={handleEndConnection}
                 disabled={pendingAction === 'end-connection'}
-                className="mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-slate-900 px-5 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+                className="mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-[var(--rt-accent)] px-5 py-3 font-semibold text-white transition hover:bg-[var(--rt-accent-strong)] disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {pendingAction === 'end-connection'
                   ? 'Ending conversation...'
@@ -978,8 +979,8 @@ export function PlaceViewScreen({
                 disabled={pendingAction === 'ready'}
                 className={`mt-4 inline-flex w-full items-center justify-center rounded-2xl px-5 py-3 font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-70 ${
                   isReady
-                    ? 'bg-slate-900 hover:bg-slate-800'
-                    : 'bg-emerald-600 hover:bg-emerald-700'
+                    ? 'bg-[var(--rt-accent)] hover:bg-[var(--rt-accent-strong)]'
+                    : 'bg-[#1b8d6d] hover:bg-[#157257]'
                 }`}
               >
                 {pendingAction === 'ready'
@@ -992,7 +993,7 @@ export function PlaceViewScreen({
           </div>
 
           {conversationNotice ? (
-            <div className="mt-6 rounded-3xl border border-amber-200 bg-amber-50 p-5 text-amber-950">
+            <div className="mt-6 rounded-3xl border border-[var(--rt-border-strong)] bg-[var(--rt-accent-soft)] p-5 text-[var(--rt-ink)]">
               <p className="text-sm font-semibold">{conversationNotice.title}</p>
               <p className="mt-2 text-sm leading-6">
                 {conversationNotice.description}
@@ -1001,22 +1002,22 @@ export function PlaceViewScreen({
           ) : null}
 
           {finderNotice ? (
-            <div className="mt-6 rounded-3xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-950">
+            <div className="mt-6 rounded-3xl border border-[var(--rt-border-strong)] bg-[var(--rt-accent-soft)] p-5 text-[var(--rt-ink)]">
               <p className="text-sm font-semibold">{finderNotice.title}</p>
               <p className="mt-2 text-sm leading-6">{finderNotice.description}</p>
             </div>
           ) : null}
 
-          <div className="mt-6 rounded-3xl border border-stone-200 bg-stone-50 p-5">
+          <div className="mt-6 rounded-3xl border border-[var(--rt-border)] bg-[var(--rt-surface-strong)] p-5">
             <div className="flex items-center gap-3">
-              <div className="rounded-2xl border border-stone-200 bg-white p-3 text-slate-700">
+              <div className="rounded-2xl border border-[var(--rt-border)] bg-white p-3 text-[var(--rt-accent)]">
                 <LocateFixed className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-900">
+                <p className="text-sm font-semibold text-[var(--rt-ink)]">
                   Help someone find you
                 </p>
-                <p className="text-sm leading-6 text-slate-600">
+                <p className="text-sm leading-6 text-[var(--rt-ink-soft)]">
                   Share one simple spot in this place, then let someone nearby
                   send a quick cue before they scan your QR.
                 </p>
@@ -1037,8 +1038,8 @@ export function PlaceViewScreen({
                     disabled={!isReady || isInConversation || pendingAction === 'finder'}
                     className={`rounded-full px-4 py-2 text-sm font-medium transition ${
                       isSelected
-                        ? 'bg-slate-900 text-white'
-                        : 'border border-stone-200 bg-white text-slate-700 hover:border-stone-300 hover:text-slate-950'
+                        ? 'bg-[var(--rt-accent)] text-white'
+                        : 'border border-[var(--rt-border)] bg-white text-[var(--rt-ink-soft)] hover:border-[var(--rt-border-strong)] hover:text-[var(--rt-ink)]'
                     } disabled:cursor-not-allowed disabled:opacity-60`}
                   >
                     {hint}
@@ -1047,8 +1048,8 @@ export function PlaceViewScreen({
               })}
             </div>
 
-            <div className="mt-4 rounded-2xl border border-stone-200 bg-white px-4 py-4">
-              <p className="text-sm font-semibold text-slate-900">
+            <div className="mt-4 rounded-2xl border border-[var(--rt-border)] bg-white px-4 py-4">
+              <p className="text-sm font-semibold text-[var(--rt-ink)]">
                 {isFindable
                   ? `Currently sharing: ${selectedFinderHint}`
                   : isInConversation
@@ -1057,7 +1058,7 @@ export function PlaceViewScreen({
                       ? 'Pick the spot that best matches where you are.'
                       : 'Set yourself ready before sharing a spot.'}
               </p>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
+              <p className="mt-2 text-sm leading-6 text-[var(--rt-ink-soft)]">
                 {isFindable
                   ? 'People nearby can look for this hint and send a quick cue to your phone.'
                   : 'This stays off until you choose to share it.'}
@@ -1072,8 +1073,8 @@ export function PlaceViewScreen({
               disabled={!isReady || isInConversation || pendingAction === 'finder'}
               className={`mt-4 inline-flex w-full items-center justify-center rounded-2xl px-5 py-3 font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-70 ${
                 isFindable
-                  ? 'bg-slate-900 hover:bg-slate-800'
-                  : 'bg-emerald-600 hover:bg-emerald-700'
+                  ? 'bg-[var(--rt-accent)] hover:bg-[var(--rt-accent-strong)]'
+                  : 'bg-[#1b8d6d] hover:bg-[#157257]'
               }`}
             >
               {pendingAction === 'finder'
@@ -1084,31 +1085,31 @@ export function PlaceViewScreen({
             </button>
           </div>
 
-          <div className="mt-6 rounded-3xl border border-stone-200 bg-stone-50 p-5">
+          <div className="mt-6 rounded-3xl border border-[var(--rt-border)] bg-[var(--rt-surface-strong)] p-5">
             <div className="flex items-center gap-3">
-              <div className="rounded-2xl border border-stone-200 bg-white p-3 text-slate-700">
+              <div className="rounded-2xl border border-[var(--rt-border)] bg-white p-3 text-[var(--rt-accent)]">
                 <QrCode className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-900">Your QR</p>
-                <p className="text-sm leading-6 text-slate-600">
+                <p className="text-sm font-semibold text-[var(--rt-ink)]">Your QR</p>
+                <p className="text-sm leading-6 text-[var(--rt-ink-soft)]">
                   Nearby people can scan this to preview you, then confirm
                   before they connect.
                 </p>
               </div>
             </div>
 
-            <div className="mt-5 rounded-3xl border border-stone-200 bg-white px-4 py-6 text-center">
+            <div className="mt-5 rounded-3xl border border-[var(--rt-border)] bg-white px-4 py-6 text-center">
               {qrDataUrl ? (
                 <img
                   src={qrDataUrl}
                   alt={`Ready to Talk QR for ${username}`}
-                  className={`mx-auto h-48 w-48 rounded-3xl border border-stone-200 bg-slate-50 p-3 ${
+                  className={`mx-auto h-48 w-48 rounded-3xl border border-[var(--rt-border)] bg-[var(--rt-surface-strong)] p-3 ${
                     liveStatus === 'ready' ? '' : 'opacity-40'
                   }`}
                 />
               ) : (
-                <div className="mx-auto flex h-48 w-48 items-center justify-center rounded-3xl border border-dashed border-stone-300 text-sm text-slate-500">
+                <div className="mx-auto flex h-48 w-48 items-center justify-center rounded-3xl border border-dashed border-[var(--rt-border-strong)] text-sm text-[var(--rt-ink-soft)]">
                   Building QR...
                 </div>
               )}
@@ -1116,8 +1117,8 @@ export function PlaceViewScreen({
               <div
                 className={`mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-medium ${
                   qrHandoff.isActive
-                    ? 'bg-emerald-100 text-emerald-800'
-                    : 'bg-stone-200 text-slate-700'
+                    ? 'bg-[var(--rt-accent-soft)] text-[var(--rt-accent)]'
+                    : 'bg-[var(--rt-bg-strong)] text-[var(--rt-ink-soft)]'
                 }`}
               >
                 <Check className="h-4 w-4" />
@@ -1129,26 +1130,26 @@ export function PlaceViewScreen({
           </div>
 
           {resolvedActiveConnection ? (
-            <div className="mt-6 rounded-3xl border border-emerald-200 bg-emerald-50 p-5">
-              <div className="flex items-center justify-between gap-3 text-emerald-900">
+            <div className="mt-6 rounded-3xl border border-[var(--rt-border-strong)] bg-[var(--rt-accent-soft)] p-5">
+              <div className="flex items-center justify-between gap-3 text-[var(--rt-accent)]">
                 <div className="flex items-center gap-3">
                   <MessageCircle className="h-5 w-5" />
                   <p className="text-sm font-semibold">Current conversation</p>
                 </div>
                 {conversationElapsed ? (
-                  <span className="rounded-full bg-white/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-900">
+                  <span className="rounded-full bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--rt-accent)]">
                     {conversationElapsed}
                   </span>
                 ) : null}
               </div>
-              <p className="mt-3 text-xl font-semibold text-slate-950">
+              <p className="mt-3 text-xl font-semibold text-[var(--rt-ink)]">
                 {resolvedActiveConnection.counterpart.username}
               </p>
-              <p className="mt-2 text-sm leading-6 text-slate-700">
+              <p className="mt-2 text-sm leading-6 text-[var(--rt-ink-soft)]">
                 {resolvedActiveConnection.counterpart.moodEmoji}{' '}
                 {resolvedActiveConnection.counterpart.intentSummary}
               </p>
-              <p className="mt-3 text-sm leading-6 text-emerald-900/80">
+              <p className="mt-3 text-sm leading-6 text-[var(--rt-accent)]/80">
                 Take your time. Either person can end the conversation, and you
                 will both return to ready automatically.
               </p>
@@ -1160,7 +1161,7 @@ export function PlaceViewScreen({
               type="button"
               onClick={handleOpenScanner}
               disabled={isInConversation}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-amber-500 px-5 py-3 font-semibold text-slate-950 transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-70"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--rt-accent)] px-5 py-3 font-semibold text-white transition hover:bg-[var(--rt-accent-strong)] disabled:cursor-not-allowed disabled:opacity-70"
             >
               <ScanLine className="h-4 w-4" />
               Scan someone nearby
@@ -1169,7 +1170,7 @@ export function PlaceViewScreen({
               type="button"
               onClick={handleLeavePlace}
               disabled={pendingAction === 'leave'}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-stone-200 bg-white px-5 py-3 font-semibold text-slate-900 transition hover:border-stone-300 disabled:cursor-not-allowed disabled:opacity-70"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-[var(--rt-border)] bg-white px-5 py-3 font-semibold text-[var(--rt-ink)] transition hover:border-[var(--rt-border-strong)] disabled:cursor-not-allowed disabled:opacity-70"
             >
               <ArrowLeft className="h-4 w-4" />
               {pendingAction === 'leave' ? 'Leaving place...' : 'Switch place'}
@@ -1185,14 +1186,14 @@ export function PlaceViewScreen({
       </div>
 
       {scannerOpen ? (
-        <div className="fixed inset-0 z-50 flex items-end bg-slate-950/55 sm:items-center sm:justify-center">
-          <div className="w-full max-w-xl rounded-t-[2rem] border border-stone-200 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.22)] sm:rounded-[2rem] sm:p-8">
+        <div className="fixed inset-0 z-50 flex items-end bg-[rgba(17,52,44,0.55)] sm:items-center sm:justify-center">
+          <div className="w-full max-w-xl rounded-t-[2rem] border border-[var(--rt-border)] bg-[var(--rt-surface-strong)] p-6 shadow-[0_24px_80px_rgba(17,52,44,0.22)] sm:rounded-[2rem] sm:p-8">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm uppercase tracking-[0.24em] text-amber-700">
+                <p className="text-sm uppercase tracking-[0.24em] text-[var(--rt-accent)]">
                   Scan QR
                 </p>
-                <h3 className="mt-2 text-2xl font-bold">
+                <h3 className="mt-2 text-2xl font-bold text-[var(--rt-ink)]">
                   Understand, then connect
                 </h3>
               </div>
@@ -1202,7 +1203,7 @@ export function PlaceViewScreen({
                 onClick={() => {
                   void handleCloseScanner()
                 }}
-                className="rounded-full border border-stone-200 p-2 text-slate-700 transition hover:border-stone-300 hover:text-slate-950"
+                className="rounded-full border border-[var(--rt-border)] p-2 text-[var(--rt-ink-soft)] transition hover:border-[var(--rt-border-strong)] hover:text-[var(--rt-ink)]"
                 aria-label="Close scanner"
               >
                 <X className="h-4 w-4" />
@@ -1210,18 +1211,18 @@ export function PlaceViewScreen({
             </div>
 
             {scanPreview ? (
-              <div className="mt-6 rounded-3xl border border-stone-200 bg-stone-50 p-5">
-                <p className="text-sm font-semibold text-slate-900">
+              <div className="mt-6 rounded-3xl border border-[var(--rt-border)] bg-[var(--rt-accent-soft)] p-5">
+                <p className="text-sm font-semibold text-[var(--rt-ink)]">
                   You are about to connect with
                 </p>
-                <p className="mt-3 text-2xl font-semibold">
+                <p className="mt-3 text-2xl font-semibold text-[var(--rt-ink)]">
                   {scanPreview.counterpart.username}
                 </p>
-                <p className="mt-3 text-sm leading-6 text-slate-700">
+                <p className="mt-3 text-sm leading-6 text-[var(--rt-ink-soft)]">
                   {scanPreview.counterpart.moodEmoji}{' '}
                   {scanPreview.counterpart.intentSummary}
                 </p>
-                <p className="mt-3 text-sm text-slate-500">
+                <p className="mt-3 text-sm text-[var(--rt-ink-soft)]">
                   {scanPreview.placeName}
                 </p>
 
@@ -1230,7 +1231,7 @@ export function PlaceViewScreen({
                     type="button"
                     onClick={handleConnect}
                     disabled={pendingAction === 'connect'}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--rt-accent)] px-5 py-3 font-semibold text-white transition hover:bg-[var(--rt-accent-strong)] disabled:cursor-not-allowed disabled:opacity-70"
                   >
                     {pendingAction === 'connect'
                       ? 'Connecting...'
@@ -1242,7 +1243,7 @@ export function PlaceViewScreen({
                       setScanPreview(null)
                       setScanInput('')
                     }}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-stone-200 bg-white px-5 py-3 font-semibold text-slate-900 transition hover:border-stone-300"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-[var(--rt-border)] bg-white px-5 py-3 font-semibold text-[var(--rt-ink)] transition hover:border-[var(--rt-border-strong)]"
                   >
                     Scan another
                   </button>
@@ -1250,9 +1251,9 @@ export function PlaceViewScreen({
               </div>
             ) : (
               <>
-                <div className="mt-6 overflow-hidden rounded-3xl border border-stone-200 bg-slate-950">
+                <div className="mt-6 overflow-hidden rounded-3xl border border-[var(--rt-border)] bg-[var(--rt-accent)]">
                   {cameraStatus === 'unsupported' ? (
-                    <div className="flex min-h-64 flex-col items-center justify-center gap-3 px-6 py-10 text-center text-slate-200">
+                    <div className="flex min-h-64 flex-col items-center justify-center gap-3 px-6 py-10 text-center text-white/85">
                       <Camera className="h-8 w-8" />
                       <p className="max-w-sm text-sm leading-6">
                         In-app camera scanning is not available here. Scan the QR
@@ -1269,8 +1270,8 @@ export function PlaceViewScreen({
                   )}
                 </div>
 
-                <div className="mt-4 rounded-3xl border border-stone-200 bg-stone-50 p-5">
-                  <p className="text-sm font-semibold text-slate-900">
+                <div className="mt-4 rounded-3xl border border-[var(--rt-border)] bg-white p-5">
+                  <p className="text-sm font-semibold text-[var(--rt-ink)]">
                     {cameraStatus === 'starting'
                       ? 'Starting camera...'
                       : cameraStatus === 'scanning'
@@ -1284,14 +1285,14 @@ export function PlaceViewScreen({
                       value={scanInput}
                       onChange={(event) => setScanInput(event.target.value)}
                       placeholder="https://readytotalk.app/?scan=..."
-                      className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-amber-400"
+                      className="w-full rounded-2xl border border-[var(--rt-border)] bg-[var(--rt-surface-strong)] px-4 py-3 text-sm text-[var(--rt-ink)] outline-none transition focus:border-[var(--rt-accent-strong)]"
                     />
                     <button
                       type="button"
                       onClick={() => {
                         void handleResolveManualScan()
                       }}
-                      className="inline-flex items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 font-semibold text-white transition hover:bg-slate-800"
+                      className="inline-flex items-center justify-center rounded-2xl bg-[var(--rt-accent)] px-5 py-3 font-semibold text-white transition hover:bg-[var(--rt-accent-strong)]"
                     >
                       Preview
                     </button>
@@ -1324,9 +1325,10 @@ function MetricCard({
   tone: 'amber' | 'emerald' | 'slate'
 }) {
   const styles = {
-    amber: 'border-amber-200 bg-amber-50 text-amber-900',
-    emerald: 'border-emerald-200 bg-emerald-50 text-emerald-900',
-    slate: 'border-stone-200 bg-white text-slate-900',
+    amber: 'border-[var(--rt-border)] bg-[var(--rt-accent-soft)] text-[var(--rt-accent)]',
+    emerald:
+      'border-[var(--rt-border)] bg-[color:rgba(27,141,109,0.12)] text-[#0b5d49]',
+    slate: 'border-[var(--rt-border)] bg-white text-[var(--rt-ink)]',
   }[tone]
 
   return (
@@ -1358,28 +1360,28 @@ function PresencePersonCard({
   isPinging: boolean
 }) {
   return (
-    <div className="rounded-3xl border border-stone-200 bg-stone-50 px-4 py-4">
+    <div className="rounded-3xl border border-[var(--rt-border)] bg-[var(--rt-surface-strong)] px-4 py-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-base font-semibold text-slate-950">
+          <p className="text-base font-semibold text-[var(--rt-ink)]">
             {username}
             {isCurrentUser ? (
-              <span className="ml-2 rounded-full bg-slate-900 px-2 py-0.5 text-xs font-semibold uppercase tracking-[0.14em] text-white">
+              <span className="ml-2 rounded-full bg-[var(--rt-accent)] px-2 py-0.5 text-xs font-semibold uppercase tracking-[0.14em] text-white">
                 You
               </span>
             ) : null}
           </p>
-          <p className="mt-2 text-sm leading-6 text-slate-700">
+          <p className="mt-2 text-sm leading-6 text-[var(--rt-ink-soft)]">
             {moodEmoji} {intentSummary || 'Open to a nearby conversation.'}
           </p>
           {participant.isFindable && participant.locationHint ? (
-            <p className="mt-2 text-sm font-medium text-emerald-800">
+            <p className="mt-2 text-sm font-medium text-[var(--rt-accent)]">
               Near {participant.locationHint.toLowerCase()}
             </p>
           ) : null}
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2">
-          <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">
+          <span className="rounded-full bg-[var(--rt-accent-soft)] px-3 py-1 text-xs font-semibold text-[var(--rt-accent)]">
             {participant.isFindable ? 'Findable' : 'Ready'}
           </span>
           {onPing ? (
@@ -1387,7 +1389,7 @@ function PresencePersonCard({
               type="button"
               onClick={onPing}
               disabled={isPinging}
-              className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-900 transition hover:border-stone-300 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-full border border-[var(--rt-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--rt-ink)] transition hover:border-[var(--rt-border-strong)] disabled:cursor-not-allowed disabled:opacity-60"
             >
               <BellRing className="h-3.5 w-3.5" />
               {isPinging ? 'Pinging...' : 'Ping me'}
@@ -1409,12 +1411,14 @@ function PresenceSummaryCard({
   description: string
 }) {
   return (
-    <div className="rounded-3xl border border-stone-200 bg-stone-50 px-4 py-4">
-      <p className="text-sm font-semibold text-slate-900">{label}</p>
-      <p className="mt-2 text-3xl font-black tracking-[-0.04em] text-slate-950">
+    <div className="rounded-3xl border border-[var(--rt-border)] bg-[var(--rt-surface-strong)] px-4 py-4">
+      <p className="text-sm font-semibold text-[var(--rt-ink)]">{label}</p>
+      <p className="mt-2 text-3xl font-black tracking-[-0.04em] text-[var(--rt-ink)]">
         {count}
       </p>
-      <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
+      <p className="mt-2 text-sm leading-6 text-[var(--rt-ink-soft)]">
+        {description}
+      </p>
     </div>
   )
 }
