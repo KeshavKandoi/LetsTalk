@@ -6,8 +6,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import { PlaceViewScreen } from './PlaceViewScreen'
 import type { PlaceAgentState } from '../lib/app-types'
 
-const { refresh, useAgentMock } = vi.hoisted(() => {
-  const refresh = vi.fn(async () => undefined)
+const { useAgentMock } = vi.hoisted(() => {
   const useAgentMock = vi.fn(
     (
       options: {
@@ -45,15 +44,13 @@ const { refresh, useAgentMock } = vi.hoisted(() => {
       })
 
       return {
-        call: refresh,
-        stub: {
-          refresh,
-        },
+        call: vi.fn(async () => undefined),
+        stub: {},
       }
     },
   )
 
-  return { refresh, useAgentMock }
+  return { useAgentMock }
 })
 
 vi.mock('agents/react', () => ({
@@ -179,7 +176,6 @@ function dispatchDeviceMotion(acceleration: { x: number; y: number; z: number })
 afterEach(() => {
   vi.useRealTimers()
   cleanup()
-  refresh.mockClear()
   useAgentMock.mockClear()
   Object.defineProperty(navigator, 'mediaDevices', {
     configurable: true,
@@ -210,10 +206,6 @@ describe('PlaceViewScreen', () => {
         name: 'place-1',
       }),
     )
-
-    await waitFor(() => {
-      expect(refresh).toHaveBeenCalledTimes(1)
-    })
 
     expect(await screen.findByText('7')).toBeTruthy()
   })
@@ -267,6 +259,7 @@ describe('PlaceViewScreen', () => {
     const setReady = vi.fn(async () => undefined)
     const refreshSession = vi.fn(async () => undefined)
     const dateNow = vi.spyOn(Date, 'now')
+    dateNow.mockReturnValue(0)
 
     renderPlaceViewScreen({
       setReady,
@@ -279,7 +272,11 @@ describe('PlaceViewScreen', () => {
 
     dateNow.mockReturnValue(100)
     dispatchDeviceMotion({ x: 0.3, y: -0.5, z: -9.6 })
-    dateNow.mockReturnValue(1500)
+    dateNow.mockReturnValue(1600)
+    dispatchDeviceMotion({ x: 5.4, y: 1.1, z: -3.2 })
+    dateNow.mockReturnValue(1700)
+    dispatchDeviceMotion({ x: 0.3, y: -0.5, z: -9.6 })
+    dateNow.mockReturnValue(3000)
     dispatchDeviceMotion({ x: 0.2, y: 0.1, z: -9.4 })
 
     await waitFor(() => {
@@ -291,6 +288,36 @@ describe('PlaceViewScreen', () => {
     })
 
     expect(refreshSession).toHaveBeenCalledTimes(1)
+    dateNow.mockRestore()
+  })
+
+  it('does not immediately mark someone unready until an upright reading arms it', async () => {
+    Object.defineProperty(window, 'DeviceMotionEvent', {
+      configurable: true,
+      value: class DeviceMotionEvent {},
+    })
+
+    const setReady = vi.fn(async () => undefined)
+    const dateNow = vi.spyOn(Date, 'now')
+    dateNow.mockReturnValue(0)
+
+    renderPlaceViewScreen({
+      setReady,
+    })
+
+    await screen.findByText(
+      'Flip your phone face-down for a moment to leave the ready pool without tapping.',
+    )
+
+    dateNow.mockReturnValue(100)
+    dispatchDeviceMotion({ x: 0.2, y: 0.1, z: -9.6 })
+    dateNow.mockReturnValue(1900)
+    dispatchDeviceMotion({ x: 0.1, y: -0.2, z: -9.5 })
+    dateNow.mockReturnValue(3300)
+    dispatchDeviceMotion({ x: 0.3, y: 0.4, z: -9.7 })
+
+    expect(setReady).not.toHaveBeenCalled()
+
     dateNow.mockRestore()
   })
 
@@ -306,6 +333,7 @@ describe('PlaceViewScreen', () => {
 
     const setReady = vi.fn(async () => undefined)
     const dateNow = vi.spyOn(Date, 'now')
+    dateNow.mockReturnValue(0)
 
     renderPlaceViewScreen({
       setReady,
@@ -321,7 +349,11 @@ describe('PlaceViewScreen', () => {
 
     dateNow.mockReturnValue(200)
     dispatchDeviceMotion({ x: 0, y: 0, z: -9.8 })
-    dateNow.mockReturnValue(1700)
+    dateNow.mockReturnValue(1800)
+    dispatchDeviceMotion({ x: 5.2, y: 0.7, z: -2.8 })
+    dateNow.mockReturnValue(1900)
+    dispatchDeviceMotion({ x: 0, y: 0, z: -9.8 })
+    dateNow.mockReturnValue(3200)
     dispatchDeviceMotion({ x: 0.1, y: 0.2, z: -9.5 })
 
     await waitFor(() => {

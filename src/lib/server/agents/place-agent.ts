@@ -80,11 +80,14 @@ async function loadPlaceSnapshot(
       status: record.status as PlaceAgentState['participants'][number]['status'],
       isFindable: record.isFindable ?? false,
       locationHint: record.locationHint,
-      pingRequestedAt: record.pingRequestedAt,
+      pingRequestedAt: record.pingRequestedAt?.toISOString() ?? null,
       pingRequestedByUserId: record.pingRequestedByUserId,
       pingRequestedByUsername: record.pingRequestedByUsername,
     })),
-    connections: connectionRecords,
+    connections: connectionRecords.map((record) => ({
+      ...record,
+      createdAt: record.createdAt.toISOString(),
+    })),
     updatedAt: new Date().toISOString(),
   }
 }

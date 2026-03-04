@@ -62,6 +62,7 @@ type MotionAccessState =
 const FACE_DOWN_HORIZONTAL_THRESHOLD = 4
 const FACE_DOWN_Z_THRESHOLD = -7
 const FACE_DOWN_HOLD_MS = 1200
+const MOTION_ARM_DELAY_MS = 1500
 
 declare global {
   interface Window {
@@ -348,6 +349,8 @@ export function PlaceViewScreen({
   const scanIntervalRef = useRef<number | null>(null)
   const resolvingScanRef = useRef(false)
   const readyRequestInFlightRef = useRef(false)
+  const motionArmedRef = useRef(false)
+  const motionIgnoreUntilRef = useRef(0)
   const faceDownSinceRef = useRef<number | null>(null)
   const previousConnectionRef = useRef<ActiveConnectionState | null>(
     activeConnection,
@@ -361,6 +364,7 @@ export function PlaceViewScreen({
       setLivePlaceState(nextState)
     },
   })
+  void placeAgent
 
   const username =
     session.user.displayUsername || session.user.username || session.user.name
@@ -452,11 +456,7 @@ export function PlaceViewScreen({
       : null
 
   useEffect(() => {
-    void (
-      placeAgent.stub as {
-        refresh?: () => Promise<unknown>
-      }
-    ).refresh?.().catch(() => undefined)
+    setLivePlaceState(null)
   }, [currentPlace.place.placeId])
 
   useEffect(() => {
@@ -627,6 +627,10 @@ export function PlaceViewScreen({
       )
     } finally {
       readyRequestInFlightRef.current = false
+      motionArmedRef.current = false
+      motionIgnoreUntilRef.current = nextReady
+        ? Date.now() + MOTION_ARM_DELAY_MS
+        : 0
       faceDownSinceRef.current = null
       setPendingAction(null)
     }
@@ -634,16 +638,32 @@ export function PlaceViewScreen({
 
   const handleDeviceMotion = useEffectEvent((event: DeviceMotionEvent) => {
     if (!isReady || isInConversation || readyRequestInFlightRef.current) {
-      faceDownSinceRef.current = null
-      return
-    }
-
-    if (!isFaceDownReading(event.accelerationIncludingGravity)) {
+      motionArmedRef.current = false
       faceDownSinceRef.current = null
       return
     }
 
     const now = Date.now()
+    const isFaceDown = isFaceDownReading(event.accelerationIncludingGravity)
+
+    if (now < motionIgnoreUntilRef.current) {
+      faceDownSinceRef.current = null
+      return
+    }
+
+    if (!motionArmedRef.current) {
+      if (!isFaceDown) {
+        motionArmedRef.current = true
+      }
+
+      faceDownSinceRef.current = null
+      return
+    }
+
+    if (!isFaceDown) {
+      faceDownSinceRef.current = null
+      return
+    }
 
     if (faceDownSinceRef.current === null) {
       faceDownSinceRef.current = now
@@ -665,9 +685,15 @@ export function PlaceViewScreen({
       motionAccessState !== 'active' ||
       typeof window === 'undefined'
     ) {
+      motionArmedRef.current = false
+      motionIgnoreUntilRef.current = 0
       faceDownSinceRef.current = null
       return
     }
+
+    motionArmedRef.current = false
+    motionIgnoreUntilRef.current = Date.now() + MOTION_ARM_DELAY_MS
+    faceDownSinceRef.current = null
 
     window.addEventListener('devicemotion', handleDeviceMotion)
 
@@ -935,6 +961,8 @@ export function PlaceViewScreen({
 
     if (!motionEvent.requestPermission) {
       setMotionAccessState('active')
+      motionArmedRef.current = false
+      motionIgnoreUntilRef.current = Date.now() + MOTION_ARM_DELAY_MS
       return
     }
 
@@ -945,6 +973,8 @@ export function PlaceViewScreen({
 
       if (permission === 'granted') {
         setMotionAccessState('active')
+        motionArmedRef.current = false
+        motionIgnoreUntilRef.current = Date.now() + MOTION_ARM_DELAY_MS
         setMotionNotice('Flip your phone face-down to leave the ready pool.')
         return
       }
