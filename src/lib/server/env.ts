@@ -7,6 +7,7 @@ type AppEnv = Cloudflare.Env & {
   BETTER_AUTH_SECRET?: string
   DB?: D1Database
   GOOGLE_MAPS_API_KEY?: string
+  GOOGLE_MAPS_MAP_ID?: string
   PlaceAgent?: DurableObjectNamespace<PlaceAgent>
   UserAgent?: DurableObjectNamespace<UserAgent>
 }
@@ -47,6 +48,10 @@ export function getGoogleMapsApiKey() {
   }
 
   return apiKey
+}
+
+export function getGoogleMapsMapId() {
+  return appEnv.GOOGLE_MAPS_MAP_ID ?? null
 }
 
 export function getAppBaseUrl() {

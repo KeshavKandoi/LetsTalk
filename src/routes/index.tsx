@@ -8,6 +8,7 @@ import {
   connectFromScan,
   endCurrentConnection,
   getAppState,
+  getGoogleMapsBrowserConfig,
   leaveCurrentPlace,
   joinPlaceAndConnectFromScan,
   previewScanJoin,
@@ -18,7 +19,14 @@ import {
 } from '../lib/server/app-state'
 
 const loadAppState = createServerFn({ method: 'GET' }).handler(async () => {
-  return getAppState()
+  const appState = await getAppState()
+
+  return {
+    ...appState,
+    googleMapsConfig: appState.session
+      ? await getGoogleMapsBrowserConfig()
+      : null,
+  }
 })
 
 const searchNearbyPlaces = createServerFn({ method: 'POST' })
@@ -88,8 +96,14 @@ export const Route = createFileRoute('/')({
 })
 
 function App() {
-  const { session, profile, currentPlace, qrHandoff, activeConnection } =
-    Route.useLoaderData()
+  const {
+    session,
+    profile,
+    currentPlace,
+    qrHandoff,
+    activeConnection,
+    googleMapsConfig,
+  } = Route.useLoaderData()
   const { scan } = Route.useSearch()
   const router = useRouter()
 
@@ -149,6 +163,7 @@ function App() {
       profile={profile}
       refreshSession={refreshSession}
       searchNearbyPlaces={searchNearbyPlaces}
+      googleMapsConfig={googleMapsConfig}
       saveProfile={upsertUserProfile}
     />
   )

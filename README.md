@@ -25,6 +25,16 @@ Set both values in `.dev.vars`:
 
 - `BETTER_AUTH_SECRET`
 - `GOOGLE_MAPS_API_KEY`
+- `GOOGLE_MAPS_MAP_ID` (recommended for Advanced Markers)
+
+The Google key now powers both server-side nearby place search and the client
+map. Enable both the `Places API` and the `Maps JavaScript API`, and lock the
+key down with HTTP referrer restrictions for your app domains.
+
+If you also create a Google Cloud Map ID and set `GOOGLE_MAPS_MAP_ID`, the
+nearby map will use `AdvancedMarkerElement` and the deprecated marker warning
+goes away. Without a Map ID, the app falls back to classic markers so the map
+still works.
 
 3. Apply the local D1 migration:
 
@@ -73,10 +83,16 @@ Before deploying, create a real D1 database and either add its id to `wrangler.j
 wrangler secret put BETTER_AUTH_SECRET
 ```
 
-And the Google Places API key:
+And the Google Maps key:
 
 ```bash
 wrangler secret put GOOGLE_MAPS_API_KEY
+```
+
+And optionally the Map ID used for Advanced Markers:
+
+```bash
+wrangler secret put GOOGLE_MAPS_MAP_ID
 ```
 
 ## Verification

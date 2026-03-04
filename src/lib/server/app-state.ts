@@ -26,6 +26,8 @@ import {
   getAppBaseUrl,
   getGoogleMapsApiKey,
   getUserAgentBinding,
+  getGoogleMapsMapId,
+  getPlaceAgentBinding,
 } from './env'
 
 type SessionResult = Awaited<ReturnType<typeof auth.api.getSession>>
@@ -644,4 +646,13 @@ export async function searchNearbyPlacesForLocation(input: {
     ...nearbyPlace,
     readyCount: readyCountByPlaceId.get(nearbyPlace.placeId) ?? 0,
   }))
+}
+
+export async function getGoogleMapsBrowserConfig() {
+  await requireCurrentSession()
+
+  return {
+    apiKey: getGoogleMapsApiKey(),
+    mapId: getGoogleMapsMapId(),
+  }
 }

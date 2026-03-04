@@ -1,7 +1,14 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Compass, MapPin, QrCode, Sparkles } from 'lucide-react'
+import {
+  ArrowLeft,
+  Compass,
+  MapPin,
+  QrCode,
+  Users,
+} from 'lucide-react'
 import { authClient } from '../lib/auth-client'
+import { NearbyPlacesMap } from './NearbyPlacesMap'
 import type {
   AppSession,
   NearbyPlace,
@@ -32,6 +39,7 @@ export function OnboardingScreen({
   profile,
   refreshSession,
   searchNearbyPlaces,
+  googleMapsConfig,
   saveProfile,
   client = authClient,
 }: {
@@ -44,6 +52,10 @@ export function OnboardingScreen({
       longitude: number
     }
   }) => Promise<NearbyPlace[]>
+  googleMapsConfig: {
+    apiKey: string
+    mapId: string | null
+  } | null
   saveProfile: (input: {
     data: {
       moodEmoji: string
@@ -58,6 +70,10 @@ export function OnboardingScreen({
   )
   const [locationStatus, setLocationStatus] = useState<LocationStatus>('idle')
   const [locationError, setLocationError] = useState<string | null>(null)
+  const [locationCoords, setLocationCoords] = useState<{
+    latitude: number
+    longitude: number
+  } | null>(null)
   const [places, setPlaces] = useState<NearbyPlace[]>([])
   const [placesError, setPlacesError] = useState<string | null>(null)
   const [placesLoading, setPlacesLoading] = useState(false)
@@ -70,6 +86,15 @@ export function OnboardingScreen({
     session.user.displayUsername || session.user.username || session.user.name
   const selectedPlace =
     places.find((place) => place.placeId === selectedPlaceId) ?? null
+  const totalReadyCount = places.reduce(
+    (sum, place) => sum + place.readyCount,
+    0,
+  )
+  const busiestPlace =
+    places.length > 0
+      ? [...places].sort((left, right) => right.readyCount - left.readyCount)[0]
+      : null
+  const isChoosingPlace = locationStatus === 'granted' && !selectedPlace
 
   const handleSignOut = async () => {
     setPendingAction('sign-out')
@@ -93,6 +118,7 @@ export function OnboardingScreen({
   }) => {
     setPlacesLoading(true)
     setPlacesError(null)
+    setLocationCoords(coords)
 
     try {
       const result = await searchNearbyPlaces({
@@ -101,7 +127,11 @@ export function OnboardingScreen({
 
       setPlaces(result)
       setSelectedPlaceId(
-        (currentSelection) => currentSelection || result[0]?.placeId || null,
+        (currentSelection) =>
+          currentSelection &&
+          result.some((place) => place.placeId === currentSelection)
+            ? currentSelection
+            : null,
       )
     } catch (error) {
       setPlacesError(
@@ -148,6 +178,33 @@ export function OnboardingScreen({
     )
   }
 
+  useEffect(() => {
+    if (
+      typeof navigator === 'undefined' ||
+      !navigator.geolocation ||
+      !navigator.permissions?.query
+    ) {
+      return
+    }
+
+    let cancelled = false
+
+    void navigator.permissions
+      .query({ name: 'geolocation' as PermissionName })
+      .then((permissionStatus) => {
+        if (cancelled || permissionStatus.state !== 'granted') {
+          return
+        }
+
+        handleEnableLocation()
+      })
+      .catch(() => undefined)
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const handleSaveProfile = async () => {
     if (!selectedPlace) {
       setSaveError('Choose your place before saving your intro.')
@@ -189,38 +246,75 @@ export function OnboardingScreen({
           </div>
 
           <h1 className="mt-5 text-4xl font-black leading-none tracking-[-0.05em] sm:text-5xl">
-            Ready when you are, {username}.
+            See who is ready nearby, {username}.
           </h1>
           <p className="mt-4 max-w-xl text-base leading-7 text-slate-700 sm:text-lg">
-            Turn on location, confirm where you are, then set the tone before
-            you show your QR code. Email stays out of the product.
+            Open the app, share your location, and check which places are alive
+            before you walk in. When one feels right, claim your spot and set
+            the tone there.
           </p>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
             <StepCard
               icon={<MapPin className="h-5 w-5" />}
               title="1. Share location"
-              description="You can sign up without it, but scans and ready state stay locked until location is enabled."
+              description="You can sign up without it, but nearby readiness stays locked until location is enabled."
             />
             <StepCard
-              icon={<Sparkles className="h-5 w-5" />}
-              title="2. Set the vibe"
-              description="Pick a mood and write a short line about what you want to talk about right now."
+              icon={<Users className="h-5 w-5" />}
+              title="2. Check nearby"
+              description="See which cafes or spots already have people ready before you choose a place."
             />
             <StepCard
               icon={<QrCode className="h-5 w-5" />}
-              title="3. Show your QR"
-              description="Nearby people can only connect by scanning when you are in the same place."
+              title="3. Join and talk"
+              description="Set your vibe for that place, then use your QR once you actually want to connect."
             />
           </div>
 
           <div className="mt-8 rounded-[2rem] border border-stone-200 bg-white/78 p-5 text-sm text-slate-700 shadow-sm">
-            <p className="font-semibold text-slate-950">What happens next</p>
-            <p className="mt-2 leading-6">
-              Saving your intro now also checks you into the selected place as
-              <span className="font-medium text-slate-950"> present</span>.
-              The next screen is your live place view.
-            </p>
+            {locationStatus === 'granted' && places.length > 0 ? (
+              <>
+                <p className="font-semibold text-slate-950">Nearby right now</p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-3xl border border-stone-200 bg-stone-50 px-4 py-4">
+                    <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+                      Across these places
+                    </p>
+                    <p className="mt-2 text-3xl font-black tracking-[-0.04em] text-slate-950">
+                      {totalReadyCount}
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                      people marked ready nearby
+                    </p>
+                  </div>
+                  <div className="rounded-3xl border border-stone-200 bg-stone-50 px-4 py-4">
+                    <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+                      Most active place
+                    </p>
+                    <p className="mt-2 text-lg font-semibold text-slate-950">
+                      {busiestPlace?.name ?? 'No nearby place yet'}
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                      {busiestPlace
+                        ? busiestPlace.readyCount === 1
+                          ? '1 person ready there now'
+                          : `${busiestPlace.readyCount} people ready there now`
+                        : 'Move a little closer to a venue.'}
+                    </p>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="font-semibold text-slate-950">What happens next</p>
+                <p className="mt-2 leading-6">
+                  Once you pick a place and save your intro, you are checked in
+                  there as <span className="font-medium text-slate-950">present</span>.
+                  The next screen is your live place view.
+                </p>
+              </>
+            )}
           </div>
         </section>
 
@@ -228,9 +322,11 @@ export function OnboardingScreen({
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm uppercase tracking-[0.24em] text-amber-700">
-                Setup
+                {selectedPlace ? 'Join place' : 'Nearby now'}
               </p>
-              <h2 className="mt-2 text-3xl font-bold">Get ready nearby</h2>
+              <h2 className="mt-2 text-3xl font-bold">
+                {selectedPlace ? 'Set your vibe here' : 'Nearby map and list'}
+              </h2>
             </div>
 
             <button
@@ -270,163 +366,163 @@ export function OnboardingScreen({
             ) : null}
             {locationStatus === 'granted' ? (
               <p className="mt-3 text-sm text-emerald-700">
-                Location enabled. Confirm the place below.
+                Location enabled. Nearby places are live below.
               </p>
             ) : null}
           </div>
 
-          <div className="mt-6">
-            <p className="text-sm font-semibold text-slate-900">
-              Nearby places
-            </p>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              We use Google Places for the MVP. Pick the closest match before
-              you set your mood and intro.
-            </p>
+          {isChoosingPlace ? (
+            <div className="mt-6">
+              <p className="text-sm font-semibold text-slate-900">
+                Nearby places
+              </p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                We use Google Places for the MVP. Start with the map, then pick
+                the place that feels right for right now.
+              </p>
 
-            {placesLoading ? (
-              <div className="mt-4 rounded-3xl border border-dashed border-stone-200 px-4 py-5 text-sm text-slate-500">
-                Loading nearby places...
-              </div>
-            ) : null}
+              {placesLoading ? (
+                <div className="mt-4 rounded-3xl border border-dashed border-stone-200 px-4 py-5 text-sm text-slate-500">
+                  Loading nearby places...
+                </div>
+              ) : null}
 
-            {!placesLoading && places.length > 0 ? (
-              <div className="mt-4 space-y-3">
-                {places.map((place) => {
-                  const isSelected = place.placeId === selectedPlaceId
+              {!placesLoading && places.length > 0 ? (
+                <>
+                  <NearbyPlacesMap
+                    places={places}
+                    selectedPlaceId={selectedPlaceId}
+                    locationCoords={locationCoords}
+                    onSelectPlace={setSelectedPlaceId}
+                    googleMapsConfig={googleMapsConfig}
+                  />
 
-                  return (
-                    <button
-                      key={place.placeId}
-                      type="button"
-                      onClick={() => setSelectedPlaceId(place.placeId)}
-                      className={`w-full rounded-3xl border px-4 py-4 text-left transition ${
-                        isSelected
-                          ? 'border-slate-900 bg-slate-950 text-white shadow-lg'
-                          : 'border-stone-200 bg-white text-slate-900 hover:border-stone-300'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <p className="font-semibold">{place.name}</p>
-                        <span
-                          className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${
-                            isSelected
-                              ? 'bg-white/15 text-white'
-                              : place.readyCount > 0
-                                ? 'bg-emerald-100 text-emerald-800'
-                                : 'bg-stone-100 text-slate-600'
-                          }`}
-                        >
-                          {place.readyCount === 1
-                            ? '1 ready'
-                            : `${place.readyCount} ready`}
-                        </span>
-                      </div>
-                      <p
-                        className={`mt-1 text-sm leading-6 ${
-                          isSelected ? 'text-slate-200' : 'text-slate-600'
-                        }`}
-                      >
-                        {place.address}
-                      </p>
-                      <p
-                        className={`mt-3 text-xs font-medium uppercase tracking-[0.16em] ${
-                          isSelected ? 'text-slate-300' : 'text-slate-500'
-                        }`}
-                      >
-                        {place.readyCount > 0
-                          ? 'People are ready here now'
-                          : 'Quiet right now'}
-                      </p>
-                    </button>
-                  )
-                })}
-              </div>
-            ) : null}
+                  <div className="mt-4 space-y-3">
+                    {places.map((place) => (
+                      <PlaceChoiceCard
+                        key={place.placeId}
+                        place={place}
+                        isSelected={place.placeId === selectedPlaceId}
+                        onSelect={() => setSelectedPlaceId(place.placeId)}
+                      />
+                    ))}
+                  </div>
+                </>
+              ) : null}
 
-            {!placesLoading && locationStatus === 'granted' && places.length === 0 ? (
-              <div className="mt-4 rounded-3xl border border-dashed border-stone-200 px-4 py-5 text-sm text-slate-500">
-                No nearby place matched yet. Try again when you are closer to a
-                venue.
-              </div>
-            ) : null}
+              {!placesLoading &&
+              locationStatus === 'granted' &&
+              places.length === 0 ? (
+                <div className="mt-4 rounded-3xl border border-dashed border-stone-200 px-4 py-5 text-sm text-slate-500">
+                  No nearby place matched yet. Try again when you are closer to
+                  a venue.
+                </div>
+              ) : null}
 
-            {placesError ? (
-              <p className="mt-3 text-sm text-rose-700">{placesError}</p>
-            ) : null}
-          </div>
-
-          <div className="mt-6 rounded-3xl border border-stone-200 bg-stone-50 p-5">
-            <p className="text-sm font-semibold text-slate-900">
-              Mood and intro
-            </p>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              This becomes your short summary for the first version. AI can
-              refine it later, but we are stubbing that part for now.
-            </p>
-
-            <div className="mt-4 flex flex-wrap gap-3">
-              {MOOD_OPTIONS.map((option) => {
-                const isSelected = option === moodEmoji
-
-                return (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => setMoodEmoji(option)}
-                    className={`rounded-2xl border px-4 py-3 text-2xl transition ${
-                      isSelected
-                        ? 'border-slate-900 bg-slate-950 text-white'
-                        : 'border-stone-200 bg-white hover:border-stone-300'
-                    }`}
-                    aria-pressed={isSelected}
-                  >
-                    {option}
-                  </button>
-                )
-              })}
+              {placesError ? (
+                <p className="mt-3 text-sm text-rose-700">{placesError}</p>
+              ) : null}
             </div>
+          ) : null}
 
-            <label className="mt-4 block">
-              <span className="mb-2 block text-sm font-medium text-slate-700">
-                What do you want to talk about?
-              </span>
-              <textarea
-                value={intentText}
-                onChange={(event) => setIntentText(event.target.value)}
-                rows={4}
-                placeholder="Coffee break, startup ideas, a quiet walk, meeting someone new..."
-                className="w-full rounded-3xl border border-stone-200 bg-white px-4 py-3 text-base text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-200"
-              />
-            </label>
+          {selectedPlace ? (
+            <div className="mt-6 rounded-3xl border border-stone-200 bg-stone-50 p-5">
+              <button
+                type="button"
+                onClick={() => setSelectedPlaceId(null)}
+                className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-stone-300 hover:text-slate-950"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to nearby places
+              </button>
 
-            {selectedPlace ? (
-              <p className="mt-4 text-sm text-slate-600">
-                Saving for{' '}
-                <span className="font-medium text-slate-950">
-                  {selectedPlace.name}
-                </span>
-                .
-              </p>
-            ) : (
-              <p className="mt-4 text-sm text-slate-500">
-                Choose a place first to unlock this step.
-              </p>
-            )}
+              <div className="mt-4 rounded-3xl border border-stone-200 bg-white px-4 py-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-lg font-semibold text-slate-950">
+                      {selectedPlace.name}
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                      {selectedPlace.address}
+                    </p>
+                  </div>
+                  <span className="shrink-0 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">
+                    {selectedPlace.readyCount === 1
+                      ? '1 ready'
+                      : `${selectedPlace.readyCount} ready`}
+                  </span>
+                </div>
+              </div>
 
-            {saveError ? (
-              <p className="mt-3 text-sm text-rose-700">{saveError}</p>
-            ) : null}
+              <div className="mt-5">
+                <p className="text-sm font-semibold text-slate-900">
+                  Mood and intro
+                </p>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  This becomes your short summary for the first version. AI can
+                  refine it later, but we are stubbing that part for now.
+                </p>
 
-            <button
-              type="button"
-              onClick={handleSaveProfile}
-              disabled={pendingAction === 'save' || !selectedPlace}
-              className="mt-5 inline-flex w-full items-center justify-center rounded-2xl bg-amber-500 px-5 py-3 font-semibold text-white transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {pendingAction === 'save' ? 'Saving intro...' : 'Save my intro'}
-            </button>
-          </div>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  {MOOD_OPTIONS.map((option) => {
+                    const isSelected = option === moodEmoji
+
+                    return (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => setMoodEmoji(option)}
+                        className={`rounded-2xl border px-4 py-3 text-2xl transition ${
+                          isSelected
+                            ? 'border-slate-900 bg-slate-950 text-white'
+                            : 'border-stone-200 bg-white hover:border-stone-300'
+                        }`}
+                        aria-pressed={isSelected}
+                      >
+                        {option}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                <label className="mt-4 block">
+                  <span className="mb-2 block text-sm font-medium text-slate-700">
+                    What do you want to talk about?
+                  </span>
+                  <textarea
+                    value={intentText}
+                    onChange={(event) => setIntentText(event.target.value)}
+                    rows={4}
+                    placeholder="Coffee break, startup ideas, a quiet walk, meeting someone new..."
+                    className="w-full rounded-3xl border border-stone-200 bg-white px-4 py-3 text-base text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-200"
+                  />
+                </label>
+
+                <p className="mt-4 text-sm text-slate-600">
+                  Saving for{' '}
+                  <span className="font-medium text-slate-950">
+                    {selectedPlace.name}
+                  </span>
+                  .
+                </p>
+
+                {saveError ? (
+                  <p className="mt-3 text-sm text-rose-700">{saveError}</p>
+                ) : null}
+
+                <button
+                  type="button"
+                  onClick={handleSaveProfile}
+                  disabled={pendingAction === 'save'}
+                  className="mt-5 inline-flex w-full items-center justify-center rounded-2xl bg-amber-500 px-5 py-3 font-semibold text-white transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {pendingAction === 'save'
+                    ? 'Saving intro...'
+                    : 'Join this place'}
+                </button>
+              </div>
+            </div>
+          ) : null}
         </section>
       </div>
     </main>
@@ -450,5 +546,56 @@ function StepCard({
       <h3 className="mt-4 text-lg font-semibold">{title}</h3>
       <p className="mt-2 text-sm leading-7 text-slate-700">{description}</p>
     </div>
+  )
+}
+
+function PlaceChoiceCard({
+  place,
+  isSelected,
+  onSelect,
+}: {
+  place: NearbyPlace
+  isSelected: boolean
+  onSelect: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`w-full rounded-3xl border px-4 py-4 text-left transition ${
+        isSelected
+          ? 'border-slate-900 bg-slate-950 text-white shadow-lg'
+          : 'border-stone-200 bg-white text-slate-900 hover:border-stone-300'
+      }`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <p className="font-semibold">{place.name}</p>
+        <span
+          className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${
+            isSelected
+              ? 'bg-white/15 text-white'
+              : place.readyCount > 0
+                ? 'bg-emerald-100 text-emerald-800'
+                : 'bg-stone-100 text-slate-600'
+          }`}
+        >
+          {place.readyCount === 1 ? '1 ready' : `${place.readyCount} ready`}
+        </span>
+      </div>
+      <p
+        className={`mt-1 text-sm leading-6 ${
+          isSelected ? 'text-slate-200' : 'text-slate-600'
+        }`}
+      >
+        {place.address}
+      </p>
+      <p
+        className={`mt-3 text-xs font-medium uppercase tracking-[0.16em] ${
+          isSelected ? 'text-slate-300' : 'text-slate-500'
+        }`}
+      >
+        {place.readyCount > 0 ? 'People are ready here now' : 'Quiet right now'}
+      </p>
+    </button>
   )
 }
