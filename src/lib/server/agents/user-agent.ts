@@ -3,6 +3,13 @@ import { and, desc, eq, or } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
 import type { PresenceStatus, UserAgentState } from '../../app-types'
 import type { PlaceAgent } from './place-agent'
+import {
+  assertCanConnectAtPlace,
+  assertCanSetReady,
+  buildConversationIntentSummary,
+  buildIntentSummary,
+  normalizeIntentText,
+} from './user-agent-logic'
 import * as schema from '../db/schema'
 import {
   handoffConnection,
@@ -18,18 +25,6 @@ type UserAgentEnv = Cloudflare.Env & {
 
 function getDisplayUsername(record: typeof user.$inferSelect) {
   return record.displayUsername || record.username || record.name
-}
-
-function buildIntentSummary(intentText: string | null) {
-  if (!intentText) {
-    return 'Open to a nearby conversation.'
-  }
-
-  if (intentText.length <= 72) {
-    return intentText
-  }
-
-  return `${intentText.slice(0, 69).trimEnd()}...`
 }
 
 async function loadActiveConnection(
@@ -226,7 +221,7 @@ export class UserAgent extends Agent<UserAgentEnv, UserAgentState> {
 
     const db = drizzle(this.env.DB, { schema })
     const now = new Date()
-    const intentText = input.intentText.replace(/\s+/g, ' ').trim() || null
+    const intentText = normalizeIntentText(input.intentText)
     const intentSummary = buildIntentSummary(intentText)
     const [existingProfile] = await db
       .select()
@@ -288,8 +283,10 @@ export class UserAgent extends Agent<UserAgentEnv, UserAgentState> {
         userId: this.name,
         moodEmoji: input.moodEmoji,
         intentText: existingProfile?.intentText ?? null,
-        intentSummary:
-          existingProfile?.intentSummary ?? buildIntentSummary(existingProfile?.intentText ?? null),
+        intentSummary: buildConversationIntentSummary(
+          existingProfile?.intentSummary ?? null,
+          existingProfile?.intentText ?? null,
+        ),
         status: existingProfile?.status ?? 'offline',
         currentPlaceId: existingProfile?.currentPlaceId ?? null,
         createdAt: existingProfile?.createdAt ?? now,
@@ -317,7 +314,7 @@ export class UserAgent extends Agent<UserAgentEnv, UserAgentState> {
       .from(userProfile)
       .where(eq(userProfile.userId, this.name))
       .limit(1)
-    const intentText = input.intentText.replace(/\s+/g, ' ').trim() || null
+    const intentText = normalizeIntentText(input.intentText)
     const intentSummary = buildIntentSummary(intentText)
 
     await db
@@ -365,8 +362,10 @@ export class UserAgent extends Agent<UserAgentEnv, UserAgentState> {
         userId: this.name,
         moodEmoji: existingProfile?.moodEmoji ?? null,
         intentText: existingProfile?.intentText ?? null,
-        intentSummary:
-          existingProfile?.intentSummary ?? buildIntentSummary(existingProfile?.intentText ?? null),
+        intentSummary: buildConversationIntentSummary(
+          existingProfile?.intentSummary ?? null,
+          existingProfile?.intentText ?? null,
+        ),
         status: 'present',
         currentPlaceId: input.placeId,
         createdAt: existingProfile?.createdAt ?? now,
@@ -409,13 +408,7 @@ export class UserAgent extends Agent<UserAgentEnv, UserAgentState> {
       .where(eq(userProfile.userId, this.name))
       .limit(1)
 
-    if (!profileRecord?.currentPlaceId) {
-      throw new Error('Pick your current place before changing your status.')
-    }
-
-    if (profileRecord.status === 'in_conversation') {
-      throw new Error('End your current conversation before changing your status.')
-    }
+    assertCanSetReady(profileRecord)
 
     await db
       .update(userProfile)
@@ -479,8 +472,10 @@ export class UserAgent extends Agent<UserAgentEnv, UserAgentState> {
         userId: this.name,
         moodEmoji: existingProfile?.moodEmoji ?? null,
         intentText: existingProfile?.intentText ?? null,
-        intentSummary:
-          existingProfile?.intentSummary ?? buildIntentSummary(existingProfile?.intentText ?? null),
+        intentSummary: buildConversationIntentSummary(
+          existingProfile?.intentSummary ?? null,
+          existingProfile?.intentText ?? null,
+        ),
         status: 'in_conversation',
         currentPlaceId: input.placeId,
         createdAt: existingProfile?.createdAt ?? now,
@@ -522,34 +517,18 @@ export class UserAgent extends Agent<UserAgentEnv, UserAgentState> {
       .where(eq(userProfile.userId, input.counterpartUserId))
       .limit(1)
 
-    if (!viewerProfile?.currentPlaceId || viewerProfile.currentPlaceId !== input.placeId) {
-      throw new Error('You need to be checked into the same place first.')
-    }
-
-    if (viewerProfile.status === 'in_conversation') {
-      throw new Error('End your current conversation before starting another one.')
-    }
-
-    if (!targetProfile?.currentPlaceId || targetProfile.currentPlaceId !== input.placeId) {
-      throw new Error('They are no longer checked into this place.')
-    }
-
-    if (targetProfile.status !== 'ready') {
-      throw new Error('They are not marked ready right now.')
-    }
-
     const existingConnection = await loadActiveConnection(this.env.DB, this.name)
-    if (existingConnection) {
-      throw new Error('You are already connected with someone nearby.')
-    }
-
     const targetConnection = await loadActiveConnection(
       this.env.DB,
       input.counterpartUserId,
     )
-    if (targetConnection) {
-      throw new Error('They are already in a conversation.')
-    }
+    assertCanConnectAtPlace({
+      viewerProfile,
+      targetProfile,
+      placeId: input.placeId,
+      viewerHasActiveConnection: Boolean(existingConnection),
+      targetHasActiveConnection: Boolean(targetConnection),
+    })
 
     const connectionId = crypto.randomUUID()
 
@@ -607,26 +586,21 @@ export class UserAgent extends Agent<UserAgentEnv, UserAgentState> {
       .where(eq(userProfile.userId, input.counterpartUserId))
       .limit(1)
 
-    if (!targetProfile?.currentPlaceId || targetProfile.currentPlaceId !== input.placeId) {
-      throw new Error('They are no longer checked into this place.')
-    }
-
-    if (targetProfile.status !== 'ready') {
-      throw new Error('They are not marked ready right now.')
-    }
-
     const existingConnection = await loadActiveConnection(this.env.DB, this.name)
-    if (existingConnection) {
-      throw new Error('You are already connected with someone nearby.')
-    }
-
     const targetConnection = await loadActiveConnection(
       this.env.DB,
       input.counterpartUserId,
     )
-    if (targetConnection) {
-      throw new Error('They are already in a conversation.')
-    }
+    assertCanConnectAtPlace({
+      viewerProfile: {
+        currentPlaceId: input.placeId,
+        status: viewerProfile?.status ?? 'offline',
+      },
+      targetProfile,
+      placeId: input.placeId,
+      viewerHasActiveConnection: Boolean(existingConnection),
+      targetHasActiveConnection: Boolean(targetConnection),
+    })
 
     const endedConnections = await endAcceptedConnectionsForUser(this.env.DB, this.name)
 
@@ -636,9 +610,10 @@ export class UserAgent extends Agent<UserAgentEnv, UserAgentState> {
         userId: this.name,
         moodEmoji: viewerProfile?.moodEmoji ?? null,
         intentText: viewerProfile?.intentText ?? null,
-        intentSummary:
-          viewerProfile?.intentSummary ??
-          buildIntentSummary(viewerProfile?.intentText ?? null),
+        intentSummary: buildConversationIntentSummary(
+          viewerProfile?.intentSummary ?? null,
+          viewerProfile?.intentText ?? null,
+        ),
         status: 'in_conversation',
         currentPlaceId: input.placeId,
         createdAt: viewerProfile?.createdAt ?? now,
