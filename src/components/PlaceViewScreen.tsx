@@ -126,15 +126,55 @@ export function PlaceViewScreen({
 
   const username =
     session.user.displayUsername || session.user.username || session.user.name
-  const isReady = profile.status === 'ready'
-  const isInConversation = profile.status === 'in_conversation'
+  const liveParticipant =
+    livePlaceState?.participants?.find(
+      (participant) => participant.userId === session.user.id,
+    ) ?? null
+  const liveConnection =
+    livePlaceState?.connections?.find(
+      (connection) =>
+        connection.requesterUserId === session.user.id ||
+        connection.recipientUserId === session.user.id,
+    ) ?? null
+  const counterpartParticipant =
+    liveConnection && livePlaceState
+      ? livePlaceState.participants.find(
+          (participant) =>
+            participant.userId !== session.user.id &&
+            (participant.userId === liveConnection.requesterUserId ||
+              participant.userId === liveConnection.recipientUserId),
+        ) ?? null
+      : null
+  const liveStatus = liveParticipant?.status ?? profile.status
+  const resolvedActiveConnection =
+    liveParticipant && livePlaceState
+      ? liveConnection && counterpartParticipant
+        ? {
+            id: liveConnection.id,
+            placeId: currentPlace.place.placeId,
+            createdAt: liveConnection.createdAt,
+            counterpart: {
+              userId: counterpartParticipant.userId,
+              username: counterpartParticipant.username,
+              moodEmoji: counterpartParticipant.moodEmoji,
+              intentSummary: counterpartParticipant.intentSummary,
+            },
+          }
+        : null
+      : activeConnection
+  const isReady = liveStatus === 'ready'
+  const isInConversation = liveStatus === 'in_conversation'
   const readyCount =
     livePlaceState?.placeId === currentPlace.place.placeId
       ? livePlaceState.readyCount
       : currentPlace.readyCount
 
   useEffect(() => {
-    void placeAgent.stub.refresh().catch(() => undefined)
+    void (
+      placeAgent.stub as {
+        refresh?: () => Promise<unknown>
+      }
+    ).refresh?.().catch(() => undefined)
   }, [currentPlace.place.placeId])
 
   useEffect(() => {
@@ -543,7 +583,7 @@ export function PlaceViewScreen({
                   src={qrDataUrl}
                   alt={`Ready to Talk QR for ${username}`}
                   className={`mx-auto h-48 w-48 rounded-3xl border border-stone-200 bg-slate-50 p-3 ${
-                    qrHandoff.isActive ? '' : 'opacity-40'
+                    liveStatus === 'ready' ? '' : 'opacity-40'
                   }`}
                 />
               ) : (
@@ -560,25 +600,25 @@ export function PlaceViewScreen({
                 }`}
               >
                 <Check className="h-4 w-4" />
-                {qrHandoff.isActive
+                {liveStatus === 'ready'
                   ? 'Live while you are ready'
                   : 'Set yourself ready to make this live'}
               </div>
             </div>
           </div>
 
-          {activeConnection ? (
+          {resolvedActiveConnection ? (
             <div className="mt-6 rounded-3xl border border-emerald-200 bg-emerald-50 p-5">
               <div className="flex items-center gap-3 text-emerald-900">
                 <MessageCircle className="h-5 w-5" />
                 <p className="text-sm font-semibold">Current conversation</p>
               </div>
               <p className="mt-3 text-xl font-semibold text-slate-950">
-                {activeConnection.counterpart.username}
+                {resolvedActiveConnection.counterpart.username}
               </p>
               <p className="mt-2 text-sm leading-6 text-slate-700">
-                {activeConnection.counterpart.moodEmoji}{' '}
-                {activeConnection.counterpart.intentSummary}
+                {resolvedActiveConnection.counterpart.moodEmoji}{' '}
+                {resolvedActiveConnection.counterpart.intentSummary}
               </p>
             </div>
           ) : null}

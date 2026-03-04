@@ -3,6 +3,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import { PlaceViewScreen } from './PlaceViewScreen'
+import type { PlaceAgentState } from '../lib/app-types'
 
 const { refresh, useAgentMock } = vi.hoisted(() => {
   const refresh = vi.fn(async () => undefined)
@@ -10,12 +11,7 @@ const { refresh, useAgentMock } = vi.hoisted(() => {
     (
       options: {
         onStateUpdate?: (
-          state: {
-            placeId: string
-            readyCount: number
-            checkedInCount: number
-            updatedAt: string | null
-          },
+          state: PlaceAgentState,
           source: 'server' | 'client',
         ) => void
       },
@@ -26,6 +22,16 @@ const { refresh, useAgentMock } = vi.hoisted(() => {
             placeId: 'place-1',
             readyCount: 7,
             checkedInCount: 12,
+            participants: [
+              {
+                userId: 'user-1',
+                username: 'readytalk',
+                moodEmoji: '🙂',
+                intentSummary: 'Open to a quick hello.',
+                status: 'ready',
+              },
+            ],
+            connections: [],
             updatedAt: '2026-03-04T19:30:00.000Z',
           },
           'server',
@@ -33,6 +39,7 @@ const { refresh, useAgentMock } = vi.hoisted(() => {
       })
 
       return {
+        call: refresh,
         stub: {
           refresh,
         },

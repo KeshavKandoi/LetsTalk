@@ -310,7 +310,7 @@ async function endAcceptedConnectionsForUser(userId: string) {
         await db
           .update(userProfile)
           .set({
-            status: 'present',
+            status: 'ready',
             updatedAt: now,
           })
           .where(eq(userProfile.userId, nextUserId))

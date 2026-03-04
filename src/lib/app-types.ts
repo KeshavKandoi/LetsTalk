@@ -52,7 +52,24 @@ export type PlaceAgentState = {
   placeId: string
   readyCount: number
   checkedInCount: number
+  participants: PlaceAgentParticipantState[]
+  connections: PlaceAgentConnectionState[]
   updatedAt: string | null
+}
+
+export type PlaceAgentParticipantState = {
+  userId: string
+  username: string
+  moodEmoji: string | null
+  intentSummary: string | null
+  status: PresenceStatus
+}
+
+export type PlaceAgentConnectionState = {
+  id: string
+  requesterUserId: string
+  recipientUserId: string
+  createdAt: string | Date
 }
 
 export type QrHandoffState = {
