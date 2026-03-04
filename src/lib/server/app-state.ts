@@ -1,4 +1,4 @@
-import { and, desc, eq, or, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, or, sql } from 'drizzle-orm'
 import { getAgentByName } from 'agents'
 import { getRequestHeaders } from '@tanstack/react-start/server'
 import type {
@@ -71,13 +71,17 @@ function mapUserProfile(
   }
 }
 
-function mapPlace(record: typeof place.$inferSelect): NearbyPlace {
+function mapPlace(
+  record: typeof place.$inferSelect,
+  readyCount = 0,
+): NearbyPlace {
   return {
     placeId: record.placeId,
     name: record.name,
     address: record.address,
     lat: record.lat,
     lng: record.lng,
+    readyCount,
   }
 }
 
@@ -397,7 +401,7 @@ export async function getAppState(): Promise<AppState> {
         )
 
       currentPlace = {
-        place: mapPlace(currentPlaceRecord),
+        place: mapPlace(currentPlaceRecord, readyCount),
         readyCount,
       }
 
@@ -797,6 +801,7 @@ function mapGooglePlace(result: GoogleNearbyPlace): NearbyPlace | null {
     address: result.formattedAddress,
     lat: result.location.latitude,
     lng: result.location.longitude,
+    readyCount: 0,
   }
 }
 
@@ -866,5 +871,42 @@ export async function searchNearbyPlacesForLocation(input: {
       .onConflictDoNothing()
   }
 
-  return places
+  if (places.length === 0) {
+    return places
+  }
+
+  const readyCountRows = await db
+    .select({
+      placeId: userProfile.currentPlaceId,
+      readyCount: sql<number>`count(*)`,
+    })
+    .from(userProfile)
+    .where(
+      and(
+        inArray(
+          userProfile.currentPlaceId,
+          places.map((nearbyPlace) => nearbyPlace.placeId),
+        ),
+        eq(userProfile.status, 'ready'),
+      ),
+    )
+    .groupBy(userProfile.currentPlaceId)
+
+  const readyCountByPlaceId = new Map(
+    readyCountRows
+      .filter(
+        (
+          row,
+        ): row is {
+          placeId: string
+          readyCount: number
+        } => Boolean(row.placeId),
+      )
+      .map((row) => [row.placeId, row.readyCount]),
+  )
+
+  return places.map((nearbyPlace) => ({
+    ...nearbyPlace,
+    readyCount: readyCountByPlaceId.get(nearbyPlace.placeId) ?? 0,
+  }))
 }

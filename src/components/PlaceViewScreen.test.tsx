@@ -94,6 +94,7 @@ describe('PlaceViewScreen', () => {
             address: '123 Main St',
             lat: 1,
             lng: 2,
+            readyCount: 2,
           },
           readyCount: 2,
         }}

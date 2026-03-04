@@ -55,6 +55,11 @@ type PlaceViewClientLike = {
   signOut: () => Promise<AuthResult>
 }
 
+type ConversationNoticeState = {
+  title: string
+  description: string
+}
+
 export function PlaceViewScreen({
   session,
   profile,
@@ -107,14 +112,20 @@ export function PlaceViewScreen({
   const [scanPreview, setScanPreview] = useState<ConnectionPreviewState | null>(
     null,
   )
+  const [conversationNotice, setConversationNotice] =
+    useState<ConversationNoticeState | null>(null)
   const [scanError, setScanError] = useState<string | null>(null)
   const [cameraStatus, setCameraStatus] = useState<
     'idle' | 'starting' | 'scanning' | 'unsupported'
   >('idle')
+  const [conversationNow, setConversationNow] = useState(() => Date.now())
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const scanIntervalRef = useRef<number | null>(null)
   const resolvingScanRef = useRef(false)
+  const previousConnectionRef = useRef<ActiveConnectionState | null>(
+    activeConnection,
+  )
 
   const placeAgent = useAgent<PlaceAgent, PlaceAgentState>({
     agent: 'place-agent',
@@ -164,10 +175,45 @@ export function PlaceViewScreen({
       : activeConnection
   const isReady = liveStatus === 'ready'
   const isInConversation = liveStatus === 'in_conversation'
+  const liveParticipants =
+    livePlaceState?.placeId === currentPlace.place.placeId
+      ? livePlaceState.participants
+      : []
+  const readyParticipants = [...liveParticipants]
+    .filter((participant) => participant.status === 'ready')
+    .sort((left, right) => {
+      if (left.userId === session.user.id) {
+        return -1
+      }
+
+      if (right.userId === session.user.id) {
+        return 1
+      }
+
+      return left.username.localeCompare(right.username)
+    })
+  const presentParticipants = liveParticipants.filter(
+    (participant) => participant.status === 'present',
+  )
+  const activeConversationCount =
+    livePlaceState?.placeId === currentPlace.place.placeId
+      ? livePlaceState.connections.length
+      : 0
   const readyCount =
     livePlaceState?.placeId === currentPlace.place.placeId
       ? livePlaceState.readyCount
       : currentPlace.readyCount
+  const checkedInCount =
+    livePlaceState?.placeId === currentPlace.place.placeId
+      ? livePlaceState.checkedInCount
+      : Math.max(currentPlace.readyCount, readyParticipants.length)
+  const conversationElapsed =
+    resolvedActiveConnection !== null
+      ? formatConversationElapsed(
+          resolvedActiveConnection.createdAt,
+          conversationNow,
+        )
+      : null
 
   useEffect(() => {
     void (
@@ -176,6 +222,59 @@ export function PlaceViewScreen({
       }
     ).refresh?.().catch(() => undefined)
   }, [currentPlace.place.placeId])
+
+  useEffect(() => {
+    if (resolvedActiveConnection) {
+      previousConnectionRef.current = resolvedActiveConnection
+      setConversationNotice(null)
+      return
+    }
+
+    const previousConnection = previousConnectionRef.current
+
+    if (!previousConnection) {
+      return
+    }
+
+    previousConnectionRef.current = null
+    setConversationNotice({
+      title: 'Conversation ended',
+      description:
+        liveStatus === 'ready'
+          ? `You and ${previousConnection.counterpart.username} are back in the ready pool.`
+          : `You and ${previousConnection.counterpart.username} are no longer connected. Set yourself ready again whenever you want.`,
+    })
+  }, [liveStatus, resolvedActiveConnection])
+
+  useEffect(() => {
+    if (!conversationNotice) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setConversationNotice(null)
+    }, 5000)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [conversationNotice])
+
+  useEffect(() => {
+    if (!resolvedActiveConnection) {
+      return
+    }
+
+    setConversationNow(Date.now())
+
+    const intervalId = window.setInterval(() => {
+      setConversationNow(Date.now())
+    }, 30000)
+
+    return () => {
+      window.clearInterval(intervalId)
+    }
+  }, [resolvedActiveConnection?.id])
 
   useEffect(() => {
     let cancelled = false
@@ -469,12 +568,18 @@ export function PlaceViewScreen({
             QR code when you want someone nearby to connect.
           </p>
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-2">
+          <div className="mt-8 grid gap-4 sm:grid-cols-3">
             <MetricCard
               icon={<Users className="h-5 w-5" />}
               label="Ready right now"
               value={String(readyCount)}
               tone="amber"
+            />
+            <MetricCard
+              icon={<Radio className="h-5 w-5" />}
+              label="Checked in now"
+              value={String(checkedInCount)}
+              tone="slate"
             />
             <MetricCard
               icon={<MapPin className="h-5 w-5" />}
@@ -501,6 +606,53 @@ export function PlaceViewScreen({
               {currentPlace.place.address}
             </p>
           </div>
+
+          <div className="mt-6 rounded-[2rem] border border-stone-200 bg-white/78 p-6 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">
+                  Who is ready here
+                </p>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  You can see who is open to a conversation before you scan.
+                </p>
+              </div>
+              <div className="rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-900">
+                {readyCount} ready
+              </div>
+            </div>
+
+            {readyParticipants.length > 0 ? (
+              <div className="mt-5 space-y-3">
+                {readyParticipants.map((participant) => (
+                  <PresencePersonCard
+                    key={participant.userId}
+                    username={participant.username}
+                    moodEmoji={participant.moodEmoji}
+                    intentSummary={participant.intentSummary}
+                    isCurrentUser={participant.userId === session.user.id}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="mt-5 rounded-3xl border border-dashed border-stone-200 bg-stone-50 px-4 py-5 text-sm text-slate-500">
+                No one is marked ready here yet.
+              </div>
+            )}
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <PresenceSummaryCard
+                label="Taking a moment"
+                count={presentParticipants.length}
+                description="Checked in here, but not in the ready pool."
+              />
+              <PresenceSummaryCard
+                label="Talking now"
+                count={activeConversationCount}
+                description="Active conversations happening in this place."
+              />
+            </div>
+          </div>
         </section>
 
         <section className="w-full max-w-xl rounded-[2rem] border border-stone-200 bg-white/92 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.12)] sm:p-8">
@@ -526,7 +678,7 @@ export function PlaceViewScreen({
             <p className="text-sm font-semibold text-slate-900">Status</p>
             <p className="mt-2 text-sm leading-6 text-slate-600">
               {isInConversation
-                ? 'You are currently in a conversation, so your QR and ready state are paused.'
+                ? `You are currently talking${resolvedActiveConnection ? ` with ${resolvedActiveConnection.counterpart.username}` : ''}, so your QR and ready state are paused.`
                 : isReady
                 ? 'You are visible in the ready count for this place.'
                 : 'You are present here, but not yet in the ready count.'}
@@ -562,6 +714,15 @@ export function PlaceViewScreen({
               </button>
             )}
           </div>
+
+          {conversationNotice ? (
+            <div className="mt-6 rounded-3xl border border-amber-200 bg-amber-50 p-5 text-amber-950">
+              <p className="text-sm font-semibold">{conversationNotice.title}</p>
+              <p className="mt-2 text-sm leading-6">
+                {conversationNotice.description}
+              </p>
+            </div>
+          ) : null}
 
           <div className="mt-6 rounded-3xl border border-stone-200 bg-stone-50 p-5">
             <div className="flex items-center gap-3">
@@ -609,9 +770,16 @@ export function PlaceViewScreen({
 
           {resolvedActiveConnection ? (
             <div className="mt-6 rounded-3xl border border-emerald-200 bg-emerald-50 p-5">
-              <div className="flex items-center gap-3 text-emerald-900">
-                <MessageCircle className="h-5 w-5" />
-                <p className="text-sm font-semibold">Current conversation</p>
+              <div className="flex items-center justify-between gap-3 text-emerald-900">
+                <div className="flex items-center gap-3">
+                  <MessageCircle className="h-5 w-5" />
+                  <p className="text-sm font-semibold">Current conversation</p>
+                </div>
+                {conversationElapsed ? (
+                  <span className="rounded-full bg-white/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-900">
+                    {conversationElapsed}
+                  </span>
+                ) : null}
               </div>
               <p className="mt-3 text-xl font-semibold text-slate-950">
                 {resolvedActiveConnection.counterpart.username}
@@ -619,6 +787,10 @@ export function PlaceViewScreen({
               <p className="mt-2 text-sm leading-6 text-slate-700">
                 {resolvedActiveConnection.counterpart.moodEmoji}{' '}
                 {resolvedActiveConnection.counterpart.intentSummary}
+              </p>
+              <p className="mt-3 text-sm leading-6 text-emerald-900/80">
+                Take your time. Either person can end the conversation, and you
+                will both return to ready automatically.
               </p>
             </div>
           ) : null}
@@ -806,4 +978,82 @@ function MetricCard({
       <p className="mt-2 text-4xl font-black tracking-[-0.04em]">{value}</p>
     </div>
   )
+}
+
+function PresencePersonCard({
+  username,
+  moodEmoji,
+  intentSummary,
+  isCurrentUser,
+}: {
+  username: string
+  moodEmoji: string | null
+  intentSummary: string | null
+  isCurrentUser: boolean
+}) {
+  return (
+    <div className="rounded-3xl border border-stone-200 bg-stone-50 px-4 py-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-base font-semibold text-slate-950">
+            {username}
+            {isCurrentUser ? (
+              <span className="ml-2 rounded-full bg-slate-900 px-2 py-0.5 text-xs font-semibold uppercase tracking-[0.14em] text-white">
+                You
+              </span>
+            ) : null}
+          </p>
+          <p className="mt-2 text-sm leading-6 text-slate-700">
+            {moodEmoji} {intentSummary || 'Open to a nearby conversation.'}
+          </p>
+        </div>
+        <span className="shrink-0 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">
+          Ready
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function PresenceSummaryCard({
+  label,
+  count,
+  description,
+}: {
+  label: string
+  count: number
+  description: string
+}) {
+  return (
+    <div className="rounded-3xl border border-stone-200 bg-stone-50 px-4 py-4">
+      <p className="text-sm font-semibold text-slate-900">{label}</p>
+      <p className="mt-2 text-3xl font-black tracking-[-0.04em] text-slate-950">
+        {count}
+      </p>
+      <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
+    </div>
+  )
+}
+
+function formatConversationElapsed(
+  createdAt: string | Date,
+  now: number,
+) {
+  const startedAt = new Date(createdAt).getTime()
+
+  if (!Number.isFinite(startedAt)) {
+    return null
+  }
+
+  const elapsedMinutes = Math.max(0, Math.floor((now - startedAt) / 60000))
+
+  if (elapsedMinutes < 1) {
+    return 'Started now'
+  }
+
+  if (elapsedMinutes === 1) {
+    return '1 min in'
+  }
+
+  return `${elapsedMinutes} min in`
 }

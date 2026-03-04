@@ -33,6 +33,7 @@ export type NearbyPlace = {
   address: string
   lat: number
   lng: number
+  readyCount: number
 }
 
 export type AppState = {

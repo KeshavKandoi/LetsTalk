@@ -306,13 +306,37 @@ export function OnboardingScreen({
                           : 'border-stone-200 bg-white text-slate-900 hover:border-stone-300'
                       }`}
                     >
-                      <p className="font-semibold">{place.name}</p>
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="font-semibold">{place.name}</p>
+                        <span
+                          className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${
+                            isSelected
+                              ? 'bg-white/15 text-white'
+                              : place.readyCount > 0
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : 'bg-stone-100 text-slate-600'
+                          }`}
+                        >
+                          {place.readyCount === 1
+                            ? '1 ready'
+                            : `${place.readyCount} ready`}
+                        </span>
+                      </div>
                       <p
                         className={`mt-1 text-sm leading-6 ${
                           isSelected ? 'text-slate-200' : 'text-slate-600'
                         }`}
                       >
                         {place.address}
+                      </p>
+                      <p
+                        className={`mt-3 text-xs font-medium uppercase tracking-[0.16em] ${
+                          isSelected ? 'text-slate-300' : 'text-slate-500'
+                        }`}
+                      >
+                        {place.readyCount > 0
+                          ? 'People are ready here now'
+                          : 'Quiet right now'}
                       </p>
                     </button>
                   )
