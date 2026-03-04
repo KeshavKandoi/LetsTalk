@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   assertCanConnectAtPlace,
+  assertCanRequestFinderPing,
   assertCanSetReady,
+  assertCanUpdateFinderProfile,
   buildConversationIntentSummary,
   buildIntentSummary,
   normalizeIntentText,
@@ -84,6 +86,60 @@ describe('user-agent logic', () => {
           status: 'in_conversation',
         }),
       ).toThrow('End your current conversation before changing your status.')
+    })
+  })
+
+  describe('assertCanUpdateFinderProfile', () => {
+    it('allows turning finder mode off without extra checks', () => {
+      expect(() =>
+        assertCanUpdateFinderProfile({
+          profile: {
+            currentPlaceId: 'place-1',
+            status: 'present',
+          },
+          isFindable: false,
+          locationHint: null,
+        }),
+      ).not.toThrow()
+    })
+
+    it('requires a current place before sharing a hint', () => {
+      expect(() =>
+        assertCanUpdateFinderProfile({
+          profile: {
+            currentPlaceId: null,
+            status: 'ready',
+          },
+          isFindable: true,
+          locationHint: 'Window seats',
+        }),
+      ).toThrow('Pick your current place before sharing where you are.')
+    })
+
+    it('requires the user to be ready', () => {
+      expect(() =>
+        assertCanUpdateFinderProfile({
+          profile: {
+            currentPlaceId: 'place-1',
+            status: 'present',
+          },
+          isFindable: true,
+          locationHint: 'Window seats',
+        }),
+      ).toThrow('Set yourself ready before helping someone find you.')
+    })
+
+    it('requires a location hint when enabling finder mode', () => {
+      expect(() =>
+        assertCanUpdateFinderProfile({
+          profile: {
+            currentPlaceId: 'place-1',
+            status: 'ready',
+          },
+          isFindable: true,
+          locationHint: null,
+        }),
+      ).toThrow('Choose a spot in the place before turning this on.')
     })
   })
 
@@ -170,6 +226,52 @@ describe('user-agent logic', () => {
           targetHasActiveConnection: true,
         }),
       ).toThrow('They are already in a conversation.')
+    })
+  })
+
+  describe('assertCanRequestFinderPing', () => {
+    const validInput = {
+      viewerProfile: {
+        currentPlaceId: 'place-1',
+        status: 'ready' as const,
+      },
+      targetProfile: {
+        currentPlaceId: 'place-1',
+        status: 'ready' as const,
+        isFindable: true,
+      },
+      placeId: 'place-1',
+      viewerHasActiveConnection: false,
+      targetHasActiveConnection: false,
+    }
+
+    it('allows a ping when both people are eligible in the same place', () => {
+      expect(() => assertCanRequestFinderPing(validInput)).not.toThrow()
+    })
+
+    it('rejects targets who have not shared a findable spot', () => {
+      expect(() =>
+        assertCanRequestFinderPing({
+          ...validInput,
+          targetProfile: {
+            currentPlaceId: 'place-1',
+            status: 'ready',
+            isFindable: false,
+          },
+        }),
+      ).toThrow('They have not shared a spot to help you find them.')
+    })
+
+    it('rejects seekers already in a conversation', () => {
+      expect(() =>
+        assertCanRequestFinderPing({
+          ...validInput,
+          viewerProfile: {
+            currentPlaceId: 'place-1',
+            status: 'in_conversation',
+          },
+        }),
+      ).toThrow('Finish your current conversation before finding someone else.')
     })
   })
 })

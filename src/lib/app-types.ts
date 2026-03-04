@@ -23,6 +23,11 @@ export type UserProfileState = {
   intentSummary: string | null
   status: PresenceStatus
   currentPlaceId: string | null
+  isFindable: boolean
+  locationHint: string | null
+  pingRequestedAt: string | Date | null
+  pingRequestedByUserId: string | null
+  pingRequestedByUsername: string | null
   createdAt: string | Date
   updatedAt: string | Date
 }
@@ -34,6 +39,11 @@ export type UserAgentState = {
   intentSummary: string | null
   status: PresenceStatus
   currentPlaceId: string | null
+  isFindable: boolean
+  locationHint: string | null
+  pingRequestedAt: string | null
+  pingRequestedByUserId: string | null
+  pingRequestedByUsername: string | null
   activeConversationId: string | null
   updatedAt: string | null
 }
@@ -83,6 +93,11 @@ export type PlaceAgentParticipantState = {
   moodEmoji: string | null
   intentSummary: string | null
   status: PresenceStatus
+  isFindable: boolean
+  locationHint: string | null
+  pingRequestedAt: string | Date | null
+  pingRequestedByUserId: string | null
+  pingRequestedByUsername: string | null
 }
 
 export type PlaceAgentConnectionState = {

@@ -103,6 +103,13 @@ export const userProfile = sqliteTable('user_profile', {
   intentSummary: text('intent_summary'),
   status: text('status').notNull().default('offline'),
   currentPlaceId: text('current_place_id'),
+  isFindable: integer('is_findable', { mode: 'boolean' })
+    .notNull()
+    .default(false),
+  locationHint: text('location_hint'),
+  pingRequestedAt: integer('ping_requested_at', { mode: 'timestamp_ms' }),
+  pingRequestedByUserId: text('ping_requested_by_user_id'),
+  pingRequestedByUsername: text('ping_requested_by_username'),
   createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 })

@@ -5,8 +5,10 @@ import * as QRCode from 'qrcode'
 import { useAgent } from 'agents/react'
 import {
   ArrowLeft,
+  BellRing,
   Camera,
   Check,
+  LocateFixed,
   MapPin,
   MessageCircle,
   QrCode,
@@ -125,6 +127,60 @@ type ConversationNoticeState = {
   description: string
 }
 
+const finderHintOptions = [
+  'Front tables',
+  'Counter',
+  'Window seats',
+  'Patio',
+  'Back corner',
+] as const
+
+async function playFinderCue() {
+  if (typeof window !== 'undefined') {
+    const AudioContextCtor =
+      window.AudioContext ||
+      // Safari.
+      ('webkitAudioContext' in window
+        ? ((window as Window & {
+            webkitAudioContext?: typeof AudioContext
+          }).webkitAudioContext ?? null)
+        : null)
+
+    if (AudioContextCtor) {
+      try {
+        const audioContext = new AudioContextCtor()
+        const oscillator = audioContext.createOscillator()
+        const gain = audioContext.createGain()
+
+        oscillator.type = 'sine'
+        oscillator.frequency.setValueAtTime(880, audioContext.currentTime)
+        oscillator.frequency.exponentialRampToValueAtTime(
+          1320,
+          audioContext.currentTime + 0.18,
+        )
+        gain.gain.setValueAtTime(0.0001, audioContext.currentTime)
+        gain.gain.exponentialRampToValueAtTime(0.06, audioContext.currentTime + 0.02)
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.28)
+
+        oscillator.connect(gain)
+        gain.connect(audioContext.destination)
+        oscillator.start()
+        oscillator.stop(audioContext.currentTime + 0.3)
+
+        window.setTimeout(() => {
+          void audioContext.close().catch(() => undefined)
+        }, 450)
+      } catch {
+        // Ignore blocked audio contexts and rely on vibration/visual cues.
+      }
+    }
+  }
+
+  if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+    navigator.vibrate?.([120, 80, 140])
+  }
+}
+
 export function PlaceViewScreen({
   session,
   profile,
@@ -135,7 +191,9 @@ export function PlaceViewScreen({
   refreshSession,
   clearScanToken,
   setReady,
+  saveFinderProfile,
   leavePlace,
+  pingParticipant,
   loadScanPreview,
   connectScan,
   endConversation,
@@ -150,7 +208,18 @@ export function PlaceViewScreen({
   refreshSession: () => Promise<void>
   clearScanToken: () => Promise<void>
   setReady: (input: { data: { ready: boolean } }) => Promise<void>
+  saveFinderProfile: (input: {
+    data: {
+      isFindable: boolean
+      locationHint: string | null
+    }
+  }) => Promise<UserProfileState>
   leavePlace: () => Promise<void>
+  pingParticipant: (input: {
+    data: {
+      userId: string
+    }
+  }) => Promise<unknown>
   loadScanPreview: (input: {
     data: {
       token: string
@@ -165,9 +234,18 @@ export function PlaceViewScreen({
   client?: PlaceViewClientLike
 }) {
   const [pendingAction, setPendingAction] = useState<
-    'ready' | 'leave' | 'sign-out' | 'connect' | 'end-connection' | null
+    | 'ready'
+    | 'finder'
+    | 'leave'
+    | 'sign-out'
+    | 'connect'
+    | 'end-connection'
+    | null
   >(null)
   const [error, setError] = useState<string | null>(null)
+  const [finderNotice, setFinderNotice] = useState<ConversationNoticeState | null>(
+    null,
+  )
   const [livePlaceState, setLivePlaceState] = useState<PlaceAgentState | null>(
     null,
   )
@@ -184,6 +262,10 @@ export function PlaceViewScreen({
     'idle' | 'starting' | 'scanning' | 'unsupported'
   >('idle')
   const [conversationNow, setConversationNow] = useState(() => Date.now())
+  const [pendingPingUserId, setPendingPingUserId] = useState<string | null>(null)
+  const [selectedFinderHint, setSelectedFinderHint] = useState(
+    profile.locationHint ?? finderHintOptions[0],
+  )
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const scanIntervalRef = useRef<number | null>(null)
@@ -191,6 +273,7 @@ export function PlaceViewScreen({
   const previousConnectionRef = useRef<ActiveConnectionState | null>(
     activeConnection,
   )
+  const previousPingRef = useRef<string | null>(profile.pingRequestedAt?.toString() ?? null)
 
   const placeAgent = useAgent<PlaceAgent, PlaceAgentState>({
     agent: 'place-agent',
@@ -222,6 +305,12 @@ export function PlaceViewScreen({
         ) ?? null
       : null
   const liveStatus = liveParticipant?.status ?? profile.status
+  const isFindable = liveParticipant?.isFindable ?? profile.isFindable
+  const locationHint = liveParticipant?.locationHint ?? profile.locationHint
+  const activePingRequestedAt =
+    liveParticipant?.pingRequestedAt ?? profile.pingRequestedAt
+  const activePingRequestedByUsername =
+    liveParticipant?.pingRequestedByUsername ?? profile.pingRequestedByUsername
   const resolvedActiveConnection =
     liveParticipant && livePlaceState
       ? liveConnection && counterpartParticipant
@@ -257,6 +346,9 @@ export function PlaceViewScreen({
 
       return left.username.localeCompare(right.username)
     })
+  const findableParticipants = readyParticipants.filter(
+    (participant) => participant.userId !== session.user.id && participant.isFindable,
+  )
   const presentParticipants = liveParticipants.filter(
     (participant) => participant.status === 'present',
   )
@@ -326,6 +418,20 @@ export function PlaceViewScreen({
   }, [conversationNotice])
 
   useEffect(() => {
+    if (!finderNotice) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setFinderNotice(null)
+    }, 5000)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [finderNotice])
+
+  useEffect(() => {
     if (!resolvedActiveConnection) {
       return
     }
@@ -340,6 +446,36 @@ export function PlaceViewScreen({
       window.clearInterval(intervalId)
     }
   }, [resolvedActiveConnection?.id])
+
+  useEffect(() => {
+    if (locationHint) {
+      setSelectedFinderHint(locationHint)
+    }
+  }, [locationHint])
+
+  useEffect(() => {
+    const nextPingValue = activePingRequestedAt?.toString() ?? null
+
+    if (!nextPingValue || previousPingRef.current === nextPingValue) {
+      return
+    }
+
+    previousPingRef.current = nextPingValue
+
+    const pingTimestamp = new Date(nextPingValue).getTime()
+
+    if (!Number.isFinite(pingTimestamp) || Date.now() - pingTimestamp > 15000) {
+      return
+    }
+
+    setFinderNotice({
+      title: 'Someone is trying to find you',
+      description: activePingRequestedByUsername
+        ? `${activePingRequestedByUsername} asked for a quick cue. Keep your QR ready when they arrive.`
+        : 'Someone nearby asked for a quick cue. Keep your QR ready when they arrive.',
+    })
+    void playFinderCue()
+  }, [activePingRequestedAt, activePingRequestedByUsername])
 
   useEffect(() => {
     let cancelled = false
@@ -526,6 +662,49 @@ export function PlaceViewScreen({
     }
   }
 
+  const saveFinderState = async (nextIsFindable: boolean, nextLocationHint: string) => {
+    setPendingAction('finder')
+    setError(null)
+
+    try {
+      await saveFinderProfile({
+        data: {
+          isFindable: nextIsFindable,
+          locationHint: nextLocationHint,
+        },
+      })
+      await refreshSession()
+      setFinderNotice({
+        title: nextIsFindable ? 'Finder mode is on' : 'Finder mode is off',
+        description: nextIsFindable
+          ? `People nearby can look for you around ${nextLocationHint}.`
+          : 'You are no longer sharing a spot in this place.',
+      })
+    } catch (nextError) {
+      setError(
+        nextError instanceof Error
+          ? nextError.message
+          : 'Unable to update your finder settings right now.',
+      )
+    } finally {
+      setPendingAction(null)
+    }
+  }
+
+  const handleFinderToggle = async () => {
+    await saveFinderState(!isFindable, selectedFinderHint)
+  }
+
+  const handleSelectFinderHint = async (nextHint: string) => {
+    setSelectedFinderHint(nextHint)
+
+    if (!isFindable) {
+      return
+    }
+
+    await saveFinderState(true, nextHint)
+  }
+
   const handleSignOut = async () => {
     setPendingAction('sign-out')
     setError(null)
@@ -608,6 +787,31 @@ export function PlaceViewScreen({
     }
   }
 
+  const handlePingParticipant = async (participant: PlaceAgentState['participants'][number]) => {
+    setPendingPingUserId(participant.userId)
+    setError(null)
+
+    try {
+      await pingParticipant({
+        data: {
+          userId: participant.userId,
+        },
+      })
+      setFinderNotice({
+        title: 'Ping sent',
+        description: `A quick cue was sent to ${participant.username} near ${participant.locationHint || 'their shared spot'}.`,
+      })
+    } catch (nextError) {
+      setError(
+        nextError instanceof Error
+          ? nextError.message
+          : 'Unable to send that ping right now.',
+      )
+    } finally {
+      setPendingPingUserId(null)
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[#f4efe6] text-slate-950">
       <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-8 px-5 py-8 sm:px-6 lg:flex-row lg:items-start lg:justify-between lg:gap-12 lg:px-8">
@@ -685,10 +889,19 @@ export function PlaceViewScreen({
                 {readyParticipants.map((participant) => (
                   <PresencePersonCard
                     key={participant.userId}
+                    participant={participant}
                     username={participant.username}
                     moodEmoji={participant.moodEmoji}
                     intentSummary={participant.intentSummary}
                     isCurrentUser={participant.userId === session.user.id}
+                    onPing={
+                      participant.userId === session.user.id || !participant.isFindable
+                        ? null
+                        : () => {
+                            void handlePingParticipant(participant)
+                          }
+                    }
+                    isPinging={pendingPingUserId === participant.userId}
                   />
                 ))}
               </div>
@@ -698,7 +911,7 @@ export function PlaceViewScreen({
               </div>
             )}
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
               <PresenceSummaryCard
                 label="Taking a moment"
                 count={presentParticipants.length}
@@ -708,6 +921,11 @@ export function PlaceViewScreen({
                 label="Talking now"
                 count={activeConversationCount}
                 description="Active conversations happening in this place."
+              />
+              <PresenceSummaryCard
+                label="Easy to find"
+                count={findableParticipants.length}
+                description="Ready people who shared a spot and can be pinged."
               />
             </div>
           </div>
@@ -781,6 +999,90 @@ export function PlaceViewScreen({
               </p>
             </div>
           ) : null}
+
+          {finderNotice ? (
+            <div className="mt-6 rounded-3xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-950">
+              <p className="text-sm font-semibold">{finderNotice.title}</p>
+              <p className="mt-2 text-sm leading-6">{finderNotice.description}</p>
+            </div>
+          ) : null}
+
+          <div className="mt-6 rounded-3xl border border-stone-200 bg-stone-50 p-5">
+            <div className="flex items-center gap-3">
+              <div className="rounded-2xl border border-stone-200 bg-white p-3 text-slate-700">
+                <LocateFixed className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-900">
+                  Help someone find you
+                </p>
+                <p className="text-sm leading-6 text-slate-600">
+                  Share one simple spot in this place, then let someone nearby
+                  send a quick cue before they scan your QR.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 flex flex-wrap gap-2">
+              {finderHintOptions.map((hint) => {
+                const isSelected = selectedFinderHint === hint
+
+                return (
+                  <button
+                    key={hint}
+                    type="button"
+                    onClick={() => {
+                      void handleSelectFinderHint(hint)
+                    }}
+                    disabled={!isReady || isInConversation || pendingAction === 'finder'}
+                    className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                      isSelected
+                        ? 'bg-slate-900 text-white'
+                        : 'border border-stone-200 bg-white text-slate-700 hover:border-stone-300 hover:text-slate-950'
+                    } disabled:cursor-not-allowed disabled:opacity-60`}
+                  >
+                    {hint}
+                  </button>
+                )
+              })}
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-stone-200 bg-white px-4 py-4">
+              <p className="text-sm font-semibold text-slate-900">
+                {isFindable
+                  ? `Currently sharing: ${selectedFinderHint}`
+                  : isInConversation
+                    ? 'Finder mode pauses while you are talking.'
+                    : isReady
+                      ? 'Pick the spot that best matches where you are.'
+                      : 'Set yourself ready before sharing a spot.'}
+              </p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                {isFindable
+                  ? 'People nearby can look for this hint and send a quick cue to your phone.'
+                  : 'This stays off until you choose to share it.'}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                void handleFinderToggle()
+              }}
+              disabled={!isReady || isInConversation || pendingAction === 'finder'}
+              className={`mt-4 inline-flex w-full items-center justify-center rounded-2xl px-5 py-3 font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-70 ${
+                isFindable
+                  ? 'bg-slate-900 hover:bg-slate-800'
+                  : 'bg-emerald-600 hover:bg-emerald-700'
+              }`}
+            >
+              {pendingAction === 'finder'
+                ? 'Saving finder settings...'
+                : isFindable
+                  ? 'Stop sharing my spot'
+                  : 'Help someone find me'}
+            </button>
+          </div>
 
           <div className="mt-6 rounded-3xl border border-stone-200 bg-stone-50 p-5">
             <div className="flex items-center gap-3">
@@ -1039,15 +1341,21 @@ function MetricCard({
 }
 
 function PresencePersonCard({
+  participant,
   username,
   moodEmoji,
   intentSummary,
   isCurrentUser,
+  onPing,
+  isPinging,
 }: {
+  participant: PlaceAgentState['participants'][number]
   username: string
   moodEmoji: string | null
   intentSummary: string | null
   isCurrentUser: boolean
+  onPing: (() => void) | null
+  isPinging: boolean
 }) {
   return (
     <div className="rounded-3xl border border-stone-200 bg-stone-50 px-4 py-4">
@@ -1064,10 +1372,28 @@ function PresencePersonCard({
           <p className="mt-2 text-sm leading-6 text-slate-700">
             {moodEmoji} {intentSummary || 'Open to a nearby conversation.'}
           </p>
+          {participant.isFindable && participant.locationHint ? (
+            <p className="mt-2 text-sm font-medium text-emerald-800">
+              Near {participant.locationHint.toLowerCase()}
+            </p>
+          ) : null}
         </div>
-        <span className="shrink-0 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">
-          Ready
-        </span>
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">
+            {participant.isFindable ? 'Findable' : 'Ready'}
+          </span>
+          {onPing ? (
+            <button
+              type="button"
+              onClick={onPing}
+              disabled={isPinging}
+              className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-900 transition hover:border-stone-300 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <BellRing className="h-3.5 w-3.5" />
+              {isPinging ? 'Pinging...' : 'Ping me'}
+            </button>
+          ) : null}
+        </div>
       </div>
     </div>
   )

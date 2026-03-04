@@ -37,6 +37,11 @@ async function loadPlaceSnapshot(
       moodEmoji: userProfile.moodEmoji,
       intentSummary: userProfile.intentSummary,
       status: userProfile.status,
+      isFindable: userProfile.isFindable,
+      locationHint: userProfile.locationHint,
+      pingRequestedAt: userProfile.pingRequestedAt,
+      pingRequestedByUserId: userProfile.pingRequestedByUserId,
+      pingRequestedByUsername: userProfile.pingRequestedByUsername,
     })
     .from(userProfile)
     .innerJoin(user, eq(user.id, userProfile.userId))
@@ -73,6 +78,11 @@ async function loadPlaceSnapshot(
       moodEmoji: record.moodEmoji,
       intentSummary: record.intentSummary,
       status: record.status as PlaceAgentState['participants'][number]['status'],
+      isFindable: record.isFindable ?? false,
+      locationHint: record.locationHint,
+      pingRequestedAt: record.pingRequestedAt,
+      pingRequestedByUserId: record.pingRequestedByUserId,
+      pingRequestedByUsername: record.pingRequestedByUsername,
     })),
     connections: connectionRecords,
     updatedAt: new Date().toISOString(),

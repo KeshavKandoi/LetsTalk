@@ -5,7 +5,9 @@ import type { PresenceStatus, UserAgentState } from '../../app-types'
 import type { PlaceAgent } from './place-agent'
 import {
   assertCanConnectAtPlace,
+  assertCanRequestFinderPing,
   assertCanSetReady,
+  assertCanUpdateFinderProfile,
   buildConversationIntentSummary,
   buildIntentSummary,
   normalizeIntentText,
@@ -57,6 +59,14 @@ function getDisplayUsername(record: typeof user.$inferSelect) {
   return record.displayUsername || record.username || record.name
 }
 
+function normalizeLocationHint(locationHint: string | null | undefined) {
+  if (!locationHint) {
+    return null
+  }
+
+  return locationHint.replace(/\s+/g, ' ').trim() || null
+}
+
 async function loadActiveConnection(
   database: D1Database,
   userId: string,
@@ -105,6 +115,11 @@ async function loadUserState(
     intentSummary: profileRecord?.intentSummary ?? null,
     status: (profileRecord?.status as PresenceStatus | undefined) ?? 'offline',
     currentPlaceId: profileRecord?.currentPlaceId ?? null,
+    isFindable: profileRecord?.isFindable ?? false,
+    locationHint: profileRecord?.locationHint ?? null,
+    pingRequestedAt: profileRecord?.pingRequestedAt?.toISOString() ?? null,
+    pingRequestedByUserId: profileRecord?.pingRequestedByUserId ?? null,
+    pingRequestedByUsername: profileRecord?.pingRequestedByUsername ?? null,
     activeConversationId: activeConnection?.id ?? null,
     updatedAt: profileRecord?.updatedAt?.toISOString() ?? null,
   }
@@ -207,6 +222,11 @@ async function endAcceptedConnectionsForUser(database: D1Database, userId: strin
           .update(userProfile)
           .set({
             status: 'ready',
+            isFindable: false,
+            locationHint: null,
+            pingRequestedAt: null,
+            pingRequestedByUserId: null,
+            pingRequestedByUsername: null,
             updatedAt: now,
           })
           .where(eq(userProfile.userId, nextUserId))
@@ -228,6 +248,11 @@ export class UserAgent extends Agent<UserAgentEnv, UserAgentState> {
     intentSummary: null,
     status: 'offline',
     currentPlaceId: null,
+    isFindable: false,
+    locationHint: null,
+    pingRequestedAt: null,
+    pingRequestedByUserId: null,
+    pingRequestedByUsername: null,
     activeConversationId: null,
     updatedAt: null,
   }
@@ -275,6 +300,11 @@ export class UserAgent extends Agent<UserAgentEnv, UserAgentState> {
         intentSummary,
         status: 'present',
         currentPlaceId: input.currentPlaceId,
+        isFindable: false,
+        locationHint: null,
+        pingRequestedAt: null,
+        pingRequestedByUserId: null,
+        pingRequestedByUsername: null,
         createdAt: now,
         updatedAt: now,
       })
@@ -286,6 +316,11 @@ export class UserAgent extends Agent<UserAgentEnv, UserAgentState> {
           intentSummary,
           status: 'present',
           currentPlaceId: input.currentPlaceId,
+          isFindable: false,
+          locationHint: null,
+          pingRequestedAt: null,
+          pingRequestedByUserId: null,
+          pingRequestedByUsername: null,
           updatedAt: now,
         },
       })
@@ -325,6 +360,12 @@ export class UserAgent extends Agent<UserAgentEnv, UserAgentState> {
         ),
         status: existingProfile?.status ?? 'offline',
         currentPlaceId: existingProfile?.currentPlaceId ?? null,
+        isFindable: existingProfile?.isFindable ?? false,
+        locationHint: existingProfile?.locationHint ?? null,
+        pingRequestedAt: existingProfile?.pingRequestedAt ?? null,
+        pingRequestedByUserId: existingProfile?.pingRequestedByUserId ?? null,
+        pingRequestedByUsername:
+          existingProfile?.pingRequestedByUsername ?? null,
         createdAt: existingProfile?.createdAt ?? now,
         updatedAt: now,
       })
@@ -362,6 +403,12 @@ export class UserAgent extends Agent<UserAgentEnv, UserAgentState> {
         intentSummary,
         status: existingProfile?.status ?? 'offline',
         currentPlaceId: existingProfile?.currentPlaceId ?? null,
+        isFindable: existingProfile?.isFindable ?? false,
+        locationHint: existingProfile?.locationHint ?? null,
+        pingRequestedAt: existingProfile?.pingRequestedAt ?? null,
+        pingRequestedByUserId: existingProfile?.pingRequestedByUserId ?? null,
+        pingRequestedByUsername:
+          existingProfile?.pingRequestedByUsername ?? null,
         createdAt: existingProfile?.createdAt ?? now,
         updatedAt: now,
       })
@@ -404,6 +451,11 @@ export class UserAgent extends Agent<UserAgentEnv, UserAgentState> {
         ),
         status: 'present',
         currentPlaceId: input.placeId,
+        isFindable: false,
+        locationHint: null,
+        pingRequestedAt: null,
+        pingRequestedByUserId: null,
+        pingRequestedByUsername: null,
         createdAt: existingProfile?.createdAt ?? now,
         updatedAt: now,
       })
@@ -412,6 +464,11 @@ export class UserAgent extends Agent<UserAgentEnv, UserAgentState> {
         set: {
           status: 'present',
           currentPlaceId: input.placeId,
+          isFindable: false,
+          locationHint: null,
+          pingRequestedAt: null,
+          pingRequestedByUserId: null,
+          pingRequestedByUsername: null,
           updatedAt: now,
         },
       })
@@ -452,7 +509,49 @@ export class UserAgent extends Agent<UserAgentEnv, UserAgentState> {
       .update(userProfile)
       .set({
         status: input.ready ? 'ready' : 'present',
+        isFindable: input.ready ? profileRecord?.isFindable ?? false : false,
+        pingRequestedAt: null,
+        pingRequestedByUserId: null,
+        pingRequestedByUsername: null,
         updatedAt: new Date(),
+      })
+      .where(eq(userProfile.userId, this.name))
+
+    await syncPlaceAgents([profileSnapshot?.currentPlaceId])
+    return this.refresh()
+  }
+
+  // @ts-expect-error decorator signature mismatch between TS modes
+  @callable()
+  async setFinderProfile(input: {
+    isFindable: boolean
+    locationHint: string | null
+  }) {
+    const db = drizzle(this.env.DB, { schema })
+    const now = new Date()
+    const [profileRecord] = await db
+      .select()
+      .from(userProfile)
+      .where(eq(userProfile.userId, this.name))
+      .limit(1)
+    const profileSnapshot = toUserProfileSnapshot(profileRecord)
+    const locationHint = normalizeLocationHint(input.locationHint)
+
+    assertCanUpdateFinderProfile({
+      profile: profileSnapshot,
+      isFindable: input.isFindable,
+      locationHint,
+    })
+
+    await db
+      .update(userProfile)
+      .set({
+        isFindable: input.isFindable,
+        locationHint,
+        pingRequestedAt: null,
+        pingRequestedByUserId: null,
+        pingRequestedByUsername: null,
+        updatedAt: now,
       })
       .where(eq(userProfile.userId, this.name))
 
@@ -476,6 +575,11 @@ export class UserAgent extends Agent<UserAgentEnv, UserAgentState> {
       .set({
         status: 'offline',
         currentPlaceId: null,
+        isFindable: false,
+        locationHint: null,
+        pingRequestedAt: null,
+        pingRequestedByUserId: null,
+        pingRequestedByUsername: null,
         updatedAt: new Date(),
       })
       .where(eq(userProfile.userId, this.name))
@@ -516,6 +620,11 @@ export class UserAgent extends Agent<UserAgentEnv, UserAgentState> {
         ),
         status: 'in_conversation',
         currentPlaceId: input.placeId,
+        isFindable: false,
+        locationHint: null,
+        pingRequestedAt: null,
+        pingRequestedByUserId: null,
+        pingRequestedByUsername: null,
         createdAt: existingProfile?.createdAt ?? now,
         updatedAt: now,
       })
@@ -524,11 +633,76 @@ export class UserAgent extends Agent<UserAgentEnv, UserAgentState> {
         set: {
           status: 'in_conversation',
           currentPlaceId: input.placeId,
+          isFindable: false,
+          locationHint: null,
+          pingRequestedAt: null,
+          pingRequestedByUserId: null,
+          pingRequestedByUsername: null,
           updatedAt: now,
         },
       })
 
     await syncPlaceAgents([existingProfile?.currentPlaceId, input.placeId])
+    return this.refresh()
+  }
+
+  // @ts-expect-error decorator signature mismatch between TS modes
+  @callable()
+  async requestFinderPing(input: { requesterUserId: string }) {
+    if (input.requesterUserId === this.name) {
+      throw new Error('You cannot ping yourself.')
+    }
+
+    const db = drizzle(this.env.DB, { schema })
+    const now = new Date()
+    const [targetProfile] = await db
+      .select()
+      .from(userProfile)
+      .where(eq(userProfile.userId, this.name))
+      .limit(1)
+    const [requesterProfile] = await db
+      .select()
+      .from(userProfile)
+      .where(eq(userProfile.userId, input.requesterUserId))
+      .limit(1)
+    const [requesterUser] = await db
+      .select()
+      .from(user)
+      .where(eq(user.id, input.requesterUserId))
+      .limit(1)
+
+    const requesterConnection = await loadActiveConnection(
+      this.env.DB,
+      input.requesterUserId,
+    )
+    const targetConnection = await loadActiveConnection(this.env.DB, this.name)
+    const requesterProfileSnapshot = toUserProfileSnapshot(requesterProfile)
+    const targetProfileSnapshot = toUserProfileSnapshot(targetProfile)
+
+    assertCanRequestFinderPing({
+      viewerProfile: requesterProfileSnapshot,
+      targetProfile: targetProfileSnapshot,
+      placeId:
+        requesterProfileSnapshot?.currentPlaceId ??
+        targetProfileSnapshot?.currentPlaceId ??
+        '',
+      viewerHasActiveConnection: Boolean(requesterConnection),
+      targetHasActiveConnection: Boolean(targetConnection),
+    })
+
+    await db
+      .update(userProfile)
+      .set({
+        pingRequestedAt: now,
+        pingRequestedByUserId: input.requesterUserId,
+        pingRequestedByUsername: requesterUser
+          ? getDisplayUsername(requesterUser)
+          : null,
+        updatedAt: now,
+      })
+      .where(eq(userProfile.userId, this.name))
+
+    await syncPlaceAgents([targetProfileSnapshot?.currentPlaceId])
     return this.refresh()
   }
 
@@ -585,6 +759,11 @@ export class UserAgent extends Agent<UserAgentEnv, UserAgentState> {
       .update(userProfile)
       .set({
         status: 'in_conversation',
+        isFindable: false,
+        locationHint: null,
+        pingRequestedAt: null,
+        pingRequestedByUserId: null,
+        pingRequestedByUsername: null,
         updatedAt: now,
       })
       .where(
@@ -657,6 +836,11 @@ export class UserAgent extends Agent<UserAgentEnv, UserAgentState> {
         ),
         status: 'in_conversation',
         currentPlaceId: input.placeId,
+        isFindable: false,
+        locationHint: null,
+        pingRequestedAt: null,
+        pingRequestedByUserId: null,
+        pingRequestedByUsername: null,
         createdAt: viewerProfile?.createdAt ?? now,
         updatedAt: now,
       })
@@ -665,6 +849,11 @@ export class UserAgent extends Agent<UserAgentEnv, UserAgentState> {
         set: {
           status: 'in_conversation',
           currentPlaceId: input.placeId,
+          isFindable: false,
+          locationHint: null,
+          pingRequestedAt: null,
+          pingRequestedByUserId: null,
+          pingRequestedByUsername: null,
           updatedAt: now,
         },
       })
@@ -673,6 +862,11 @@ export class UserAgent extends Agent<UserAgentEnv, UserAgentState> {
       .update(userProfile)
       .set({
         status: 'in_conversation',
+        isFindable: false,
+        locationHint: null,
+        pingRequestedAt: null,
+        pingRequestedByUserId: null,
+        pingRequestedByUsername: null,
         updatedAt: now,
       })
       .where(eq(userProfile.userId, input.counterpartUserId))

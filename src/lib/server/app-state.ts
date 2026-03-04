@@ -11,6 +11,7 @@ import type {
   NearbyPlacePreviewState,
   PresenceStatus,
   QrHandoffState,
+  UserAgentState,
   UserProfileState,
 } from '../app-types'
 import { auth } from './auth'
@@ -68,6 +69,11 @@ function mapUserProfile(
     intentSummary: profileRecord.intentSummary,
     status: profileRecord.status as PresenceStatus,
     currentPlaceId: profileRecord.currentPlaceId,
+    isFindable: profileRecord.isFindable,
+    locationHint: profileRecord.locationHint,
+    pingRequestedAt: profileRecord.pingRequestedAt,
+    pingRequestedByUserId: profileRecord.pingRequestedByUserId,
+    pingRequestedByUsername: profileRecord.pingRequestedByUsername,
     createdAt: profileRecord.createdAt,
     updatedAt: profileRecord.updatedAt,
   }
@@ -279,6 +285,29 @@ async function resolveScanPreview(
   }
 }
 
+function mapUserProfileStateFromAgent(
+  state: UserAgentState,
+  intentText: string | null,
+): UserProfileState {
+  const now = state.updatedAt ? new Date(state.updatedAt) : new Date()
+
+  return {
+    userId: state.userId,
+    moodEmoji: state.moodEmoji,
+    intentText,
+    intentSummary: state.intentSummary,
+    status: state.status,
+    currentPlaceId: state.currentPlaceId,
+    isFindable: state.isFindable,
+    locationHint: state.locationHint,
+    pingRequestedAt: state.pingRequestedAt,
+    pingRequestedByUserId: state.pingRequestedByUserId,
+    pingRequestedByUsername: state.pingRequestedByUsername,
+    createdAt: now,
+    updatedAt: now,
+  }
+}
+
 export async function getCurrentSession() {
   try {
     return await auth.api.getSession({
@@ -379,25 +408,49 @@ export async function saveUserProfile(input: {
   const session = await requireCurrentSession()
   const agent = await getUserAgent(session.user.id)
   const nextState = await agent.setProfile(input)
+  const intentText = input.intentText.replace(/\s+/g, ' ').trim() || null
 
-  const now = nextState.updatedAt ? new Date(nextState.updatedAt) : new Date()
-
-  return {
-    userId: nextState.userId,
-    moodEmoji: nextState.moodEmoji,
-    intentText: input.intentText.replace(/\s+/g, ' ').trim() || null,
-    intentSummary: nextState.intentSummary,
-    status: nextState.status,
-    currentPlaceId: nextState.currentPlaceId,
-    createdAt: now,
-    updatedAt: now,
-  } satisfies UserProfileState
+  return mapUserProfileStateFromAgent(nextState, intentText)
 }
 
 export async function setReadyState(input: { ready: boolean }) {
   const session = await requireCurrentSession()
   const agent = await getUserAgent(session.user.id)
   await agent.setReady(input)
+}
+
+export async function saveFinderProfile(input: {
+  isFindable: boolean
+  locationHint: string | null
+}) {
+  const session = await requireCurrentSession()
+  const agent = await getUserAgent(session.user.id)
+  const [existingProfile] = await db
+    .select()
+    .from(userProfile)
+    .where(eq(userProfile.userId, session.user.id))
+    .limit(1)
+  const nextState = await agent.setFinderProfile(input)
+
+  return mapUserProfileStateFromAgent(nextState, existingProfile?.intentText ?? null)
+}
+
+export async function pingFindableUser(input: { userId: string }) {
+  const session = await requireCurrentSession()
+  const targetUserId = input.userId.trim()
+
+  if (!targetUserId) {
+    throw new Error('Choose someone in the place first.')
+  }
+
+  const targetAgent = await getUserAgent(targetUserId)
+  await targetAgent.requestFinderPing({
+    requesterUserId: session.user.id,
+  })
+
+  return {
+    success: true,
+  }
 }
 
 export async function leaveCurrentPlace() {
@@ -704,6 +757,11 @@ export async function getNearbyPlacePreview(input: { placeId: string }) {
       moodEmoji: userProfile.moodEmoji,
       intentSummary: userProfile.intentSummary,
       status: userProfile.status,
+      isFindable: userProfile.isFindable,
+      locationHint: userProfile.locationHint,
+      pingRequestedAt: userProfile.pingRequestedAt,
+      pingRequestedByUserId: userProfile.pingRequestedByUserId,
+      pingRequestedByUsername: userProfile.pingRequestedByUsername,
     })
     .from(userProfile)
     .innerJoin(user, eq(user.id, userProfile.userId))
@@ -733,14 +791,19 @@ export async function getNearbyPlacePreview(input: { placeId: string }) {
     readyCount,
     checkedInCount,
     activeConversationCount,
-    readyParticipants: readyParticipantRecords.map((record) => ({
-      userId: record.userId,
-      username:
-        record.username || record.fallbackUsername || record.fallbackName,
-      moodEmoji: record.moodEmoji,
-      intentSummary: record.intentSummary,
-      status: record.status as NearbyPlacePreviewState['readyParticipants'][number]['status'],
-    })),
+      readyParticipants: readyParticipantRecords.map((record) => ({
+        userId: record.userId,
+        username:
+          record.username || record.fallbackUsername || record.fallbackName,
+        moodEmoji: record.moodEmoji,
+        intentSummary: record.intentSummary,
+        status: record.status as NearbyPlacePreviewState['readyParticipants'][number]['status'],
+        isFindable: record.isFindable ?? false,
+        locationHint: record.locationHint ?? null,
+        pingRequestedAt: record.pingRequestedAt,
+        pingRequestedByUserId: record.pingRequestedByUserId ?? null,
+        pingRequestedByUsername: record.pingRequestedByUsername ?? null,
+      })),
   } satisfies NearbyPlacePreviewState
 }
 
