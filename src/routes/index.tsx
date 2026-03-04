@@ -3,11 +3,14 @@ import { createServerFn } from '@tanstack/react-start'
 import { AuthScreen } from '../components/AuthScreen'
 import { OnboardingScreen } from '../components/OnboardingScreen'
 import { PlaceViewScreen } from '../components/PlaceViewScreen'
+import { ScanJoinScreen } from '../components/ScanJoinScreen'
 import {
   connectFromScan,
   endCurrentConnection,
   getAppState,
   leaveCurrentPlace,
+  joinPlaceAndConnectFromScan,
+  previewScanJoin,
   resolveScanToken,
   saveUserProfile,
   setReadyState,
@@ -64,6 +67,18 @@ const endConversation = createServerFn({ method: 'POST' }).handler(async () => {
   return endCurrentConnection()
 })
 
+const loadScanJoinPreview = createServerFn({ method: 'POST' })
+  .inputValidator((input: { token: string }) => input)
+  .handler(async ({ data }) => {
+    return previewScanJoin(data)
+  })
+
+const joinScannedPlace = createServerFn({ method: 'POST' })
+  .inputValidator((input: { token: string }) => input)
+  .handler(async ({ data }) => {
+    return joinPlaceAndConnectFromScan(data)
+  })
+
 export const Route = createFileRoute('/')({
   validateSearch: (search: Record<string, unknown>) => ({
     scan: typeof search.scan === 'string' ? search.scan : undefined,
@@ -93,6 +108,19 @@ function App() {
 
   if (!session) {
     return <AuthScreen refreshSession={refreshSession} />
+  }
+
+  if (scan && !profile?.currentPlaceId) {
+    return (
+      <ScanJoinScreen
+        session={session}
+        scanToken={scan}
+        refreshSession={refreshSession}
+        clearScanToken={clearScanToken}
+        loadPreview={loadScanJoinPreview}
+        joinAndConnect={joinScannedPlace}
+      />
+    )
   }
 
   if (profile && currentPlace && qrHandoff) {

@@ -201,16 +201,29 @@ async function resolveScannedHandoff(
   token: string,
   viewerUserId: string,
 ): Promise<ConnectionPreviewState> {
-  const now = new Date()
   const [viewerProfile] = await db
     .select()
     .from(userProfile)
     .where(eq(userProfile.userId, viewerUserId))
     .limit(1)
+  const preview = await resolveScanPreview(token, viewerUserId)
 
   if (!viewerProfile?.currentPlaceId) {
     throw new Error('Pick your current place before scanning someone nearby.')
   }
+
+  if (viewerProfile.currentPlaceId !== preview.placeId) {
+    throw new Error('That QR code belongs to someone in a different place.')
+  }
+
+  return preview
+}
+
+async function resolveScanPreview(
+  token: string,
+  viewerUserId: string,
+): Promise<ConnectionPreviewState> {
+  const now = new Date()
 
   const [codeRecord] = await db
     .select()
@@ -224,10 +237,6 @@ async function resolveScannedHandoff(
 
   if (codeRecord.userId === viewerUserId) {
     throw new Error('That is your own QR code.')
-  }
-
-  if (codeRecord.placeId !== viewerProfile.currentPlaceId) {
-    throw new Error('That QR code belongs to someone in a different place.')
   }
 
   const [targetUser] = await db
@@ -641,6 +650,112 @@ export async function connectFromScan(input: { token: string }) {
     )
 
   await syncPlaceAgents([preview.placeId])
+
+  return {
+    success: true,
+    connectionId,
+  }
+}
+
+export async function previewScanJoin(input: { token: string }) {
+  const session = await requireCurrentSession()
+  const token = input.token.trim()
+
+  if (!token) {
+    throw new Error('Scan a Ready to Talk QR code first.')
+  }
+
+  return resolveScanPreview(token, session.user.id)
+}
+
+export async function joinPlaceAndConnectFromScan(input: { token: string }) {
+  const session = await requireCurrentSession()
+  const token = input.token.trim()
+
+  if (!token) {
+    throw new Error('Scan a Ready to Talk QR code first.')
+  }
+
+  const preview = await resolveScanPreview(token, session.user.id)
+  const now = new Date()
+  const [viewerProfile] = await db
+    .select()
+    .from(userProfile)
+    .where(eq(userProfile.userId, session.user.id))
+    .limit(1)
+  const [targetProfile] = await db
+    .select()
+    .from(userProfile)
+    .where(eq(userProfile.userId, preview.counterpart.userId))
+    .limit(1)
+
+  if (!targetProfile?.currentPlaceId || targetProfile.currentPlaceId !== preview.placeId) {
+    throw new Error('They are no longer checked into this place.')
+  }
+
+  if (targetProfile.status !== 'ready') {
+    throw new Error('They are not marked ready right now.')
+  }
+
+  const existingConnection = await getActiveConnectionForUser(session.user.id)
+  if (existingConnection) {
+    throw new Error('You are already connected with someone nearby.')
+  }
+
+  const targetConnection = await getActiveConnectionForUser(preview.counterpart.userId)
+  if (targetConnection) {
+    throw new Error('They are already in a conversation.')
+  }
+
+  const endedPlaceIds = await endAcceptedConnectionsForUser(session.user.id)
+
+  await db
+    .insert(userProfile)
+    .values({
+      userId: session.user.id,
+      moodEmoji: viewerProfile?.moodEmoji ?? null,
+      intentText: viewerProfile?.intentText ?? null,
+      intentSummary:
+        viewerProfile?.intentSummary ?? 'Open to a nearby conversation.',
+      status: 'in_conversation',
+      currentPlaceId: preview.placeId,
+      createdAt: viewerProfile?.createdAt ?? now,
+      updatedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: userProfile.userId,
+      set: {
+        status: 'in_conversation',
+        currentPlaceId: preview.placeId,
+        updatedAt: now,
+      },
+    })
+
+  await db
+    .update(userProfile)
+    .set({
+      status: 'in_conversation',
+      updatedAt: now,
+    })
+    .where(eq(userProfile.userId, preview.counterpart.userId))
+
+  const connectionId = crypto.randomUUID()
+
+  await db.insert(handoffConnection).values({
+    id: connectionId,
+    requesterUserId: session.user.id,
+    recipientUserId: preview.counterpart.userId,
+    placeId: preview.placeId,
+    status: 'accepted',
+    createdAt: now,
+    updatedAt: now,
+  })
+
+  await syncPlaceAgents([
+    viewerProfile?.currentPlaceId,
+    preview.placeId,
+    ...endedPlaceIds,
+  ])
 
   return {
     success: true,
