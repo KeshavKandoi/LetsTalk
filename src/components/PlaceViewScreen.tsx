@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
+import jsQR from 'jsqr'
 import * as QRCode from 'qrcode'
 import { useAgent } from 'agents/react'
 import {
@@ -39,9 +40,73 @@ type BarcodeDetectorCtor = new (options?: {
   formats?: string[]
 }) => BarcodeDetectorLike
 
+type QrFrameDetector = {
+  detect: (source: HTMLVideoElement) => Promise<string | null>
+}
+
 declare global {
   interface Window {
     BarcodeDetector?: BarcodeDetectorCtor
+  }
+}
+
+function createQrFrameDetector(): QrFrameDetector | null {
+  if (typeof window === 'undefined') {
+    return null
+  }
+
+  const BarcodeDetector = window.BarcodeDetector
+
+  if (BarcodeDetector) {
+    const detector = new BarcodeDetector({
+      formats: ['qr_code'],
+    })
+
+    return {
+      detect: async (source) => {
+        const results = await detector.detect(source)
+        return results[0]?.rawValue ?? null
+      },
+    }
+  }
+
+  if (typeof document === 'undefined') {
+    return null
+  }
+
+  const canvas = document.createElement('canvas')
+  const context = canvas.getContext('2d', {
+    willReadFrequently: true,
+  })
+
+  if (!context) {
+    return null
+  }
+
+  return {
+    detect: async (source) => {
+      const width = source.videoWidth
+      const height = source.videoHeight
+
+      if (!width || !height) {
+        return null
+      }
+
+      if (canvas.width !== width) {
+        canvas.width = width
+      }
+
+      if (canvas.height !== height) {
+        canvas.height = height
+      }
+
+      context.drawImage(source, 0, 0, width, height)
+
+      const imageData = context.getImageData(0, 0, width, height)
+      const result = jsQR(imageData.data, width, height)
+
+      return result?.data ?? null
+    },
   }
 }
 
@@ -355,11 +420,14 @@ export function PlaceViewScreen({
       return
     }
 
-    if (
-      !navigator.mediaDevices?.getUserMedia ||
-      typeof window === 'undefined' ||
-      !window.BarcodeDetector
-    ) {
+    if (!navigator.mediaDevices?.getUserMedia || typeof window === 'undefined') {
+      setCameraStatus('unsupported')
+      return
+    }
+
+    const detector = createQrFrameDetector()
+
+    if (!detector) {
       setCameraStatus('unsupported')
       return
     }
@@ -386,30 +454,20 @@ export function PlaceViewScreen({
         videoRef.current.srcObject = stream
         await videoRef.current.play()
 
-        const BarcodeDetector = window.BarcodeDetector
-
-        if (!BarcodeDetector) {
-          setCameraStatus('unsupported')
-          return
-        }
-
-        const detector = new BarcodeDetector({
-          formats: ['qr_code'],
-        })
-
         setCameraStatus('scanning')
         scanIntervalRef.current = window.setInterval(() => {
           if (!videoRef.current || resolvingScanRef.current) {
             return
           }
 
-          void detector.detect(videoRef.current).then((results) => {
-            const rawValue = results[0]?.rawValue
-
-            if (rawValue) {
-              void resolveToken(rawValue)
-            }
-          })
+          void detector
+            .detect(videoRef.current)
+            .then((rawValue) => {
+              if (rawValue) {
+                void resolveToken(rawValue)
+              }
+            })
+            .catch(() => undefined)
         }, 500)
       } catch (nextError) {
         setCameraStatus('unsupported')

@@ -30,6 +30,7 @@
 		"agents": "^0.7.3",
 		"better-auth": "^1.5.3",
 		"drizzle-orm": "^0.45.1",
+		"jsqr": "^1.4.0",
 		"lucide-react": "^0.545.0",
 		"qrcode": "^1.5.4",
 		"react": "^19.2.0",
