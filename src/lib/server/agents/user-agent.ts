@@ -23,6 +23,36 @@ type UserAgentEnv = Cloudflare.Env & {
   DB: D1Database
 }
 
+function asPresenceStatus(
+  status: string | null | undefined,
+): PresenceStatus {
+  switch (status) {
+    case 'offline':
+    case 'present':
+    case 'ready':
+    case 'in_conversation':
+      return status
+    default:
+      return 'offline'
+  }
+}
+
+function toUserProfileSnapshot(
+  profileRecord:
+    | typeof userProfile.$inferSelect
+    | null
+    | undefined,
+) {
+  if (!profileRecord) {
+    return null
+  }
+
+  return {
+    ...profileRecord,
+    status: asPresenceStatus(profileRecord.status),
+  }
+}
+
 function getDisplayUsername(record: typeof user.$inferSelect) {
   return record.displayUsername || record.username || record.name
 }
@@ -94,7 +124,11 @@ async function requirePlaceExists(database: D1Database, placeId: string) {
 }
 
 async function syncPlaceAgents(placeIds: Array<string | null | undefined>) {
-  const uniquePlaceIds = [...new Set(placeIds.filter(Boolean))]
+  const uniquePlaceIds = [
+    ...new Set(
+      placeIds.filter((placeId): placeId is string => Boolean(placeId)),
+    ),
+  ]
 
   for (const placeId of uniquePlaceIds) {
     const agent = await getAgentByName<Cloudflare.Env, PlaceAgent>(
@@ -106,7 +140,9 @@ async function syncPlaceAgents(placeIds: Array<string | null | undefined>) {
 }
 
 async function syncUserAgents(userIds: Array<string | null | undefined>) {
-  const uniqueUserIds = [...new Set(userIds.filter(Boolean))]
+  const uniqueUserIds = [
+    ...new Set(userIds.filter((userId): userId is string => Boolean(userId))),
+  ]
 
   for (const userId of uniqueUserIds) {
     const agent = await getAgentByName<Cloudflare.Env, UserAgent>(
@@ -408,7 +444,9 @@ export class UserAgent extends Agent<UserAgentEnv, UserAgentState> {
       .where(eq(userProfile.userId, this.name))
       .limit(1)
 
-    assertCanSetReady(profileRecord)
+    const profileSnapshot = toUserProfileSnapshot(profileRecord)
+
+    assertCanSetReady(profileSnapshot)
 
     await db
       .update(userProfile)
@@ -418,7 +456,7 @@ export class UserAgent extends Agent<UserAgentEnv, UserAgentState> {
       })
       .where(eq(userProfile.userId, this.name))
 
-    await syncPlaceAgents([profileRecord.currentPlaceId])
+    await syncPlaceAgents([profileSnapshot?.currentPlaceId])
     return this.refresh()
   }
 
@@ -522,9 +560,10 @@ export class UserAgent extends Agent<UserAgentEnv, UserAgentState> {
       this.env.DB,
       input.counterpartUserId,
     )
+
     assertCanConnectAtPlace({
-      viewerProfile,
-      targetProfile,
+      viewerProfile: toUserProfileSnapshot(viewerProfile),
+      targetProfile: toUserProfileSnapshot(targetProfile),
       placeId: input.placeId,
       viewerHasActiveConnection: Boolean(existingConnection),
       targetHasActiveConnection: Boolean(targetConnection),
@@ -591,12 +630,14 @@ export class UserAgent extends Agent<UserAgentEnv, UserAgentState> {
       this.env.DB,
       input.counterpartUserId,
     )
+    const viewerProfileSnapshot = toUserProfileSnapshot(viewerProfile)
+
     assertCanConnectAtPlace({
       viewerProfile: {
         currentPlaceId: input.placeId,
-        status: viewerProfile?.status ?? 'offline',
+        status: viewerProfileSnapshot?.status ?? 'offline',
       },
-      targetProfile,
+      targetProfile: toUserProfileSnapshot(targetProfile),
       placeId: input.placeId,
       viewerHasActiveConnection: Boolean(existingConnection),
       targetHasActiveConnection: Boolean(targetConnection),

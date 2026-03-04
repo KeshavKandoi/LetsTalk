@@ -8,6 +8,8 @@ declare global {
 
 type GoogleMapInstance = {
   fitBounds: (bounds: GoogleLatLngBounds, padding?: number) => void
+  setCenter: (position: { lat: number; lng: number }) => void
+  setZoom: (zoom: number) => void
 }
 
 type GoogleLatLngBounds = {

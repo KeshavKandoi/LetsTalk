@@ -9,6 +9,7 @@ import {
   endCurrentConnection,
   getAppState,
   getGoogleMapsBrowserConfig,
+  getNearbyPlacePreview,
   leaveCurrentPlace,
   joinPlaceAndConnectFromScan,
   previewScanJoin,
@@ -35,6 +36,12 @@ const searchNearbyPlaces = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     return searchNearbyPlacesForLocation(data)
+  })
+
+const loadNearbyPlacePreview = createServerFn({ method: 'POST' })
+  .inputValidator((input: { placeId: string }) => input)
+  .handler(async ({ data }) => {
+    return getNearbyPlacePreview(data)
   })
 
 const upsertUserProfile = createServerFn({ method: 'POST' })
@@ -163,6 +170,7 @@ function App() {
       profile={profile}
       refreshSession={refreshSession}
       searchNearbyPlaces={searchNearbyPlaces}
+      loadNearbyPlacePreview={loadNearbyPlacePreview}
       googleMapsConfig={googleMapsConfig}
       saveProfile={upsertUserProfile}
     />

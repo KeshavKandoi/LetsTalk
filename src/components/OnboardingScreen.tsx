@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import {
   ArrowLeft,
   Compass,
+  MessageCircle,
   MapPin,
   QrCode,
   Users,
@@ -12,6 +13,7 @@ import { NearbyPlacesMap } from './NearbyPlacesMap'
 import type {
   AppSession,
   NearbyPlace,
+  NearbyPlacePreviewState,
   UserProfileState,
 } from '../lib/app-types'
 
@@ -39,6 +41,7 @@ export function OnboardingScreen({
   profile,
   refreshSession,
   searchNearbyPlaces,
+  loadNearbyPlacePreview,
   googleMapsConfig,
   saveProfile,
   client = authClient,
@@ -52,6 +55,11 @@ export function OnboardingScreen({
       longitude: number
     }
   }) => Promise<NearbyPlace[]>
+  loadNearbyPlacePreview: (input: {
+    data: {
+      placeId: string
+    }
+  }) => Promise<NearbyPlacePreviewState>
   googleMapsConfig: {
     apiKey: string
     mapId: string | null
@@ -78,6 +86,11 @@ export function OnboardingScreen({
   const [placesError, setPlacesError] = useState<string | null>(null)
   const [placesLoading, setPlacesLoading] = useState(false)
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null)
+  const [placePreview, setPlacePreview] = useState<NearbyPlacePreviewState | null>(
+    null,
+  )
+  const [placePreviewLoading, setPlacePreviewLoading] = useState(false)
+  const [placePreviewError, setPlacePreviewError] = useState<string | null>(null)
   const [moodEmoji, setMoodEmoji] = useState(profile?.moodEmoji ?? '🙂')
   const [intentText, setIntentText] = useState(profile?.intentText ?? '')
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -204,6 +217,54 @@ export function OnboardingScreen({
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    if (!selectedPlaceId) {
+      setPlacePreview(null)
+      setPlacePreviewError(null)
+      setPlacePreviewLoading(false)
+      return
+    }
+
+    let cancelled = false
+
+    setPlacePreviewLoading(true)
+    setPlacePreviewError(null)
+
+    void loadNearbyPlacePreview({
+      data: {
+        placeId: selectedPlaceId,
+      },
+    })
+      .then((nextPreview) => {
+        if (cancelled) {
+          return
+        }
+
+        setPlacePreview(nextPreview)
+      })
+      .catch((error) => {
+        if (cancelled) {
+          return
+        }
+
+        setPlacePreview(null)
+        setPlacePreviewError(
+          error instanceof Error
+            ? error.message
+            : 'Unable to load this place right now.',
+        )
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setPlacePreviewLoading(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [loadNearbyPlacePreview, selectedPlaceId])
 
   const handleSaveProfile = async () => {
     if (!selectedPlace) {
@@ -454,6 +515,90 @@ export function OnboardingScreen({
                 </div>
               </div>
 
+              <div className="mt-5 rounded-3xl border border-stone-200 bg-white px-4 py-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">
+                      Live here now
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                      Preview the room before you step in.
+                    </p>
+                  </div>
+                  {placePreview ? (
+                    <span className="shrink-0 rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                      {placePreview.checkedInCount} here now
+                    </span>
+                  ) : null}
+                </div>
+
+                {placePreviewLoading ? (
+                  <div className="mt-4 rounded-3xl border border-dashed border-stone-200 bg-stone-50 px-4 py-5 text-sm text-slate-500">
+                    Loading place preview...
+                  </div>
+                ) : null}
+
+                {placePreview ? (
+                  <>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <PreviewMetricCard
+                        icon={<Users className="h-4 w-4" />}
+                        label="Ready"
+                        value={
+                          placePreview.readyCount === 1
+                            ? '1 person'
+                            : `${placePreview.readyCount} people`
+                        }
+                      />
+                      <PreviewMetricCard
+                        icon={<MessageCircle className="h-4 w-4" />}
+                        label="Talking"
+                        value={
+                          placePreview.activeConversationCount === 1
+                            ? '1 conversation'
+                            : `${placePreview.activeConversationCount} conversations`
+                        }
+                      />
+                    </div>
+
+                    <div className="mt-4">
+                      <p className="text-sm font-semibold text-slate-900">
+                        Ready to talk here
+                      </p>
+                      {placePreview.readyParticipants.length > 0 ? (
+                        <div className="mt-3 space-y-3">
+                          {placePreview.readyParticipants.map((participant) => (
+                            <div
+                              key={participant.userId}
+                              className="rounded-3xl border border-stone-200 bg-stone-50 px-4 py-4"
+                            >
+                              <p className="text-sm font-semibold text-slate-950">
+                                {participant.username}
+                              </p>
+                              <p className="mt-2 text-sm leading-6 text-slate-700">
+                                {participant.moodEmoji}{' '}
+                                {participant.intentSummary ||
+                                  'Open to a nearby conversation.'}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="mt-3 rounded-3xl border border-dashed border-stone-200 bg-stone-50 px-4 py-5 text-sm text-slate-500">
+                          No one is marked ready here at the moment.
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : null}
+
+                {placePreviewError ? (
+                  <p className="mt-4 text-sm text-rose-700">
+                    {placePreviewError}
+                  </p>
+                ) : null}
+              </div>
+
               <div className="mt-5">
                 <p className="text-sm font-semibold text-slate-900">
                   Mood and intro
@@ -513,7 +658,7 @@ export function OnboardingScreen({
                 <button
                   type="button"
                   onClick={handleSaveProfile}
-                  disabled={pendingAction === 'save'}
+                  disabled={pendingAction === 'save' || placePreviewLoading}
                   className="mt-5 inline-flex w-full items-center justify-center rounded-2xl bg-amber-500 px-5 py-3 font-semibold text-white transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {pendingAction === 'save'
@@ -545,6 +690,26 @@ function StepCard({
       </div>
       <h3 className="mt-4 text-lg font-semibold">{title}</h3>
       <p className="mt-2 text-sm leading-7 text-slate-700">{description}</p>
+    </div>
+  )
+}
+
+function PreviewMetricCard({
+  icon,
+  label,
+  value,
+}: {
+  icon: ReactNode
+  label: string
+  value: string
+}) {
+  return (
+    <div className="rounded-3xl border border-stone-200 bg-stone-50 px-4 py-4">
+      <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-600">
+        {icon}
+        {label}
+      </div>
+      <p className="mt-3 text-lg font-semibold text-slate-950">{value}</p>
     </div>
   )
 }

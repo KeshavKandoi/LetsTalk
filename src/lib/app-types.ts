@@ -60,6 +60,14 @@ export type CurrentPlaceState = {
   readyCount: number
 }
 
+export type NearbyPlacePreviewState = {
+  placeId: string
+  readyCount: number
+  checkedInCount: number
+  activeConversationCount: number
+  readyParticipants: PlaceAgentParticipantState[]
+}
+
 export type PlaceAgentState = {
   placeId: string
   readyCount: number

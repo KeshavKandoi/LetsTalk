@@ -8,6 +8,7 @@ import type {
   ConnectionPreviewState,
   CurrentPlaceState,
   NearbyPlace,
+  NearbyPlacePreviewState,
   PresenceStatus,
   QrHandoffState,
   UserProfileState,
@@ -27,7 +28,6 @@ import {
   getGoogleMapsApiKey,
   getUserAgentBinding,
   getGoogleMapsMapId,
-  getPlaceAgentBinding,
 } from './env'
 
 type SessionResult = Awaited<ReturnType<typeof auth.api.getSession>>
@@ -458,10 +458,15 @@ export async function connectFromScan(input: { token: string }) {
   }
 
   const agent = await getUserAgent(session.user.id)
-  return agent.connectWithUser({
+  const result = await agent.connectWithUser({
     counterpartUserId: preview.counterpart.userId,
     placeId: preview.placeId,
   })
+
+  return {
+    success: result.success,
+    connectionId: result.connectionId,
+  }
 }
 
 export async function previewScanJoin(input: { token: string }) {
@@ -509,16 +514,25 @@ export async function joinPlaceAndConnectFromScan(input: { token: string }) {
   }
 
   const agent = await getUserAgent(session.user.id)
-  return agent.joinPlaceAndConnectWithUser({
+  const result = await agent.joinPlaceAndConnectWithUser({
     counterpartUserId: preview.counterpart.userId,
     placeId: preview.placeId,
   })
+
+  return {
+    success: result.success,
+    connectionId: result.connectionId,
+  }
 }
 
 export async function endCurrentConnection() {
   const session = await requireCurrentSession()
   const agent = await getUserAgent(session.user.id)
-  return agent.endCurrentConnection()
+  const result = await agent.endCurrentConnection()
+
+  return {
+    success: result.success,
+  }
 }
 
 function mapGooglePlace(result: GoogleNearbyPlace): NearbyPlace | null {
@@ -646,6 +660,88 @@ export async function searchNearbyPlacesForLocation(input: {
     ...nearbyPlace,
     readyCount: readyCountByPlaceId.get(nearbyPlace.placeId) ?? 0,
   }))
+}
+
+export async function getNearbyPlacePreview(input: { placeId: string }) {
+  await requireCurrentSession()
+
+  const placeId = input.placeId.trim()
+
+  if (!placeId) {
+    throw new Error('Choose a place first.')
+  }
+
+  const [placeRecord] = await db
+    .select()
+    .from(place)
+    .where(eq(place.placeId, placeId))
+    .limit(1)
+
+  if (!placeRecord) {
+    throw new Error('That place is no longer available.')
+  }
+
+  const presentStatuses = ['present', 'ready', 'in_conversation'] as const
+  const [{ readyCount, checkedInCount }] = await db
+    .select({
+      readyCount: sql<number>`count(case when ${userProfile.status} = 'ready' then 1 end)`,
+      checkedInCount: sql<number>`count(*)`,
+    })
+    .from(userProfile)
+    .where(
+      and(
+        eq(userProfile.currentPlaceId, placeId),
+        inArray(userProfile.status, presentStatuses),
+      ),
+    )
+
+  const readyParticipantRecords = await db
+    .select({
+      userId: user.id,
+      username: user.displayUsername,
+      fallbackUsername: user.username,
+      fallbackName: user.name,
+      moodEmoji: userProfile.moodEmoji,
+      intentSummary: userProfile.intentSummary,
+      status: userProfile.status,
+    })
+    .from(userProfile)
+    .innerJoin(user, eq(user.id, userProfile.userId))
+    .where(
+      and(
+        eq(userProfile.currentPlaceId, placeId),
+        eq(userProfile.status, 'ready'),
+      ),
+    )
+    .orderBy(desc(userProfile.updatedAt))
+    .limit(8)
+
+  const [{ activeConversationCount }] = await db
+    .select({
+      activeConversationCount: sql<number>`count(*)`,
+    })
+    .from(handoffConnection)
+    .where(
+      and(
+        eq(handoffConnection.placeId, placeId),
+        eq(handoffConnection.status, 'accepted'),
+      ),
+    )
+
+  return {
+    placeId,
+    readyCount,
+    checkedInCount,
+    activeConversationCount,
+    readyParticipants: readyParticipantRecords.map((record) => ({
+      userId: record.userId,
+      username:
+        record.username || record.fallbackUsername || record.fallbackName,
+      moodEmoji: record.moodEmoji,
+      intentSummary: record.intentSummary,
+      status: record.status as NearbyPlacePreviewState['readyParticipants'][number]['status'],
+    })),
+  } satisfies NearbyPlacePreviewState
 }
 
 export async function getGoogleMapsBrowserConfig() {

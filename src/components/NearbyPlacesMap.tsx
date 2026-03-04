@@ -8,6 +8,8 @@ import {
 
 type MapLike = {
   fitBounds: (bounds: BoundsLike, padding?: number) => void
+  setCenter: (position: { lat: number; lng: number }) => void
+  setZoom: (zoom: number) => void
 }
 
 type MarkerLike = {
@@ -220,7 +222,15 @@ export function NearbyPlacesMap({
           })
         }
 
-        mapRef.current.fitBounds(bounds, 56)
+        if (locationCoords) {
+          mapRef.current.setCenter({
+            lat: locationCoords.latitude,
+            lng: locationCoords.longitude,
+          })
+          mapRef.current.setZoom(17)
+        } else {
+          mapRef.current.fitBounds(bounds, 56)
+        }
         setLoadingState('ready')
       })
       .catch((error) => {
