@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import jsQR from 'jsqr'
 import * as QRCode from 'qrcode'
@@ -46,10 +46,69 @@ type QrFrameDetector = {
   detect: (source: HTMLVideoElement) => Promise<string | null>
 }
 
+type MotionPermissionResponse = 'granted' | 'denied'
+
+type DeviceMotionEventWithPermission = typeof DeviceMotionEvent & {
+  requestPermission?: () => Promise<MotionPermissionResponse>
+}
+
+type MotionAccessState =
+  | 'unavailable'
+  | 'needs-permission'
+  | 'requesting'
+  | 'active'
+  | 'denied'
+
+const FACE_DOWN_HORIZONTAL_THRESHOLD = 4
+const FACE_DOWN_Z_THRESHOLD = -7
+const FACE_DOWN_HOLD_MS = 1200
+
 declare global {
   interface Window {
     BarcodeDetector?: BarcodeDetectorCtor
   }
+}
+
+function getInitialMotionAccessState(): MotionAccessState {
+  if (typeof window === 'undefined' || !('DeviceMotionEvent' in window)) {
+    return 'unavailable'
+  }
+
+  const motionEvent = window.DeviceMotionEvent as
+    | DeviceMotionEventWithPermission
+    | undefined
+
+  if (!motionEvent) {
+    return 'unavailable'
+  }
+
+  return typeof motionEvent.requestPermission === 'function'
+    ? 'needs-permission'
+    : 'active'
+}
+
+function isFaceDownReading(
+  acceleration: DeviceMotionEvent['accelerationIncludingGravity'] | null,
+) {
+  if (!acceleration) {
+    return false
+  }
+
+  const { x, y, z } = acceleration
+
+  if (
+    typeof x !== 'number' ||
+    typeof y !== 'number' ||
+    typeof z !== 'number'
+  ) {
+    return false
+  }
+
+  return (
+    Math.abs(x) <= FACE_DOWN_HORIZONTAL_THRESHOLD &&
+    Math.abs(y) <= FACE_DOWN_HORIZONTAL_THRESHOLD &&
+    z <= FACE_DOWN_Z_THRESHOLD
+  )
 }
 
 function createQrFrameDetector(): QrFrameDetector | null {
@@ -266,10 +325,16 @@ export function PlaceViewScreen({
   const [selectedFinderHint, setSelectedFinderHint] = useState(
     profile.locationHint ?? finderHintOptions[0],
   )
+  const [motionAccessState, setMotionAccessState] = useState<MotionAccessState>(
+    () => getInitialMotionAccessState(),
+  )
+  const [motionNotice, setMotionNotice] = useState<string | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const scanIntervalRef = useRef<number | null>(null)
   const resolvingScanRef = useRef(false)
+  const readyRequestInFlightRef = useRef(false)
+  const faceDownSinceRef = useRef<number | null>(null)
   const previousConnectionRef = useRef<ActiveConnectionState | null>(
     activeConnection,
   )
@@ -381,6 +446,10 @@ export function PlaceViewScreen({
   }, [currentPlace.place.placeId])
 
   useEffect(() => {
+    setMotionAccessState(getInitialMotionAccessState())
+  }, [])
+
+  useEffect(() => {
     if (resolvedActiveConnection) {
       previousConnectionRef.current = resolvedActiveConnection
       setConversationNotice(null)
@@ -430,6 +499,20 @@ export function PlaceViewScreen({
       window.clearTimeout(timeoutId)
     }
   }, [finderNotice])
+
+  useEffect(() => {
+    if (!motionNotice) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setMotionNotice(null)
+    }, 4000)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [motionNotice])
 
   useEffect(() => {
     if (!resolvedActiveConnection) {
@@ -497,6 +580,87 @@ export function PlaceViewScreen({
       cancelled = true
     }
   }, [qrHandoff.url])
+
+  const updateReadyState = async (
+    nextReady: boolean,
+    source: 'manual' | 'face-down' = 'manual',
+  ) => {
+    if (readyRequestInFlightRef.current || nextReady === isReady) {
+      return
+    }
+
+    readyRequestInFlightRef.current = true
+    setPendingAction('ready')
+    setError(null)
+
+    try {
+      await setReady({
+        data: {
+          ready: nextReady,
+        },
+      })
+      await refreshSession()
+
+      if (source === 'face-down') {
+        setMotionNotice('Phone turned face-down. You are no longer marked ready.')
+      }
+    } catch (nextError) {
+      setMotionNotice(null)
+      setError(
+        nextError instanceof Error
+          ? nextError.message
+          : 'Unable to change your status right now.',
+      )
+    } finally {
+      readyRequestInFlightRef.current = false
+      faceDownSinceRef.current = null
+      setPendingAction(null)
+    }
+  }
+
+  const handleDeviceMotion = useEffectEvent((event: DeviceMotionEvent) => {
+    if (!isReady || isInConversation || readyRequestInFlightRef.current) {
+      faceDownSinceRef.current = null
+      return
+    }
+
+    if (!isFaceDownReading(event.accelerationIncludingGravity)) {
+      faceDownSinceRef.current = null
+      return
+    }
+
+    const now = Date.now()
+
+    if (faceDownSinceRef.current === null) {
+      faceDownSinceRef.current = now
+      return
+    }
+
+    if (now - faceDownSinceRef.current < FACE_DOWN_HOLD_MS) {
+      return
+    }
+
+    faceDownSinceRef.current = null
+    void updateReadyState(false, 'face-down')
+  })
+
+  useEffect(() => {
+    if (
+      !isReady ||
+      isInConversation ||
+      motionAccessState !== 'active' ||
+      typeof window === 'undefined'
+    ) {
+      faceDownSinceRef.current = null
+      return
+    }
+
+    window.addEventListener('devicemotion', handleDeviceMotion)
+
+    return () => {
+      window.removeEventListener('devicemotion', handleDeviceMotion)
+    }
+  }, [isReady, isInConversation, motionAccessState])
 
   const stopScanner = () => {
     if (scanIntervalRef.current !== null) {
@@ -623,25 +787,7 @@ export function PlaceViewScreen({
   }, [scannerOpen, scanPreview, isInConversation])
 
   const handleReadyToggle = async () => {
-    setPendingAction('ready')
-    setError(null)
-
-    try {
-      await setReady({
-        data: {
-          ready: !isReady,
-        },
-      })
-      await refreshSession()
-    } catch (nextError) {
-      setError(
-        nextError instanceof Error
-          ? nextError.message
-          : 'Unable to change your status right now.',
-      )
-    } finally {
-      setPendingAction(null)
-    }
+    await updateReadyState(!isReady)
   }
 
   const handleLeavePlace = async () => {
@@ -740,6 +886,42 @@ export function PlaceViewScreen({
 
   const handleResolveManualScan = async () => {
     await resolveToken(scanInput)
+  }
+
+  const handleEnableMotionAccess = async () => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    const motionEvent = window.DeviceMotionEvent as
+      | DeviceMotionEventWithPermission
+      | undefined
+
+    if (!motionEvent) {
+      setMotionAccessState('unavailable')
+      return
+    }
+
+    if (!motionEvent.requestPermission) {
+      setMotionAccessState('active')
+      return
+    }
+
+    setMotionAccessState('requesting')
+
+    try {
+      const permission = await motionEvent.requestPermission()
+
+      if (permission === 'granted') {
+        setMotionAccessState('active')
+        setMotionNotice('Flip your phone face-down to leave the ready pool.')
+        return
+      }
+
+      setMotionAccessState('denied')
+    } catch {
+      setMotionAccessState('denied')
+    }
   }
 
   const handleConnect = async () => {
@@ -990,6 +1172,51 @@ export function PlaceViewScreen({
                     : 'Set me ready'}
               </button>
             )}
+
+            {!isInConversation ? (
+              <div className="mt-4 rounded-2xl border border-dashed border-[var(--rt-border)] bg-white px-4 py-4">
+                <p className="text-sm font-semibold text-[var(--rt-ink)]">
+                  Phone flip shortcut
+                </p>
+                <p className="mt-2 text-sm leading-6 text-[var(--rt-ink-soft)]">
+                  {motionAccessState === 'active'
+                    ? isReady
+                      ? 'Flip your phone face-down for a moment to leave the ready pool without tapping.'
+                      : 'When you are ready, flipping your phone face-down can take you back out of the ready pool without tapping.'
+                    : motionAccessState === 'needs-permission' ||
+                        motionAccessState === 'requesting'
+                      ? 'Allow motion access once so turning your phone face-down can quietly take you out of the ready pool.'
+                      : motionAccessState === 'denied'
+                        ? 'Motion access is still off, so face-down detection cannot change your status yet.'
+                        : 'Face-down detection is not available in this browser.'}
+                </p>
+
+                {(motionAccessState === 'needs-permission' ||
+                  motionAccessState === 'requesting' ||
+                  motionAccessState === 'denied') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void handleEnableMotionAccess()
+                    }}
+                    disabled={motionAccessState === 'requesting'}
+                    className="mt-4 inline-flex items-center justify-center rounded-full border border-[var(--rt-border)] bg-[var(--rt-surface-strong)] px-4 py-2 text-sm font-medium text-[var(--rt-ink)] transition hover:border-[var(--rt-border-strong)] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {motionAccessState === 'requesting'
+                      ? 'Enabling motion access...'
+                      : motionAccessState === 'denied'
+                        ? 'Try motion access again'
+                        : 'Enable face-down shortcut'}
+                  </button>
+                )}
+
+                {motionNotice ? (
+                  <p className="mt-3 text-sm font-medium text-[var(--rt-accent)]">
+                    {motionNotice}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
           {conversationNotice ? (
