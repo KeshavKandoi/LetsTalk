@@ -1,5 +1,6 @@
 import { env } from 'cloudflare:workers'
 import type { PlaceAgent } from './agents/place-agent'
+import type { UserAgent } from './agents/user-agent'
 
 type AppEnv = Cloudflare.Env & {
   BETTER_AUTH_URL?: string
@@ -7,6 +8,7 @@ type AppEnv = Cloudflare.Env & {
   DB?: D1Database
   GOOGLE_MAPS_API_KEY?: string
   PlaceAgent?: DurableObjectNamespace<PlaceAgent>
+  UserAgent?: DurableObjectNamespace<UserAgent>
 }
 
 const appEnv = env as AppEnv
@@ -69,4 +71,16 @@ export function getPlaceAgentBinding() {
   }
 
   return placeAgent
+}
+
+export function getUserAgentBinding() {
+  const userAgent = appEnv.UserAgent
+
+  if (!userAgent) {
+    throw new Error(
+      'Missing the UserAgent durable object binding. Add it to wrangler.jsonc before starting the app.',
+    )
+  }
+
+  return userAgent
 }

@@ -27,6 +27,17 @@ export type UserProfileState = {
   updatedAt: string | Date
 }
 
+export type UserAgentState = {
+  userId: string
+  username: string | null
+  moodEmoji: string | null
+  intentSummary: string | null
+  status: PresenceStatus
+  currentPlaceId: string | null
+  activeConversationId: string | null
+  updatedAt: string | null
+}
+
 export type NearbyPlace = {
   placeId: string
   name: string
