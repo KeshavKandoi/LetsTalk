@@ -12,8 +12,8 @@ body {
   @apply m-0;
   min-height: 100vh;
   font-family: var(--font-sans);
-  background: #07111f;
-  color: #f8fafc;
+  background: #f7f3ea;
+  color: #0f172a;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

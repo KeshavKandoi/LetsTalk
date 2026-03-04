@@ -35,7 +35,8 @@
 	"d1_databases": [
 		{
 			"binding": "DB",
-			"database_name": "readytotalk-app",
+			"database_name": "readytotalk-db",
+			"database_id": "672166d0-cd03-4885-9c20-bdb6a78dd159",
 			"migrations_dir": "./drizzle"
 		}
 	]
