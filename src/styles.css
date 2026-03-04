@@ -1,15 +1,23 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: "Avenir Next", "Trebuchet MS", "Segoe UI", sans-serif;
+}
+
+html {
+  min-height: 100%;
+}
+
 body {
   @apply m-0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
-    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
-    sans-serif;
+  min-height: 100vh;
+  font-family: var(--font-sans);
+  background: #07111f;
+  color: #f8fafc;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
-    monospace;
+* {
+  box-sizing: border-box;
 }

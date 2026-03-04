@@ -12,7 +12,7 @@
 	"main": "@tanstack/react-start/server-entry",
 	"observability": {
 		"enabled": true
-	}
+	},
 	/**
 	 * Smart Placement
 	 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
@@ -30,7 +30,15 @@
 	 * Note: Use secrets to store sensitive data.
 	 * https://developers.cloudflare.com/workers/configuration/secrets/
 	 */
-	// "vars": {  "MY_VARIABLE": "production_value" }
+	// Put BETTER_AUTH_SECRET in `.dev.vars` for local development and use
+	// `wrangler secret put BETTER_AUTH_SECRET` before deploying.
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "readytotalk-app",
+			"migrations_dir": "./drizzle"
+		}
+	]
 	/**
 	 * Static Assets
 	 * https://developers.cloudflare.com/workers/static-assets/binding/
