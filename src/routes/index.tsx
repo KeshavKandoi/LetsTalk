@@ -12,8 +12,10 @@ import {
   getNearbyPlacePreview,
   leaveCurrentPlace,
   joinPlaceAndConnectFromScan,
+  pingFindableUser,
   previewScanJoin,
   resolveScanToken,
+  saveFinderProfile,
   saveUserProfile,
   setReadyState,
   searchNearbyPlacesForLocation,
@@ -62,9 +64,23 @@ const updateReadyState = createServerFn({ method: 'POST' })
     return setReadyState(data)
   })
 
+const updateFinderProfile = createServerFn({ method: 'POST' })
+  .inputValidator(
+    (input: { isFindable: boolean; locationHint: string | null }) => input,
+  )
+  .handler(async ({ data }) => {
+    return saveFinderProfile(data)
+  })
+
 const clearCurrentPlace = createServerFn({ method: 'POST' }).handler(async () => {
   return leaveCurrentPlace()
 })
+
+const pingParticipant = createServerFn({ method: 'POST' })
+  .inputValidator((input: { userId: string }) => input)
+  .handler(async ({ data }) => {
+    return pingFindableUser(data)
+  })
 
 const loadScanPreview = createServerFn({ method: 'POST' })
   .inputValidator((input: { token: string }) => input)
@@ -156,7 +172,9 @@ function App() {
         refreshSession={refreshSession}
         clearScanToken={clearScanToken}
         setReady={updateReadyState}
+        saveFinderProfile={updateFinderProfile}
         leavePlace={clearCurrentPlace}
+        pingParticipant={pingParticipant}
         loadScanPreview={loadScanPreview}
         connectScan={connectScannedQr}
         endConversation={endConversation}

@@ -29,6 +29,11 @@ const { refresh, useAgentMock } = vi.hoisted(() => {
                 moodEmoji: '🙂',
                 intentSummary: 'Open to a quick hello.',
                 status: 'ready',
+                isFindable: false,
+                locationHint: null,
+                pingRequestedAt: null,
+                pingRequestedByUserId: null,
+                pingRequestedByUsername: null,
               },
             ],
             connections: [],
@@ -105,6 +110,11 @@ describe('PlaceViewScreen', () => {
           intentSummary: 'Open to a quick hello.',
           status: 'present',
           currentPlaceId: 'place-1',
+          isFindable: false,
+          locationHint: null,
+          pingRequestedAt: null,
+          pingRequestedByUserId: null,
+          pingRequestedByUsername: null,
           createdAt: '2026-03-04T19:00:00.000Z',
           updatedAt: '2026-03-04T19:00:00.000Z',
         }}
@@ -130,18 +140,34 @@ describe('PlaceViewScreen', () => {
         refreshSession={vi.fn(async () => undefined)}
         clearScanToken={vi.fn(async () => undefined)}
         setReady={vi.fn(async () => undefined)}
+        saveFinderProfile={vi.fn(async () => ({
+          userId: 'user-1',
+          moodEmoji: '🙂',
+          intentText: 'Open to a quick hello.',
+          intentSummary: 'Open to a quick hello.',
+          status: 'ready' as const,
+          currentPlaceId: 'place-1',
+          isFindable: true,
+          locationHint: 'Window seats',
+          pingRequestedAt: null,
+          pingRequestedByUserId: null,
+          pingRequestedByUsername: null,
+          createdAt: '2026-03-04T19:00:00.000Z',
+          updatedAt: '2026-03-04T19:00:00.000Z',
+        }))}
         leavePlace={vi.fn(async () => undefined)}
+        pingParticipant={vi.fn(async () => ({ success: true }))}
         loadScanPreview={vi.fn(async () => ({
           token: 'qr-token',
           placeId: 'place-1',
           placeName: 'Quiet Cafe',
-          counterpart: {
-            userId: 'user-2',
-            username: 'someone',
-            moodEmoji: '🙂',
-            intentSummary: 'Open to a quick hello.',
-            status: 'ready' as const,
-          },
+            counterpart: {
+              userId: 'user-2',
+              username: 'someone',
+              moodEmoji: '🙂',
+              intentSummary: 'Open to a quick hello.',
+              status: 'ready' as const,
+            },
         }))}
         connectScan={vi.fn(async () => ({ success: true }))}
         endConversation={vi.fn(async () => ({ success: true }))}
@@ -210,6 +236,11 @@ describe('PlaceViewScreen', () => {
           intentSummary: 'Open to a quick hello.',
           status: 'present',
           currentPlaceId: 'place-1',
+          isFindable: false,
+          locationHint: null,
+          pingRequestedAt: null,
+          pingRequestedByUserId: null,
+          pingRequestedByUsername: null,
           createdAt: '2026-03-04T19:00:00.000Z',
           updatedAt: '2026-03-04T19:00:00.000Z',
         }}
@@ -235,7 +266,23 @@ describe('PlaceViewScreen', () => {
         refreshSession={vi.fn(async () => undefined)}
         clearScanToken={vi.fn(async () => undefined)}
         setReady={vi.fn(async () => undefined)}
+        saveFinderProfile={vi.fn(async () => ({
+          userId: 'user-1',
+          moodEmoji: '🙂',
+          intentText: 'Open to a quick hello.',
+          intentSummary: 'Open to a quick hello.',
+          status: 'ready' as const,
+          currentPlaceId: 'place-1',
+          isFindable: true,
+          locationHint: 'Window seats',
+          pingRequestedAt: null,
+          pingRequestedByUserId: null,
+          pingRequestedByUsername: null,
+          createdAt: '2026-03-04T19:00:00.000Z',
+          updatedAt: '2026-03-04T19:00:00.000Z',
+        }))}
         leavePlace={vi.fn(async () => undefined)}
+        pingParticipant={vi.fn(async () => ({ success: true }))}
         loadScanPreview={vi.fn(async () => ({
           token: 'qr-token',
           placeId: 'place-1',
