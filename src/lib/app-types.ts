@@ -45,3 +45,10 @@ export type CurrentPlaceState = {
   place: NearbyPlace
   readyCount: number
 }
+
+export type PlaceAgentState = {
+  placeId: string
+  readyCount: number
+  checkedInCount: number
+  updatedAt: string | null
+}

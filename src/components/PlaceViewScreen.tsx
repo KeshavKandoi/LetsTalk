@@ -1,12 +1,15 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
+import { useAgent } from 'agents/react'
 import { ArrowLeft, MapPin, QrCode, Radio, Users } from 'lucide-react'
 import { authClient } from '../lib/auth-client'
 import type {
   AppSession,
   CurrentPlaceState,
+  PlaceAgentState,
   UserProfileState,
 } from '../lib/app-types'
+import type { PlaceAgent } from '../lib/server/agents/place-agent'
 
 type AuthResult = {
   error?: {
@@ -39,10 +42,29 @@ export function PlaceViewScreen({
     'ready' | 'leave' | 'sign-out' | null
   >(null)
   const [error, setError] = useState<string | null>(null)
+  const [livePlaceState, setLivePlaceState] = useState<PlaceAgentState | null>(
+    null,
+  )
+
+  const placeAgent = useAgent<PlaceAgent, PlaceAgentState>({
+    agent: 'place-agent',
+    name: currentPlace.place.placeId,
+    onStateUpdate: (nextState) => {
+      setLivePlaceState(nextState)
+    },
+  })
 
   const username =
     session.user.displayUsername || session.user.username || session.user.name
   const isReady = profile.status === 'ready'
+  const readyCount =
+    livePlaceState?.placeId === currentPlace.place.placeId
+      ? livePlaceState.readyCount
+      : currentPlace.readyCount
+
+  useEffect(() => {
+    void placeAgent.stub.refresh().catch(() => undefined)
+  }, [currentPlace.place.placeId])
 
   const handleReadyToggle = async () => {
     setPendingAction('ready')
@@ -122,7 +144,7 @@ export function PlaceViewScreen({
             <MetricCard
               icon={<Users className="h-5 w-5" />}
               label="Ready right now"
-              value={String(currentPlace.readyCount)}
+              value={String(readyCount)}
               tone="amber"
             />
             <MetricCard

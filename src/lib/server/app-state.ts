@@ -1,4 +1,5 @@
 import { and, eq, sql } from 'drizzle-orm'
+import { getAgentByName } from 'agents'
 import { getRequestHeaders } from '@tanstack/react-start/server'
 import type {
   AppSession,
@@ -10,8 +11,9 @@ import type {
 } from '../app-types'
 import { auth } from './auth'
 import { db } from './db'
+import type { PlaceAgent } from './agents/place-agent'
 import { place, userProfile } from './db/schema'
-import { getGoogleMapsApiKey } from './env'
+import { getGoogleMapsApiKey, getPlaceAgentBinding } from './env'
 
 type SessionResult = Awaited<ReturnType<typeof auth.api.getSession>>
 
@@ -143,6 +145,31 @@ export async function getAppState(): Promise<AppState> {
   }
 }
 
+async function syncPlaceAgent(placeId: string | null | undefined) {
+  if (!placeId) {
+    return
+  }
+
+  const agent = await getAgentByName<Cloudflare.Env, PlaceAgent>(
+    getPlaceAgentBinding(),
+    placeId,
+  )
+
+  await agent.refresh()
+}
+
+async function syncPlaceAgents(placeIds: Array<string | null | undefined>) {
+  const uniquePlaceIds = [...new Set(placeIds.filter(Boolean))]
+
+  try {
+    for (const placeId of uniquePlaceIds) {
+      await syncPlaceAgent(placeId)
+    }
+  } catch (error) {
+    console.error('Failed to sync place agent state', error)
+  }
+}
+
 function buildIntentSummary(intentText: string | null) {
   if (!intentText) {
     return 'Open to a nearby conversation.'
@@ -164,6 +191,11 @@ export async function saveUserProfile(input: {
   const now = new Date()
   const intentText = input.intentText.replace(/\s+/g, ' ').trim() || null
   const intentSummary = buildIntentSummary(intentText)
+  const [existingProfile] = await db
+    .select()
+    .from(userProfile)
+    .where(eq(userProfile.userId, session.user.id))
+    .limit(1)
   const [selectedPlace] = await db
     .select()
     .from(place)
@@ -198,6 +230,8 @@ export async function saveUserProfile(input: {
       },
     })
 
+  await syncPlaceAgents([existingProfile?.currentPlaceId, input.currentPlaceId])
+
   return {
     userId: session.user.id,
     moodEmoji: input.moodEmoji,
@@ -229,10 +263,17 @@ export async function setReadyState(input: { ready: boolean }) {
       updatedAt: new Date(),
     })
     .where(eq(userProfile.userId, session.user.id))
+
+  await syncPlaceAgents([profileRecord.currentPlaceId])
 }
 
 export async function leaveCurrentPlace() {
   const session = await requireCurrentSession()
+  const [profileRecord] = await db
+    .select()
+    .from(userProfile)
+    .where(eq(userProfile.userId, session.user.id))
+    .limit(1)
 
   await db
     .update(userProfile)
@@ -242,6 +283,8 @@ export async function leaveCurrentPlace() {
       updatedAt: new Date(),
     })
     .where(eq(userProfile.userId, session.user.id))
+
+  await syncPlaceAgents([profileRecord?.currentPlaceId])
 }
 
 function mapGooglePlace(result: GoogleNearbyPlace): NearbyPlace | null {

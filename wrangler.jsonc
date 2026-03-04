@@ -9,7 +9,7 @@
 	"compatibility_flags": [
 		"nodejs_compat"
 	],
-	"main": "@tanstack/react-start/server-entry",
+	"main": "src/server.ts",
 	"observability": {
 		"enabled": true
 	},
@@ -47,6 +47,22 @@
 			"database_name": "readytotalk-db",
 			"database_id": "672166d0-cd03-4885-9c20-bdb6a78dd159",
 			"migrations_dir": "./drizzle"
+		}
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "PlaceAgent",
+				"class_name": "PlaceAgent"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1-place-agent",
+			"new_sqlite_classes": [
+				"PlaceAgent"
+			]
 		}
 	]
 	/**
