@@ -10,6 +10,7 @@ The MVP is intentionally narrow:
 - users are pseudonymous
 - location permission is required
 - place identity comes from Google Places
+- users can browse nearby places
 - users signal `ready` when they are available now
 - starting a conversation requires scanning another user's QR code
 - presence and live state are coordinated in real time
@@ -34,6 +35,7 @@ The product goal is to reduce the friction of starting in-person conversations w
 - onboarding with emoji mood and short intent text
 - AI-generated intent summary from onboarding text
 - required location permission
+- browsing nearby places from current location
 - current place resolution via Google Places
 - live place presence
 - ready/not ready/in conversation state
@@ -45,7 +47,6 @@ The product goal is to reduce the friction of starting in-person conversations w
 ### Out of scope
 
 - direct messaging
-- browsing nearby places
 - browsing people without scanning
 - detailed moderation systems beyond future placeholders
 - custom user-created places in MVP
@@ -67,11 +68,19 @@ The product goal is to reduce the friction of starting in-person conversations w
 
 If location permission is denied, the user cannot use the app.
 
+### Nearby places flow
+
+1. User grants location access.
+2. The app fetches nearby Google Places for the current location.
+3. The user can browse nearby places.
+4. The user selects a place to enter its place view.
+5. The app uses the selected Google `place_id` as the current working place context.
+
 ### Ready flow
 
 1. User arrives at a recognized place.
-2. App resolves the current `place_id`.
-3. User enters the place view.
+2. App resolves the current `place_id` or the user selects a nearby place.
+3. User enters the place view for that `place_id`.
 4. User sets status to `ready`.
 5. The place view shows the current count of ready people.
 6. The user can display their static QR code for others to scan.
@@ -79,20 +88,22 @@ If location permission is denied, the user cannot use the app.
 ### Start conversation flow
 
 1. User A is `ready` at place `P`.
-2. User B is `ready` at place `P`.
+2. User B is present at place `P`.
 3. User B scans User A's QR code.
 4. The app verifies both users are currently in the same `place_id`.
 5. The app creates or reuses an active `ConversationSession`.
-6. User A and User B move from `ready` to `in_conversation`.
-7. The ready count decreases.
-8. The conversation becomes visible as an active conversation at the place.
+6. User B is promoted directly into the conversation flow even if they were not manually `ready` before scanning.
+7. User A and User B move to `in_conversation`.
+8. If User B was counted in the ready pool before the scan, remove them from it.
+9. If User A was counted in the ready pool before the scan, remove them from it.
+10. The conversation becomes visible as an active conversation at the place.
 
 ### Join conversation flow
 
-1. User C is `ready` at the same place.
+1. User C is present at the same place.
 2. User C scans the QR code of a participant already in an active conversation.
 3. If the conversation is joinable and not full, User C joins that same `ConversationSession`.
-4. User C moves from `ready` to `in_conversation`.
+4. User C moves directly to `in_conversation` even if they were not manually `ready` before scanning.
 
 ## Core Domain Model
 
@@ -167,14 +178,18 @@ Notes:
 Users can be in exactly one of these states:
 
 - `offline`
+- `present`
 - `ready`
 - `in_conversation`
 
 Rules:
 
+- `present` means the user is at a current `place_id` but not in the ready pool
 - a user can only be `ready` if they have a current `place_id`
 - a user can only be in one active conversation at a time
-- scanning someone successfully moves the scanner and the scanned user into `in_conversation` if they were `ready`
+- scanning someone successfully can promote the scanner directly from `present` into `in_conversation`
+- scanning someone successfully moves the scanned user into `in_conversation` when they are an eligible target
+- users in `present` are visible only as presence, not part of the ready count
 - users in `in_conversation` are not counted in the ready pool
 
 ### Conversation status
@@ -193,7 +208,7 @@ Rules:
 
 ### UserAgent
 
-Each user has a `UserAgent` backed by a Durable Object.
+Each user has a `UserAgent`.
 
 Responsibilities:
 
@@ -214,7 +229,7 @@ Live state owned by `UserAgent`:
 
 ### PlaceAgent
 
-Each place has a `PlaceAgent` backed by a Durable Object.
+Each place has a `PlaceAgent`.
 
 Responsibilities:
 
@@ -241,7 +256,7 @@ Live state owned by `PlaceAgent`:
 
 ## Persistence Model
 
-Use D1 for durable relational records and agent storage for live coordination state.
+Use D1 for durable relational records and agent-managed live coordination state.
 
 ### Recommended relational tables
 
@@ -314,6 +329,7 @@ Purpose:
 
 - location permission is mandatory
 - the app resolves one Google `place_id` at a time
+- nearby places can be browsed from the user's current location
 - same-place logic is based on exact `place_id`
 - the app refreshes location roughly once per minute in MVP
 - if location becomes stale for multiple refresh cycles, mark the user `offline` or remove them from the place
@@ -328,8 +344,9 @@ Recommended MVP rule:
 - each user has one static QR code in MVP
 - QR codes identify a user profile, not a place or a temporary session
 - scanning only succeeds if both users are currently in the same `place_id`
+- scanning does not require the scanner to have manually set `ready` first
 - scanning a user in an active, joinable conversation attempts to join that conversation
-- scanning a user who is not `ready` or not joinable should fail with a simple message
+- scanning a user who is neither `ready` nor in a joinable conversation should fail with a simple message
 
 ## Conversation Rules
 
@@ -337,7 +354,7 @@ Recommended MVP rules:
 
 - a user may be in only one active conversation at a time
 - a conversation belongs to one place only
-- a conversation starts when one ready user scans another ready user in the same place
+- a conversation starts when a present user scans a ready user in the same place
 - a conversation may be joined by scanning any current participant's QR
 - conversations should have a max participant cap
 
@@ -349,8 +366,8 @@ Recommended end behavior:
 
 - conversation ends when all participants leave
 - a participant can leave manually
-- leaving a conversation returns the user to `ready` if they are still at the same place and choose to re-enter the pool
-- default behavior should not automatically put them back into `ready` without an explicit choice
+- leaving a conversation returns the user to `present` if they are still at the same place
+- re-entering the ready pool should require an explicit user action
 
 ## Place View
 
@@ -358,6 +375,7 @@ The MVP place view should show:
 
 - current place name
 - current ready count
+- nearby places entry point
 - user's current state
 - button to toggle `ready`
 - button to show personal QR code
@@ -367,7 +385,6 @@ The MVP place view should not show:
 
 - a browsable list of nearby strangers
 - detailed profile cards for everyone at the place
-- map-first discovery
 
 ## AI Behavior
 
@@ -389,6 +406,7 @@ Notes:
 
 - the AI summary should be editable later, but it does not need to be editable in MVP
 - the agent layer is used primarily for state coordination, not heavy autonomous behavior in MVP
+- Cloudflare Agents should be treated as the product/runtime abstraction; lower-level storage/runtime details are implementation details
 
 ## APIs and Events
 
@@ -399,7 +417,9 @@ Exact route names can change, but the system needs these capabilities.
 - create account
 - sign in
 - complete onboarding
+- fetch nearby places
 - resolve current place from location
+- select a place from nearby results
 - fetch current place state
 - generate or fetch personal QR payload
 - resolve scanned QR payload to a user
@@ -489,6 +509,7 @@ The current repository already includes:
 - Better Auth
 
 This spec assumes those remain the foundation.
+Use the Cloudflare Agents SDK for agent behavior and state sync. The fact that Agents may be implemented on top of Durable Objects should be treated as an implementation detail, not a product or domain concept.
 
 ## Suggested Delivery Order
 
@@ -497,6 +518,7 @@ This spec assumes those remain the foundation.
 - finish auth and onboarding
 - add `user_profile` fields for mood and intent
 - integrate required location permission
+- fetch and browse nearby Google Places
 - resolve current Google `place_id`
 
 ### Phase 2
@@ -524,11 +546,13 @@ This spec assumes those remain the foundation.
 - person is the primary object
 - QR identifies a user profile
 - the app connects people already in the same place
+- browsing nearby places is part of MVP
 - `ready` means available now
 - location denial means the app is unusable
 - Google Places is the place source of truth for MVP
 - conversation discovery starts with count only
 - QR is required to start a conversation
+- scanning can promote the scanner directly into a conversation without a manual ready step
 - mood is emoji-only
 - QR is static in MVP
 - `UserAgent` handles identity and user state
