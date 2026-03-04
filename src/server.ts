@@ -6,10 +6,11 @@ import {
   defaultStreamHandler,
 } from '@tanstack/react-start/server'
 import { PlaceAgent } from './lib/server/agents/place-agent'
+import { UserAgent } from './lib/server/agents/user-agent'
 
 const handleStart = createStartHandler(defaultStreamHandler)
 
-export { PlaceAgent }
+export { PlaceAgent, UserAgent }
 
 export default createServerEntry({
   async fetch(request, opts) {

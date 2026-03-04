@@ -54,6 +54,10 @@
 			{
 				"name": "PlaceAgent",
 				"class_name": "PlaceAgent"
+			},
+			{
+				"name": "UserAgent",
+				"class_name": "UserAgent"
 			}
 		]
 	},
@@ -62,6 +66,12 @@
 			"tag": "v1-place-agent",
 			"new_sqlite_classes": [
 				"PlaceAgent"
+			]
+		},
+		{
+			"tag": "v2-user-agent",
+			"new_sqlite_classes": [
+				"UserAgent"
 			]
 		}
 	]

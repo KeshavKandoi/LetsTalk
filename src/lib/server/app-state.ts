@@ -14,7 +14,7 @@ import type {
 } from '../app-types'
 import { auth } from './auth'
 import { db } from './db'
-import type { PlaceAgent } from './agents/place-agent'
+import type { UserAgent } from './agents/user-agent'
 import {
   handoffCode,
   handoffConnection,
@@ -25,7 +25,7 @@ import {
 import {
   getAppBaseUrl,
   getGoogleMapsApiKey,
-  getPlaceAgentBinding,
+  getUserAgentBinding,
 } from './env'
 
 type SessionResult = Awaited<ReturnType<typeof auth.api.getSession>>
@@ -277,63 +277,6 @@ async function resolveScanPreview(
   }
 }
 
-async function endAcceptedConnectionsForUser(userId: string) {
-  const activeConnections = await db
-    .select()
-    .from(handoffConnection)
-    .where(
-      and(
-        eq(handoffConnection.status, 'accepted'),
-        or(
-          eq(handoffConnection.requesterUserId, userId),
-          eq(handoffConnection.recipientUserId, userId),
-        ),
-      ),
-    )
-
-  if (activeConnections.length === 0) {
-    return [] as string[]
-  }
-
-  const now = new Date()
-  const placeIds = new Set<string>()
-
-  for (const connectionRecord of activeConnections) {
-    placeIds.add(connectionRecord.placeId)
-
-    await db
-      .update(handoffConnection)
-      .set({
-        status: 'ended',
-        updatedAt: now,
-      })
-      .where(eq(handoffConnection.id, connectionRecord.id))
-
-    for (const nextUserId of [
-      connectionRecord.requesterUserId,
-      connectionRecord.recipientUserId,
-    ]) {
-      const [nextProfile] = await db
-        .select()
-        .from(userProfile)
-        .where(eq(userProfile.userId, nextUserId))
-        .limit(1)
-
-      if (nextProfile?.status === 'in_conversation') {
-        await db
-          .update(userProfile)
-          .set({
-            status: 'ready',
-            updatedAt: now,
-          })
-          .where(eq(userProfile.userId, nextUserId))
-      }
-    }
-  }
-
-  return [...placeIds]
-}
-
 export async function getCurrentSession() {
   try {
     return await auth.api.getSession({
@@ -422,41 +365,8 @@ export async function getAppState(): Promise<AppState> {
   }
 }
 
-async function syncPlaceAgent(placeId: string | null | undefined) {
-  if (!placeId) {
-    return
-  }
-
-  const agent = await getAgentByName<Cloudflare.Env, PlaceAgent>(
-    getPlaceAgentBinding(),
-    placeId,
-  )
-
-  await agent.refresh()
-}
-
-async function syncPlaceAgents(placeIds: Array<string | null | undefined>) {
-  const uniquePlaceIds = [...new Set(placeIds.filter(Boolean))]
-
-  try {
-    for (const placeId of uniquePlaceIds) {
-      await syncPlaceAgent(placeId)
-    }
-  } catch (error) {
-    console.error('Failed to sync place agent state', error)
-  }
-}
-
-function buildIntentSummary(intentText: string | null) {
-  if (!intentText) {
-    return 'Open to a nearby conversation.'
-  }
-
-  if (intentText.length <= 72) {
-    return intentText
-  }
-
-  return `${intentText.slice(0, 69).trimEnd()}...`
+async function getUserAgent(userId: string) {
+  return getAgentByName<Cloudflare.Env, UserAgent>(getUserAgentBinding(), userId)
 }
 
 export async function saveUserProfile(input: {
@@ -465,63 +375,18 @@ export async function saveUserProfile(input: {
   currentPlaceId: string
 }) {
   const session = await requireCurrentSession()
-  const now = new Date()
-  const intentText = input.intentText.replace(/\s+/g, ' ').trim() || null
-  const intentSummary = buildIntentSummary(intentText)
-  const [existingProfile] = await db
-    .select()
-    .from(userProfile)
-    .where(eq(userProfile.userId, session.user.id))
-    .limit(1)
-  const [selectedPlace] = await db
-    .select()
-    .from(place)
-    .where(eq(place.placeId, input.currentPlaceId))
-    .limit(1)
+  const agent = await getUserAgent(session.user.id)
+  const nextState = await agent.setProfile(input)
 
-  if (!selectedPlace) {
-    throw new Error('Choose a nearby place before saving your intro.')
-  }
-
-  const endedPlaceIds = await endAcceptedConnectionsForUser(session.user.id)
-
-  await db
-    .insert(userProfile)
-    .values({
-      userId: session.user.id,
-      moodEmoji: input.moodEmoji,
-      intentText,
-      intentSummary,
-      status: 'present',
-      currentPlaceId: input.currentPlaceId,
-      createdAt: now,
-      updatedAt: now,
-    })
-    .onConflictDoUpdate({
-      target: userProfile.userId,
-      set: {
-        moodEmoji: input.moodEmoji,
-        intentText,
-        intentSummary,
-        status: 'present',
-        currentPlaceId: input.currentPlaceId,
-        updatedAt: now,
-      },
-    })
-
-  await syncPlaceAgents([
-    existingProfile?.currentPlaceId,
-    input.currentPlaceId,
-    ...endedPlaceIds,
-  ])
+  const now = nextState.updatedAt ? new Date(nextState.updatedAt) : new Date()
 
   return {
-    userId: session.user.id,
-    moodEmoji: input.moodEmoji,
-    intentText,
-    intentSummary,
-    status: 'present',
-    currentPlaceId: input.currentPlaceId,
+    userId: nextState.userId,
+    moodEmoji: nextState.moodEmoji,
+    intentText: input.intentText.replace(/\s+/g, ' ').trim() || null,
+    intentSummary: nextState.intentSummary,
+    status: nextState.status,
+    currentPlaceId: nextState.currentPlaceId,
     createdAt: now,
     updatedAt: now,
   } satisfies UserProfileState
@@ -529,51 +394,14 @@ export async function saveUserProfile(input: {
 
 export async function setReadyState(input: { ready: boolean }) {
   const session = await requireCurrentSession()
-  const [profileRecord] = await db
-    .select()
-    .from(userProfile)
-    .where(eq(userProfile.userId, session.user.id))
-    .limit(1)
-
-  if (!profileRecord?.currentPlaceId) {
-    throw new Error('Pick your current place before changing your status.')
-  }
-
-  if (profileRecord.status === 'in_conversation') {
-    throw new Error('End your current conversation before changing your status.')
-  }
-
-  await db
-    .update(userProfile)
-    .set({
-      status: input.ready ? 'ready' : 'present',
-      updatedAt: new Date(),
-    })
-    .where(eq(userProfile.userId, session.user.id))
-
-  await syncPlaceAgents([profileRecord.currentPlaceId])
+  const agent = await getUserAgent(session.user.id)
+  await agent.setReady(input)
 }
 
 export async function leaveCurrentPlace() {
   const session = await requireCurrentSession()
-  const [profileRecord] = await db
-    .select()
-    .from(userProfile)
-    .where(eq(userProfile.userId, session.user.id))
-    .limit(1)
-
-  const endedPlaceIds = await endAcceptedConnectionsForUser(session.user.id)
-
-  await db
-    .update(userProfile)
-    .set({
-      status: 'offline',
-      currentPlaceId: null,
-      updatedAt: new Date(),
-    })
-    .where(eq(userProfile.userId, session.user.id))
-
-  await syncPlaceAgents([profileRecord?.currentPlaceId, ...endedPlaceIds])
+  const agent = await getUserAgent(session.user.id)
+  await agent.leavePlace()
 }
 
 export async function resolveScanToken(input: { token: string }) {
@@ -590,7 +418,6 @@ export async function resolveScanToken(input: { token: string }) {
 export async function connectFromScan(input: { token: string }) {
   const session = await requireCurrentSession()
   const preview = await resolveScannedHandoff(input.token.trim(), session.user.id)
-  const now = new Date()
   const [viewerProfile] = await db
     .select()
     .from(userProfile)
@@ -628,37 +455,11 @@ export async function connectFromScan(input: { token: string }) {
     throw new Error('They are already in a conversation.')
   }
 
-  const connectionId = crypto.randomUUID()
-
-  await db.insert(handoffConnection).values({
-    id: connectionId,
-    requesterUserId: session.user.id,
-    recipientUserId: preview.counterpart.userId,
+  const agent = await getUserAgent(session.user.id)
+  return agent.connectWithUser({
+    counterpartUserId: preview.counterpart.userId,
     placeId: preview.placeId,
-    status: 'accepted',
-    createdAt: now,
-    updatedAt: now,
   })
-
-  await db
-    .update(userProfile)
-    .set({
-      status: 'in_conversation',
-      updatedAt: now,
-    })
-    .where(
-      or(
-        eq(userProfile.userId, session.user.id),
-        eq(userProfile.userId, preview.counterpart.userId),
-      ),
-    )
-
-  await syncPlaceAgents([preview.placeId])
-
-  return {
-    success: true,
-    connectionId,
-  }
 }
 
 export async function previewScanJoin(input: { token: string }) {
@@ -681,12 +482,6 @@ export async function joinPlaceAndConnectFromScan(input: { token: string }) {
   }
 
   const preview = await resolveScanPreview(token, session.user.id)
-  const now = new Date()
-  const [viewerProfile] = await db
-    .select()
-    .from(userProfile)
-    .where(eq(userProfile.userId, session.user.id))
-    .limit(1)
   const [targetProfile] = await db
     .select()
     .from(userProfile)
@@ -711,77 +506,17 @@ export async function joinPlaceAndConnectFromScan(input: { token: string }) {
     throw new Error('They are already in a conversation.')
   }
 
-  const endedPlaceIds = await endAcceptedConnectionsForUser(session.user.id)
-
-  await db
-    .insert(userProfile)
-    .values({
-      userId: session.user.id,
-      moodEmoji: viewerProfile?.moodEmoji ?? null,
-      intentText: viewerProfile?.intentText ?? null,
-      intentSummary:
-        viewerProfile?.intentSummary ?? 'Open to a nearby conversation.',
-      status: 'in_conversation',
-      currentPlaceId: preview.placeId,
-      createdAt: viewerProfile?.createdAt ?? now,
-      updatedAt: now,
-    })
-    .onConflictDoUpdate({
-      target: userProfile.userId,
-      set: {
-        status: 'in_conversation',
-        currentPlaceId: preview.placeId,
-        updatedAt: now,
-      },
-    })
-
-  await db
-    .update(userProfile)
-    .set({
-      status: 'in_conversation',
-      updatedAt: now,
-    })
-    .where(eq(userProfile.userId, preview.counterpart.userId))
-
-  const connectionId = crypto.randomUUID()
-
-  await db.insert(handoffConnection).values({
-    id: connectionId,
-    requesterUserId: session.user.id,
-    recipientUserId: preview.counterpart.userId,
+  const agent = await getUserAgent(session.user.id)
+  return agent.joinPlaceAndConnectWithUser({
+    counterpartUserId: preview.counterpart.userId,
     placeId: preview.placeId,
-    status: 'accepted',
-    createdAt: now,
-    updatedAt: now,
   })
-
-  await syncPlaceAgents([
-    viewerProfile?.currentPlaceId,
-    preview.placeId,
-    ...endedPlaceIds,
-  ])
-
-  return {
-    success: true,
-    connectionId,
-  }
 }
 
 export async function endCurrentConnection() {
   const session = await requireCurrentSession()
-  const placeIds = await endAcceptedConnectionsForUser(session.user.id)
-
-  if (placeIds.length === 0) {
-    return {
-      success: false,
-    }
-  }
-
-  await syncPlaceAgents(placeIds)
-
-  return {
-    success: true,
-  }
+  const agent = await getUserAgent(session.user.id)
+  return agent.endCurrentConnection()
 }
 
 function mapGooglePlace(result: GoogleNearbyPlace): NearbyPlace | null {
