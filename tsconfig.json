@@ -19,6 +19,7 @@
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
+    "experimentalDecorators": true,
     "noEmit": true,
 
     /* Linting */

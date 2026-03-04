@@ -1,19 +1,32 @@
-import { and, eq, sql } from 'drizzle-orm'
+import { and, desc, eq, or, sql } from 'drizzle-orm'
 import { getAgentByName } from 'agents'
 import { getRequestHeaders } from '@tanstack/react-start/server'
 import type {
+  ActiveConnectionState,
   AppSession,
   AppState,
+  ConnectionPreviewState,
   CurrentPlaceState,
   NearbyPlace,
   PresenceStatus,
+  QrHandoffState,
   UserProfileState,
 } from '../app-types'
 import { auth } from './auth'
 import { db } from './db'
 import type { PlaceAgent } from './agents/place-agent'
-import { place, userProfile } from './db/schema'
-import { getGoogleMapsApiKey, getPlaceAgentBinding } from './env'
+import {
+  handoffCode,
+  handoffConnection,
+  place,
+  user,
+  userProfile,
+} from './db/schema'
+import {
+  getAppBaseUrl,
+  getGoogleMapsApiKey,
+  getPlaceAgentBinding,
+} from './env'
 
 type SessionResult = Awaited<ReturnType<typeof auth.api.getSession>>
 
@@ -68,6 +81,246 @@ function mapPlace(record: typeof place.$inferSelect): NearbyPlace {
   }
 }
 
+function getDisplayUsername(record: typeof user.$inferSelect) {
+  return record.displayUsername || record.username || record.name
+}
+
+function createHandoffToken() {
+  return crypto.randomUUID().replaceAll('-', '')
+}
+
+function buildQrUrl(token: string) {
+  const url = new URL(getAppBaseUrl())
+  url.searchParams.set('scan', token)
+  return url.toString()
+}
+
+async function getOrCreateQrHandoff(
+  userId: string,
+  placeId: string,
+  status: PresenceStatus,
+): Promise<QrHandoffState> {
+  const now = new Date()
+  const expiresAt = new Date(now.getTime() + 12 * 60 * 60 * 1000)
+  const [existingCode] = await db
+    .select()
+    .from(handoffCode)
+    .where(eq(handoffCode.userId, userId))
+    .limit(1)
+
+  let token = existingCode?.token ?? createHandoffToken()
+
+  if (existingCode && existingCode.expiresAt <= now) {
+    token = createHandoffToken()
+  }
+
+  await db
+    .insert(handoffCode)
+    .values({
+      token,
+      userId,
+      placeId,
+      expiresAt,
+      createdAt: existingCode?.createdAt ?? now,
+      updatedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: handoffCode.userId,
+      set: {
+        token,
+        placeId,
+        expiresAt,
+        updatedAt: now,
+      },
+    })
+
+  return {
+    token,
+    url: buildQrUrl(token),
+    expiresAt,
+    isActive: status === 'ready',
+  }
+}
+
+async function getActiveConnectionForUser(
+  userId: string,
+): Promise<ActiveConnectionState | null> {
+  const [connectionRecord] = await db
+    .select()
+    .from(handoffConnection)
+    .where(
+      and(
+        eq(handoffConnection.status, 'accepted'),
+        or(
+          eq(handoffConnection.requesterUserId, userId),
+          eq(handoffConnection.recipientUserId, userId),
+        ),
+      ),
+    )
+    .orderBy(desc(handoffConnection.createdAt))
+    .limit(1)
+
+  if (!connectionRecord) {
+    return null
+  }
+
+  const counterpartUserId =
+    connectionRecord.requesterUserId === userId
+      ? connectionRecord.recipientUserId
+      : connectionRecord.requesterUserId
+
+  const [counterpartUser] = await db
+    .select()
+    .from(user)
+    .where(eq(user.id, counterpartUserId))
+    .limit(1)
+  const [counterpartProfile] = await db
+    .select()
+    .from(userProfile)
+    .where(eq(userProfile.userId, counterpartUserId))
+    .limit(1)
+
+  if (!counterpartUser || !counterpartProfile) {
+    return null
+  }
+
+  return {
+    id: connectionRecord.id,
+    placeId: connectionRecord.placeId,
+    createdAt: connectionRecord.createdAt,
+    counterpart: {
+      userId: counterpartUser.id,
+      username: getDisplayUsername(counterpartUser),
+      moodEmoji: counterpartProfile.moodEmoji,
+      intentSummary: counterpartProfile.intentSummary,
+    },
+  }
+}
+
+async function resolveScannedHandoff(
+  token: string,
+  viewerUserId: string,
+): Promise<ConnectionPreviewState> {
+  const now = new Date()
+  const [viewerProfile] = await db
+    .select()
+    .from(userProfile)
+    .where(eq(userProfile.userId, viewerUserId))
+    .limit(1)
+
+  if (!viewerProfile?.currentPlaceId) {
+    throw new Error('Pick your current place before scanning someone nearby.')
+  }
+
+  const [codeRecord] = await db
+    .select()
+    .from(handoffCode)
+    .where(eq(handoffCode.token, token))
+    .limit(1)
+
+  if (!codeRecord || codeRecord.expiresAt <= now) {
+    throw new Error('That QR code expired. Ask them to reopen their place view.')
+  }
+
+  if (codeRecord.userId === viewerUserId) {
+    throw new Error('That is your own QR code.')
+  }
+
+  if (codeRecord.placeId !== viewerProfile.currentPlaceId) {
+    throw new Error('That QR code belongs to someone in a different place.')
+  }
+
+  const [targetUser] = await db
+    .select()
+    .from(user)
+    .where(eq(user.id, codeRecord.userId))
+    .limit(1)
+  const [targetProfile] = await db
+    .select()
+    .from(userProfile)
+    .where(eq(userProfile.userId, codeRecord.userId))
+    .limit(1)
+  const [targetPlace] = await db
+    .select()
+    .from(place)
+    .where(eq(place.placeId, codeRecord.placeId))
+    .limit(1)
+
+  if (!targetUser || !targetProfile || !targetPlace) {
+    throw new Error('We could not resolve that person right now.')
+  }
+
+  return {
+    token,
+    placeId: targetPlace.placeId,
+    placeName: targetPlace.name,
+    counterpart: {
+      userId: targetUser.id,
+      username: getDisplayUsername(targetUser),
+      moodEmoji: targetProfile.moodEmoji,
+      intentSummary: targetProfile.intentSummary,
+      status: targetProfile.status as PresenceStatus,
+    },
+  }
+}
+
+async function endAcceptedConnectionsForUser(userId: string) {
+  const activeConnections = await db
+    .select()
+    .from(handoffConnection)
+    .where(
+      and(
+        eq(handoffConnection.status, 'accepted'),
+        or(
+          eq(handoffConnection.requesterUserId, userId),
+          eq(handoffConnection.recipientUserId, userId),
+        ),
+      ),
+    )
+
+  if (activeConnections.length === 0) {
+    return [] as string[]
+  }
+
+  const now = new Date()
+  const placeIds = new Set<string>()
+
+  for (const connectionRecord of activeConnections) {
+    placeIds.add(connectionRecord.placeId)
+
+    await db
+      .update(handoffConnection)
+      .set({
+        status: 'ended',
+        updatedAt: now,
+      })
+      .where(eq(handoffConnection.id, connectionRecord.id))
+
+    for (const nextUserId of [
+      connectionRecord.requesterUserId,
+      connectionRecord.recipientUserId,
+    ]) {
+      const [nextProfile] = await db
+        .select()
+        .from(userProfile)
+        .where(eq(userProfile.userId, nextUserId))
+        .limit(1)
+
+      if (nextProfile?.status === 'in_conversation') {
+        await db
+          .update(userProfile)
+          .set({
+            status: 'present',
+            updatedAt: now,
+          })
+          .where(eq(userProfile.userId, nextUserId))
+      }
+    }
+  }
+
+  return [...placeIds]
+}
+
 export async function getCurrentSession() {
   try {
     return await auth.api.getSession({
@@ -100,6 +353,8 @@ export async function getAppState(): Promise<AppState> {
       session: null,
       profile: null,
       currentPlace: null,
+      qrHandoff: null,
+      activeConnection: null,
     }
   }
 
@@ -110,6 +365,7 @@ export async function getAppState(): Promise<AppState> {
     .limit(1)
 
   let currentPlace: CurrentPlaceState | null = null
+  let qrHandoff: QrHandoffState | null = null
 
   if (profileRecord?.currentPlaceId) {
     const [currentPlaceRecord] = await db
@@ -135,6 +391,12 @@ export async function getAppState(): Promise<AppState> {
         place: mapPlace(currentPlaceRecord),
         readyCount,
       }
+
+      qrHandoff = await getOrCreateQrHandoff(
+        session.user.id,
+        profileRecord.currentPlaceId,
+        profileRecord.status as PresenceStatus,
+      )
     }
   }
 
@@ -142,6 +404,8 @@ export async function getAppState(): Promise<AppState> {
     session: mapSession(session),
     profile: profileRecord ? mapUserProfile(profileRecord) : null,
     currentPlace,
+    qrHandoff,
+    activeConnection: await getActiveConnectionForUser(session.user.id),
   }
 }
 
@@ -206,6 +470,8 @@ export async function saveUserProfile(input: {
     throw new Error('Choose a nearby place before saving your intro.')
   }
 
+  const endedPlaceIds = await endAcceptedConnectionsForUser(session.user.id)
+
   await db
     .insert(userProfile)
     .values({
@@ -230,7 +496,11 @@ export async function saveUserProfile(input: {
       },
     })
 
-  await syncPlaceAgents([existingProfile?.currentPlaceId, input.currentPlaceId])
+  await syncPlaceAgents([
+    existingProfile?.currentPlaceId,
+    input.currentPlaceId,
+    ...endedPlaceIds,
+  ])
 
   return {
     userId: session.user.id,
@@ -256,6 +526,10 @@ export async function setReadyState(input: { ready: boolean }) {
     throw new Error('Pick your current place before changing your status.')
   }
 
+  if (profileRecord.status === 'in_conversation') {
+    throw new Error('End your current conversation before changing your status.')
+  }
+
   await db
     .update(userProfile)
     .set({
@@ -275,6 +549,8 @@ export async function leaveCurrentPlace() {
     .where(eq(userProfile.userId, session.user.id))
     .limit(1)
 
+  const endedPlaceIds = await endAcceptedConnectionsForUser(session.user.id)
+
   await db
     .update(userProfile)
     .set({
@@ -284,7 +560,109 @@ export async function leaveCurrentPlace() {
     })
     .where(eq(userProfile.userId, session.user.id))
 
-  await syncPlaceAgents([profileRecord?.currentPlaceId])
+  await syncPlaceAgents([profileRecord?.currentPlaceId, ...endedPlaceIds])
+}
+
+export async function resolveScanToken(input: { token: string }) {
+  const session = await requireCurrentSession()
+  const token = input.token.trim()
+
+  if (!token) {
+    throw new Error('Scan a Ready to Talk QR code first.')
+  }
+
+  return resolveScannedHandoff(token, session.user.id)
+}
+
+export async function connectFromScan(input: { token: string }) {
+  const session = await requireCurrentSession()
+  const preview = await resolveScannedHandoff(input.token.trim(), session.user.id)
+  const now = new Date()
+  const [viewerProfile] = await db
+    .select()
+    .from(userProfile)
+    .where(eq(userProfile.userId, session.user.id))
+    .limit(1)
+  const [targetProfile] = await db
+    .select()
+    .from(userProfile)
+    .where(eq(userProfile.userId, preview.counterpart.userId))
+    .limit(1)
+
+  if (!viewerProfile?.currentPlaceId || viewerProfile.currentPlaceId !== preview.placeId) {
+    throw new Error('You need to be checked into the same place first.')
+  }
+
+  if (viewerProfile.status === 'in_conversation') {
+    throw new Error('End your current conversation before starting another one.')
+  }
+
+  if (!targetProfile?.currentPlaceId || targetProfile.currentPlaceId !== preview.placeId) {
+    throw new Error('They are no longer checked into this place.')
+  }
+
+  if (targetProfile.status !== 'ready') {
+    throw new Error('They are not marked ready right now.')
+  }
+
+  const existingConnection = await getActiveConnectionForUser(session.user.id)
+  if (existingConnection) {
+    throw new Error('You are already connected with someone nearby.')
+  }
+
+  const targetConnection = await getActiveConnectionForUser(preview.counterpart.userId)
+  if (targetConnection) {
+    throw new Error('They are already in a conversation.')
+  }
+
+  const connectionId = crypto.randomUUID()
+
+  await db.insert(handoffConnection).values({
+    id: connectionId,
+    requesterUserId: session.user.id,
+    recipientUserId: preview.counterpart.userId,
+    placeId: preview.placeId,
+    status: 'accepted',
+    createdAt: now,
+    updatedAt: now,
+  })
+
+  await db
+    .update(userProfile)
+    .set({
+      status: 'in_conversation',
+      updatedAt: now,
+    })
+    .where(
+      or(
+        eq(userProfile.userId, session.user.id),
+        eq(userProfile.userId, preview.counterpart.userId),
+      ),
+    )
+
+  await syncPlaceAgents([preview.placeId])
+
+  return {
+    success: true,
+    connectionId,
+  }
+}
+
+export async function endCurrentConnection() {
+  const session = await requireCurrentSession()
+  const placeIds = await endAcceptedConnectionsForUser(session.user.id)
+
+  if (placeIds.length === 0) {
+    return {
+      success: false,
+    }
+  }
+
+  await syncPlaceAgents(placeIds)
+
+  return {
+    success: true,
+  }
 }
 
 function mapGooglePlace(result: GoogleNearbyPlace): NearbyPlace | null {

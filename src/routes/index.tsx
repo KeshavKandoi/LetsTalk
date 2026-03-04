@@ -4,8 +4,11 @@ import { AuthScreen } from '../components/AuthScreen'
 import { OnboardingScreen } from '../components/OnboardingScreen'
 import { PlaceViewScreen } from '../components/PlaceViewScreen'
 import {
+  connectFromScan,
+  endCurrentConnection,
   getAppState,
   leaveCurrentPlace,
+  resolveScanToken,
   saveUserProfile,
   setReadyState,
   searchNearbyPlacesForLocation,
@@ -45,32 +48,69 @@ const clearCurrentPlace = createServerFn({ method: 'POST' }).handler(async () =>
   return leaveCurrentPlace()
 })
 
+const loadScanPreview = createServerFn({ method: 'POST' })
+  .inputValidator((input: { token: string }) => input)
+  .handler(async ({ data }) => {
+    return resolveScanToken(data)
+  })
+
+const connectScannedQr = createServerFn({ method: 'POST' })
+  .inputValidator((input: { token: string }) => input)
+  .handler(async ({ data }) => {
+    return connectFromScan(data)
+  })
+
+const endConversation = createServerFn({ method: 'POST' }).handler(async () => {
+  return endCurrentConnection()
+})
+
 export const Route = createFileRoute('/')({
+  validateSearch: (search: Record<string, unknown>) => ({
+    scan: typeof search.scan === 'string' ? search.scan : undefined,
+  }),
   loader: async () => loadAppState(),
   component: App,
 })
 
 function App() {
-  const { session, profile, currentPlace } = Route.useLoaderData()
+  const { session, profile, currentPlace, qrHandoff, activeConnection } =
+    Route.useLoaderData()
+  const { scan } = Route.useSearch()
   const router = useRouter()
 
   const refreshSession = async () => {
     await router.invalidate()
   }
 
+  const clearScanToken = async () => {
+    await router.navigate({
+      to: '/',
+      search: {
+        scan: undefined,
+      },
+    })
+  }
+
   if (!session) {
     return <AuthScreen refreshSession={refreshSession} />
   }
 
-  if (profile && currentPlace) {
+  if (profile && currentPlace && qrHandoff) {
     return (
       <PlaceViewScreen
         session={session}
         profile={profile}
         currentPlace={currentPlace}
+        qrHandoff={qrHandoff}
+        activeConnection={activeConnection}
+        initialScanToken={scan ?? null}
         refreshSession={refreshSession}
+        clearScanToken={clearScanToken}
         setReady={updateReadyState}
         leavePlace={clearCurrentPlace}
+        loadScanPreview={loadScanPreview}
+        connectScan={connectScannedQr}
+        endConversation={endConversation}
       />
     )
   }

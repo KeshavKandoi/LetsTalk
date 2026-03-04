@@ -39,6 +39,8 @@ export type AppState = {
   session: AppSession | null
   profile: UserProfileState | null
   currentPlace: CurrentPlaceState | null
+  qrHandoff: QrHandoffState | null
+  activeConnection: ActiveConnectionState | null
 }
 
 export type CurrentPlaceState = {
@@ -51,4 +53,36 @@ export type PlaceAgentState = {
   readyCount: number
   checkedInCount: number
   updatedAt: string | null
+}
+
+export type QrHandoffState = {
+  token: string
+  url: string
+  expiresAt: string | Date
+  isActive: boolean
+}
+
+export type ConnectionPreviewState = {
+  token: string
+  placeId: string
+  placeName: string
+  counterpart: {
+    userId: string
+    username: string
+    moodEmoji: string | null
+    intentSummary: string | null
+    status: PresenceStatus
+  }
+}
+
+export type ActiveConnectionState = {
+  id: string
+  placeId: string
+  createdAt: string | Date
+  counterpart: {
+    userId: string
+    username: string
+    moodEmoji: string | null
+    intentSummary: string | null
+  }
 }

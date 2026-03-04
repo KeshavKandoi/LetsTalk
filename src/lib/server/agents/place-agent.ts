@@ -47,6 +47,9 @@ export class PlaceAgent extends Agent<PlaceAgentEnv, PlaceAgentState> {
     await this.refresh()
   }
 
+  // `agents` exposes stage-3 decorator types while local dev needs TS decorator transpilation enabled.
+  // The runtime behavior is correct; this suppresses the signature mismatch in `tsc --noEmit`.
+  // @ts-expect-error decorator signature mismatch between TS modes
   @callable()
   async refresh() {
     const snapshot = await loadPlaceSnapshot(this.env.DB, this.name)

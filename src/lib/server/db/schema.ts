@@ -117,6 +117,50 @@ export const place = sqliteTable('place', {
   updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 })
 
+export const handoffCode = sqliteTable(
+  'handoff_code',
+  {
+    token: text('token').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    placeId: text('place_id')
+      .notNull()
+      .references(() => place.placeId, { onDelete: 'cascade' }),
+    expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  (table) => [
+    uniqueIndex('handoff_code_user_unique').on(table.userId),
+    index('handoff_code_place_idx').on(table.placeId),
+  ],
+)
+
+export const handoffConnection = sqliteTable(
+  'handoff_connection',
+  {
+    id: text('id').primaryKey(),
+    requesterUserId: text('requester_user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    recipientUserId: text('recipient_user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    placeId: text('place_id')
+      .notNull()
+      .references(() => place.placeId, { onDelete: 'cascade' }),
+    status: text('status').notNull().default('accepted'),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  (table) => [
+    index('handoff_connection_requester_idx').on(table.requesterUserId),
+    index('handoff_connection_recipient_idx').on(table.recipientUserId),
+    index('handoff_connection_place_idx').on(table.placeId),
+  ],
+)
+
 export const userRelations = relations(user, ({ many, one }) => ({
   accounts: many(account),
   sessions: many(session),

@@ -2,6 +2,7 @@ import { env } from 'cloudflare:workers'
 import type { PlaceAgent } from './agents/place-agent'
 
 type AppEnv = Cloudflare.Env & {
+  BETTER_AUTH_URL?: string
   BETTER_AUTH_SECRET?: string
   DB?: D1Database
   GOOGLE_MAPS_API_KEY?: string
@@ -44,6 +45,18 @@ export function getGoogleMapsApiKey() {
   }
 
   return apiKey
+}
+
+export function getAppBaseUrl() {
+  const appBaseUrl = appEnv.BETTER_AUTH_URL
+
+  if (!appBaseUrl) {
+    throw new Error(
+      'Missing BETTER_AUTH_URL. Add it to .dev.vars for local development and set it in Wrangler before deploying.',
+    )
+  }
+
+  return appBaseUrl
 }
 
 export function getPlaceAgentBinding() {

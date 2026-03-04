@@ -47,6 +47,10 @@ vi.mock('agents/react', () => ({
   useAgent: useAgentMock,
 }))
 
+vi.mock('qrcode', () => ({
+  toDataURL: vi.fn(async () => 'data:image/png;base64,qr'),
+}))
+
 afterEach(() => {
   cleanup()
   refresh.mockClear()
@@ -86,9 +90,32 @@ describe('PlaceViewScreen', () => {
           },
           readyCount: 2,
         }}
+        qrHandoff={{
+          token: 'qr-token',
+          url: 'https://readytotalk.app/?scan=qr-token',
+          expiresAt: '2026-03-05T00:00:00.000Z',
+          isActive: false,
+        }}
+        activeConnection={null}
+        initialScanToken={null}
         refreshSession={vi.fn(async () => undefined)}
+        clearScanToken={vi.fn(async () => undefined)}
         setReady={vi.fn(async () => undefined)}
         leavePlace={vi.fn(async () => undefined)}
+        loadScanPreview={vi.fn(async () => ({
+          token: 'qr-token',
+          placeId: 'place-1',
+          placeName: 'Quiet Cafe',
+          counterpart: {
+            userId: 'user-2',
+            username: 'someone',
+            moodEmoji: '🙂',
+            intentSummary: 'Open to a quick hello.',
+            status: 'ready' as const,
+          },
+        }))}
+        connectScan={vi.fn(async () => ({ success: true }))}
+        endConversation={vi.fn(async () => ({ success: true }))}
         client={{
           signOut: vi.fn(async () => ({ error: null })),
         }}
