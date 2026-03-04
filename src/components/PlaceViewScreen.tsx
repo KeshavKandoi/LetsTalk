@@ -186,6 +186,20 @@ type ConversationNoticeState = {
   description: string
 }
 
+function isBenignVideoPlaybackInterruption(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false
+  }
+
+  const message = error.message.toLowerCase()
+
+  return (
+    error.name === 'AbortError' ||
+    message.includes('play() request was interrupted') ||
+    message.includes('media was removed from the document')
+  )
+}
+
 const finderHintOptions = [
   'Front tables',
   'Counter',
@@ -668,6 +682,11 @@ export function PlaceViewScreen({
       scanIntervalRef.current = null
     }
 
+    if (videoRef.current) {
+      videoRef.current.pause()
+      videoRef.current.srcObject = null
+    }
+
     streamRef.current?.getTracks().forEach((track) => {
       track.stop()
     })
@@ -732,6 +751,8 @@ export function PlaceViewScreen({
       return
     }
 
+    let cancelled = false
+
     const startScanner = async () => {
       setCameraStatus('starting')
       setScanError(null)
@@ -745,7 +766,7 @@ export function PlaceViewScreen({
           },
         })
 
-        if (!videoRef.current) {
+        if (cancelled || !videoRef.current) {
           stream.getTracks().forEach((track) => track.stop())
           return
         }
@@ -753,6 +774,11 @@ export function PlaceViewScreen({
         streamRef.current = stream
         videoRef.current.srcObject = stream
         await videoRef.current.play()
+
+        if (cancelled || videoRef.current?.srcObject !== stream) {
+          stream.getTracks().forEach((track) => track.stop())
+          return
+        }
 
         setCameraStatus('scanning')
         scanIntervalRef.current = window.setInterval(() => {
@@ -770,6 +796,10 @@ export function PlaceViewScreen({
             .catch(() => undefined)
         }, 500)
       } catch (nextError) {
+        if (cancelled || isBenignVideoPlaybackInterruption(nextError)) {
+          return
+        }
+
         setCameraStatus('unsupported')
         setScanError(
           nextError instanceof Error
@@ -782,6 +812,7 @@ export function PlaceViewScreen({
     void startScanner()
 
     return () => {
+      cancelled = true
       stopScanner()
     }
   }, [scannerOpen, scanPreview, isInConversation])
