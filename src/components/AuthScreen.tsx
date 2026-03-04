@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
-import { LockKeyhole, LogIn, SunMedium, UserRound, UserRoundPlus } from 'lucide-react'
+import { LockKeyhole, LogIn, SunMedium, UserRoundPlus } from 'lucide-react'
 import { authClient } from '../lib/auth-client'
 
 type AuthResult = {
@@ -25,34 +25,20 @@ type AuthClientLike = {
       username: string
     }) => Promise<AuthResult>
   }
-  signOut: () => Promise<AuthResult>
-}
-
-export type AuthSession = {
-  session: {
-    expiresAt: string | Date
-  }
-  user: {
-    name: string
-    username?: string | null
-    displayUsername?: string | null
-  }
 }
 
 export function AuthScreen({
-  session,
   refreshSession,
   client = authClient,
 }: {
-  session: AuthSession | null
   refreshSession: () => Promise<void>
   client?: AuthClientLike
 }) {
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in')
   const [error, setError] = useState<string | null>(null)
-  const [pendingAction, setPendingAction] = useState<
-    'sign-in' | 'sign-up' | 'sign-out' | null
-  >(null)
+  const [pendingAction, setPendingAction] = useState<'sign-in' | 'sign-up' | null>(
+    null,
+  )
 
   const handleSignIn = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -88,13 +74,12 @@ export function AuthScreen({
     setPendingAction('sign-up')
 
     const formData = new FormData(form)
-    const name = String(formData.get('name') ?? '').trim()
     const email = String(formData.get('email') ?? '').trim()
     const username = String(formData.get('username') ?? '').trim()
     const password = String(formData.get('password') ?? '')
 
     const result = await client.signUp.email({
-      name,
+      name: username,
       email,
       password,
       username,
@@ -111,22 +96,6 @@ export function AuthScreen({
     setPendingAction(null)
   }
 
-  const handleSignOut = async () => {
-    setError(null)
-    setPendingAction('sign-out')
-
-    const result = await client.signOut()
-
-    if (result.error) {
-      setError(result.error.message || 'Unable to sign out right now.')
-      setPendingAction(null)
-      return
-    }
-
-    await refreshSession()
-    setPendingAction(null)
-  }
-
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#f7f3ea] text-slate-900">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.18),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(245,158,11,0.2),_transparent_32%),linear-gradient(180deg,_rgba(255,255,255,0.92),_rgba(246,238,225,0.95))]" />
@@ -136,190 +105,145 @@ export function AuthScreen({
         <section className="max-w-2xl">
           <div className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-white/80 px-4 py-2 text-sm font-medium text-sky-700 shadow-sm backdrop-blur">
             <SunMedium className="h-4 w-4" />
-            TanStack Start on Cloudflare Workers
+            Calm, phone-first conversation starts
           </div>
 
           <h1 className="mt-6 text-5xl font-black leading-none tracking-[-0.06em] text-slate-950 sm:text-6xl">
-            ReadyToTalk
+            Ready to Talk
           </h1>
           <p className="mt-5 max-w-xl text-lg leading-8 text-slate-700">
-            Better Auth is wired to Cloudflare D1 through Drizzle, with
-            username sign-in enabled and a lighter default interface for the
-            first auth flow.
+            Meet nearby people only when both of you are actually ready.
+            Sign in with a pseudonym, keep your email private, and use
+            location plus QR codes when you want to connect in person.
           </p>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
             <FeatureCard
-              icon={<UserRound className="h-5 w-5" />}
-              title="Username login"
-              description="Users sign in with a username and password. Account creation keeps only the fields you care about in the UI."
+              icon={<UserRoundPlus className="h-5 w-5" />}
+              title="Pseudonym first"
+              description="Your username is the public identity. Email is only used for account creation and never shown in the product flow."
             />
             <FeatureCard
               icon={<LockKeyhole className="h-5 w-5" />}
-              title="Worker-native auth"
-              description="Sessions and auth records live in D1, served directly by your Cloudflare Worker through TanStack Start routes."
+              title="Same-place safety"
+              description="Location and QR scans keep the experience grounded in real nearby moments instead of open browsing."
             />
           </div>
         </section>
 
         <section className="w-full max-w-xl">
           <div className="rounded-[2rem] border border-stone-200 bg-white/88 p-6 shadow-[0_28px_80px_rgba(148,163,184,0.22)] backdrop-blur-xl sm:p-8">
-            {session ? (
-              <div className="space-y-6">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm uppercase tracking-[0.24em] text-sky-700">
-                      Authenticated
-                    </p>
-                    <h2 className="mt-2 text-3xl font-bold text-slate-950">
-                      Welcome back,{' '}
-                      {session.user.displayUsername || session.user.name}
-                    </h2>
-                  </div>
-                  <div className="rounded-2xl border border-sky-100 bg-sky-50 p-3 text-sky-700">
-                    <UserRound className="h-6 w-6" />
-                  </div>
+            <div className="space-y-6">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm uppercase tracking-[0.24em] text-amber-700">
+                    Authentication
+                  </p>
+                  <h2 className="mt-2 text-3xl font-bold text-slate-950">
+                    {mode === 'sign-in' ? 'Log in' : 'Create an account'}
+                  </h2>
                 </div>
 
-                <dl className="grid gap-3 rounded-3xl border border-stone-200 bg-stone-50/90 p-5 text-sm text-slate-700">
-                  <InfoRow
+                <div className="flex rounded-full border border-stone-200 bg-stone-100 p-1 text-sm">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode('sign-in')
+                      setError(null)
+                    }}
+                    className={`rounded-full px-4 py-2 transition ${
+                      mode === 'sign-in'
+                        ? 'bg-white text-slate-950 shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Log in
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode('sign-up')
+                      setError(null)
+                    }}
+                    className={`rounded-full px-4 py-2 transition ${
+                      mode === 'sign-up'
+                        ? 'bg-white text-slate-950 shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Sign up
+                  </button>
+                </div>
+              </div>
+
+              {error ? (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {error}
+                </div>
+              ) : null}
+
+              {mode === 'sign-in' ? (
+                <form className="space-y-4" onSubmit={handleSignIn}>
+                  <FormField
                     label="Username"
-                    value={session.user.username || 'Not set'}
+                    name="username"
+                    autoComplete="username"
+                    placeholder="readytotalk"
                   />
-                  <InfoRow
-                    label="Session expires"
-                    value={new Date(session.session.expiresAt).toLocaleString()}
+                  <FormField
+                    label="Password"
+                    name="password"
+                    type="password"
+                    autoComplete="current-password"
+                    placeholder="••••••••"
                   />
-                </dl>
 
-                <button
-                  type="button"
-                  onClick={handleSignOut}
-                  disabled={pendingAction === 'sign-out'}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  <LogIn className="h-4 w-4 rotate-180" />
-                  {pendingAction === 'sign-out' ? 'Signing out...' : 'Sign out'}
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm uppercase tracking-[0.24em] text-amber-700">
-                      Authentication
-                    </p>
-                    <h2 className="mt-2 text-3xl font-bold text-slate-950">
-                      {mode === 'sign-in' ? 'Log in' : 'Create an account'}
-                    </h2>
-                  </div>
+                  <button
+                    type="submit"
+                    disabled={pendingAction === 'sign-in'}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-sky-500 px-5 py-3 font-semibold text-white transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    <LogIn className="h-4 w-4" />
+                    {pendingAction === 'sign-in' ? 'Logging in...' : 'Log in'}
+                  </button>
+                </form>
+              ) : (
+                <form className="space-y-4" onSubmit={handleSignUp}>
+                  <FormField
+                    label="Email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="you@example.com"
+                    hint="Required by Better Auth. Never shown in the product."
+                  />
+                  <FormField
+                    label="Pseudonym"
+                    name="username"
+                    autoComplete="username"
+                    placeholder="readytotalk"
+                  />
+                  <FormField
+                    label="Password"
+                    name="password"
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder="Create a strong password"
+                  />
 
-                  <div className="flex rounded-full border border-stone-200 bg-stone-100 p-1 text-sm">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMode('sign-in')
-                        setError(null)
-                      }}
-                      className={`rounded-full px-4 py-2 transition ${
-                        mode === 'sign-in'
-                          ? 'bg-white text-slate-950 shadow-sm'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      Log in
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMode('sign-up')
-                        setError(null)
-                      }}
-                      className={`rounded-full px-4 py-2 transition ${
-                        mode === 'sign-up'
-                          ? 'bg-white text-slate-950 shadow-sm'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      Sign up
-                    </button>
-                  </div>
-                </div>
-
-                {error ? (
-                  <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                    {error}
-                  </div>
-                ) : null}
-
-                {mode === 'sign-in' ? (
-                  <form className="space-y-4" onSubmit={handleSignIn}>
-                    <FormField
-                      label="Username"
-                      name="username"
-                      autoComplete="username"
-                      placeholder="readytotalk"
-                    />
-                    <FormField
-                      label="Password"
-                      name="password"
-                      type="password"
-                      autoComplete="current-password"
-                      placeholder="••••••••"
-                    />
-
-                    <button
-                      type="submit"
-                      disabled={pendingAction === 'sign-in'}
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-sky-500 px-5 py-3 font-semibold text-white transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-70"
-                    >
-                      <LogIn className="h-4 w-4" />
-                      {pendingAction === 'sign-in' ? 'Logging in...' : 'Log in'}
-                    </button>
-                  </form>
-                ) : (
-                  <form className="space-y-4" onSubmit={handleSignUp}>
-                    <FormField
-                      label="Name"
-                      name="name"
-                      autoComplete="name"
-                      placeholder="Ready Talk"
-                    />
-                    <FormField
-                      label="Email"
-                      name="email"
-                      type="email"
-                      autoComplete="email"
-                      placeholder="you@example.com"
-                    />
-                    <FormField
-                      label="Username"
-                      name="username"
-                      autoComplete="username"
-                      placeholder="readytotalk"
-                    />
-                    <FormField
-                      label="Password"
-                      name="password"
-                      type="password"
-                      autoComplete="new-password"
-                      placeholder="Create a strong password"
-                    />
-
-                    <button
-                      type="submit"
-                      disabled={pendingAction === 'sign-up'}
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-amber-500 px-5 py-3 font-semibold text-white transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-70"
-                    >
-                      <UserRoundPlus className="h-4 w-4" />
-                      {pendingAction === 'sign-up'
-                        ? 'Creating account...'
-                        : 'Create account'}
-                    </button>
-                  </form>
-                )}
-              </div>
-            )}
+                  <button
+                    type="submit"
+                    disabled={pendingAction === 'sign-up'}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-amber-500 px-5 py-3 font-semibold text-white transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    <UserRoundPlus className="h-4 w-4" />
+                    {pendingAction === 'sign-up'
+                      ? 'Creating account...'
+                      : 'Create account'}
+                  </button>
+                </form>
+              )}
+            </div>
           </div>
         </section>
       </div>
@@ -353,12 +277,14 @@ function FormField({
   type = 'text',
   autoComplete,
   placeholder,
+  hint,
 }: {
   label: string
   name: string
   type?: string
   autoComplete?: string
   placeholder?: string
+  hint?: string
 }) {
   return (
     <label className="block">
@@ -373,15 +299,7 @@ function FormField({
         placeholder={placeholder}
         className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-base text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-200"
       />
+      {hint ? <span className="mt-2 block text-xs text-slate-500">{hint}</span> : null}
     </label>
-  )
-}
-
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between gap-4 border-b border-stone-200 pb-3 last:border-b-0 last:pb-0">
-      <dt className="text-slate-500">{label}</dt>
-      <dd className="text-right font-medium text-slate-950">{value}</dd>
-    </div>
   )
 }

@@ -3,6 +3,7 @@ import { env } from 'cloudflare:workers'
 type AppEnv = Cloudflare.Env & {
   BETTER_AUTH_SECRET?: string
   DB?: D1Database
+  GOOGLE_MAPS_API_KEY?: string
 }
 
 const appEnv = env as AppEnv
@@ -29,4 +30,16 @@ export function getDatabaseBinding() {
   }
 
   return database
+}
+
+export function getGoogleMapsApiKey() {
+  const apiKey = appEnv.GOOGLE_MAPS_API_KEY
+
+  if (!apiKey) {
+    throw new Error(
+      'Missing GOOGLE_MAPS_API_KEY. Add it to .dev.vars for local development and set it as a Wrangler secret before deploying.',
+    )
+  }
+
+  return apiKey
 }

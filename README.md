@@ -21,6 +21,11 @@ pnpm install
 cp .dev.vars.example .dev.vars
 ```
 
+Set both values in `.dev.vars`:
+
+- `BETTER_AUTH_SECRET`
+- `GOOGLE_MAPS_API_KEY`
+
 3. Apply the local D1 migration:
 
 ```bash
@@ -33,7 +38,7 @@ pnpm run db:migrate:local
 pnpm run dev
 ```
 
-The auth API is mounted at `/api/auth/*`, and the home route renders the sign-in/sign-up screen.
+The auth API is mounted at `/api/auth/*`. After sign-in, the app requests location access, loads nearby Google Places, saves the user's mood/intent onboarding state, and moves them into a place view with a D1-backed ready count.
 
 ## Database workflow
 
@@ -66,6 +71,12 @@ Before deploying, create a real D1 database and either add its id to `wrangler.j
 
 ```bash
 wrangler secret put BETTER_AUTH_SECRET
+```
+
+And the Google Places API key:
+
+```bash
+wrangler secret put GOOGLE_MAPS_API_KEY
 ```
 
 ## Verification

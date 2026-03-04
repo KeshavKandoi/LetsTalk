@@ -9,46 +9,42 @@ afterEach(() => {
 })
 
 describe('AuthScreen', () => {
-  it('signs up with the entered email', async () => {
+  it('signs up with email and pseudonym', async () => {
     const refreshSession = vi.fn(async () => {})
     const email = vi.fn(async () => ({ error: null }))
 
     render(
       <AuthScreen
-        session={null}
         refreshSession={refreshSession}
         client={{
           signIn: {
             username: vi.fn(async () => ({ error: null })),
           },
           signUp: { email },
-          signOut: vi.fn(async () => ({ error: null })),
         }}
       />,
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Sign up' }))
 
-    expect(screen.getByLabelText('Email')).toBeTruthy()
-    expect(screen.queryByLabelText('Confirm password')).toBeNull()
+    expect(screen.getByLabelText(/Email/i)).toBeTruthy()
+    expect(screen.queryByLabelText(/Confirm password/i)).toBeNull()
+    expect(screen.queryByLabelText(/Name/i)).toBeNull()
 
-    fireEvent.change(screen.getByLabelText('Name'), {
-      target: { value: 'Ready Talk' },
-    })
-    fireEvent.change(screen.getByLabelText('Email'), {
+    fireEvent.change(screen.getByLabelText(/Email/i), {
       target: { value: 'ready@example.com' },
     })
-    fireEvent.change(screen.getByLabelText('Username'), {
+    fireEvent.change(screen.getByLabelText(/Pseudonym/i), {
       target: { value: 'ReadyTalk' },
     })
-    fireEvent.change(screen.getByLabelText('Password'), {
+    fireEvent.change(screen.getByLabelText(/Password/i), {
       target: { value: 'secret-pass' },
     })
-    fireEvent.submit(screen.getByLabelText('Password').closest('form')!)
+    fireEvent.submit(screen.getByLabelText(/Password/i).closest('form')!)
 
     await waitFor(() => {
       expect(email).toHaveBeenCalledWith({
-        name: 'Ready Talk',
+        name: 'ReadyTalk',
         email: 'ready@example.com',
         password: 'secret-pass',
         username: 'ReadyTalk',
@@ -64,25 +60,23 @@ describe('AuthScreen', () => {
 
     render(
       <AuthScreen
-        session={null}
         refreshSession={refreshSession}
         client={{
           signIn: { username },
           signUp: {
             email: vi.fn(async () => ({ error: null })),
           },
-          signOut: vi.fn(async () => ({ error: null })),
         }}
       />,
     )
 
-    fireEvent.change(screen.getByLabelText('Username'), {
+    fireEvent.change(screen.getByLabelText(/Username/i), {
       target: { value: 'ready' },
     })
-    fireEvent.change(screen.getByLabelText('Password'), {
+    fireEvent.change(screen.getByLabelText(/Password/i), {
       target: { value: 'secret' },
     })
-    fireEvent.submit(screen.getByLabelText('Password').closest('form')!)
+    fireEvent.submit(screen.getByLabelText(/Password/i).closest('form')!)
 
     await waitFor(() => {
       expect(username).toHaveBeenCalledWith({
@@ -100,7 +94,6 @@ describe('AuthScreen', () => {
 
     render(
       <AuthScreen
-        session={null}
         refreshSession={refreshSession}
         client={{
           signIn: {
@@ -111,18 +104,17 @@ describe('AuthScreen', () => {
           signUp: {
             email: vi.fn(async () => ({ error: null })),
           },
-          signOut: vi.fn(async () => ({ error: null })),
         }}
       />,
     )
 
-    fireEvent.change(screen.getByLabelText('Username'), {
+    fireEvent.change(screen.getByLabelText(/Username/i), {
       target: { value: 'ready' },
     })
-    fireEvent.change(screen.getByLabelText('Password'), {
+    fireEvent.change(screen.getByLabelText(/Password/i), {
       target: { value: 'secret' },
     })
-    fireEvent.submit(screen.getByLabelText('Password').closest('form')!)
+    fireEvent.submit(screen.getByLabelText(/Password/i).closest('form')!)
 
     expect(await screen.findByText('Nope')).toBeTruthy()
     expect(refreshSession).not.toHaveBeenCalled()
