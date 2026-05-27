@@ -1,8 +1,7 @@
 import { and, desc, eq, or } from 'drizzle-orm'
 import { createClient } from '@supabase/supabase-js'
-import type { PresenceStatus, UserAgentState } from '../../app-types'
+import type { PresenceStatus, UserAgentState } from '@frontend/lib/app-types'
 import { db } from '../db'
-import * as schema from '../db/schema'
 import { handoffConnection, place, user, userProfile } from '../db/schema'
 import { getSupabaseUrl, getSupabaseAnonKey } from '../env'
 import {

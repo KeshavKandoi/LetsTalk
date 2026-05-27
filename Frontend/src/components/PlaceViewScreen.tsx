@@ -28,7 +28,6 @@ import type {
   UserProfileState,
 } from '../lib/app-types'
 import { extractScanToken } from '../lib/scan-token'
-import type { PlaceAgent } from '../lib/server/agents/place-agent'
 
 type DetectedCode = {
   rawValue?: string
@@ -357,7 +356,7 @@ export function PlaceViewScreen({
   )
   const previousPingRef = useRef<string | null>(profile.pingRequestedAt?.toString() ?? null)
 
-  const placeAgent = useAgent<PlaceAgent, PlaceAgentState>({
+  const placeAgent = useAgent<PlaceAgentState>({
     agent: 'place-agent',
     name: currentPlace.place.placeId,
     onStateUpdate: (nextState) => {

@@ -6,13 +6,15 @@ import viteReact from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
+  publicDir: 'public',
   plugins: [
     devtools(),
     tsconfigPaths({ projects: ['./tsconfig.json'] }),
     tailwindcss(),
     tanstackStart({
+      srcDirectory: 'src',
       server: {
-        entry: 'src/server.ts',
+        entry: '../Backend/src/server.ts',
       },
     }),
     viteReact(),

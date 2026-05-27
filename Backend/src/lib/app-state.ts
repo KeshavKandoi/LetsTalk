@@ -13,7 +13,7 @@ import type {
   QrHandoffState,
   UserAgentState,
   UserProfileState,
-} from '../app-types'
+} from '@frontend/lib/app-types'
 import { auth } from './auth'
 import { db } from './db'
 import { UserAgent } from './agents/user-agent'

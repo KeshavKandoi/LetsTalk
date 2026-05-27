@@ -1,4 +1,4 @@
-import 'dotenv/config'
+import './load-env'
 
 export function getAuthSecret() {
   const secret = process.env.BETTER_AUTH_SECRET

@@ -1,4 +1,4 @@
-import type { PresenceStatus } from '../../app-types'
+import type { PresenceStatus } from '@frontend/lib/app-types'
 
 type UserProfileSnapshot = {
   status: PresenceStatus

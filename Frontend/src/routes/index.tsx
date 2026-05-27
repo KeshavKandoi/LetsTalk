@@ -19,7 +19,7 @@ import {
   saveUserProfile,
   setReadyState,
   searchNearbyPlacesForLocation,
-} from '../lib/server/app-state'
+} from '@backend/lib/app-state'
 
 const loadAppState = createServerFn({ method: 'GET' }).handler(async () => {
   const appState = await getAppState()

@@ -1,5 +1,5 @@
 import { and, eq, inArray, sql } from 'drizzle-orm'
-import type { PlaceAgentState } from '../../app-types'
+import type { PlaceAgentState } from '@frontend/lib/app-types'
 import { db } from '../db'
 import { handoffConnection, user, userProfile } from '../db/schema'
 import { getSupabaseUrl, getSupabaseAnonKey } from '../env'

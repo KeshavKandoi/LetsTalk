@@ -1,16 +1,22 @@
 {
-  "include": ["**/*.ts", "**/*.tsx"],
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "../Backend/**/*.ts",
+    "../Backend/**/*.tsx"
+  ],
   "compilerOptions": {
     "target": "ES2022",
     "jsx": "react-jsx",
     "module": "ESNext",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@frontend/*": ["./src/*"],
+      "@backend/*": ["../Backend/src/*"]
     },
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": [
-        "./worker-configuration.d.ts",
+        "../Backend/worker-configuration.d.ts",
         "node",
         "vite/client"
     ],
