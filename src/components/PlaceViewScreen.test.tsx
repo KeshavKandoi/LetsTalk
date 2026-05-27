@@ -111,7 +111,7 @@ function renderPlaceViewScreen(
     },
     qrHandoff: {
       token: 'qr-token',
-      url: 'https://readytotalk.app/?scan=qr-token',
+      url: 'https://letstalk.app/?scan=qr-token',
       expiresAt: '2026-03-05T00:00:00.000Z',
       isActive: false,
     },

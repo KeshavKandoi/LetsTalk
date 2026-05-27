@@ -1,5 +1,10 @@
-import { drizzle } from 'drizzle-orm/d1'
+import 'dotenv/config'
+import { drizzle } from 'drizzle-orm/postgres-js'
+import postgres from 'postgres'
 import * as schema from './schema'
-import { getDatabaseBinding } from '../env'
 
-export const db = drizzle(getDatabaseBinding(), { schema })
+const url = process.env.DATABASE_URL
+if (!url) throw new Error('Missing DATABASE_URL in .env')
+
+const client = postgres(url, { ssl: 'require' })
+export const db = drizzle(client, { schema })

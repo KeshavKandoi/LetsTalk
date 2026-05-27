@@ -1,7 +1,7 @@
-# Ready to Talk
+# LetsTalk
 
 ## Product intent
-- Ready to Talk helps people connect when they are ready to talk.
+- LetsTalk helps people connect when they are ready to talk.
 - The product should reduce social friction, not increase it.
 - Early experiences should feel calm, low-pressure, and consent-first.
 
@@ -50,7 +50,7 @@
 - Prefer short sentences and plain language.
 
 ## Definition of a good first version
-- A person can understand what Ready to Talk does immediately.
+- A person can understand what LetsTalk does immediately.
 - A phone user can move through the main flow without friction.
 - QR connection behavior is understandable before backend complexity exists.
 - The app feels trustworthy enough that someone would try it with another person nearby.

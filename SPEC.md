@@ -1,8 +1,8 @@
-# Ready to Talk Spec
+# LetsTalk Spec
 
 ## Overview
 
-Ready to Talk is a phone-first app for helping people connect with each other when they are physically in the same place and available to talk right now.
+LetsTalk is a phone-first app for helping people connect with each other when they are physically in the same place and available to talk right now.
 
 The MVP is intentionally narrow:
 

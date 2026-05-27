@@ -1,91 +1,41 @@
-import { env } from 'cloudflare:workers'
-import type { PlaceAgent } from './agents/place-agent'
-import type { UserAgent } from './agents/user-agent'
-
-type AppEnv = Cloudflare.Env & {
-  BETTER_AUTH_URL?: string
-  BETTER_AUTH_SECRET?: string
-  DB?: D1Database
-  GOOGLE_MAPS_API_KEY?: string
-  GOOGLE_MAPS_MAP_ID?: string
-  PlaceAgent?: DurableObjectNamespace<PlaceAgent>
-  UserAgent?: DurableObjectNamespace<UserAgent>
-}
-
-const appEnv = env as AppEnv
+import 'dotenv/config'
 
 export function getAuthSecret() {
-  const secret = appEnv.BETTER_AUTH_SECRET
-
-  if (!secret) {
-    throw new Error(
-      'Missing BETTER_AUTH_SECRET. Add it to .dev.vars for local development and set it as a Wrangler secret before deploying.',
-    )
-  }
-
+  const secret = process.env.BETTER_AUTH_SECRET
+  if (!secret) throw new Error('Missing BETTER_AUTH_SECRET in .env')
   return secret
 }
 
-export function getDatabaseBinding() {
-  const database = appEnv.DB
-
-  if (!database) {
-    throw new Error(
-      'Missing the DB D1 binding. Add the D1 database binding in wrangler.jsonc before starting the app.',
-    )
-  }
-
-  return database
+export function getDatabaseUrl() {
+  const url = process.env.DATABASE_URL
+  if (!url) throw new Error('Missing DATABASE_URL in .env')
+  return url
 }
 
 export function getGoogleMapsApiKey() {
-  const apiKey = appEnv.GOOGLE_MAPS_API_KEY
-
-  if (!apiKey) {
-    throw new Error(
-      'Missing GOOGLE_MAPS_API_KEY. Add it to .dev.vars for local development and set it as a Wrangler secret before deploying.',
-    )
-  }
-
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY
+  if (!apiKey) throw new Error('Missing GOOGLE_MAPS_API_KEY in .env')
   return apiKey
 }
 
 export function getGoogleMapsMapId() {
-  return appEnv.GOOGLE_MAPS_MAP_ID ?? null
+  return process.env.GOOGLE_MAPS_MAP_ID ?? null
 }
 
 export function getAppBaseUrl() {
-  const appBaseUrl = appEnv.BETTER_AUTH_URL
-
-  if (!appBaseUrl) {
-    throw new Error(
-      'Missing BETTER_AUTH_URL. Add it to .dev.vars for local development and set it in Wrangler before deploying.',
-    )
-  }
-
-  return appBaseUrl
+  const url = process.env.BETTER_AUTH_URL
+  if (!url) throw new Error('Missing BETTER_AUTH_URL in .env')
+  return url
 }
 
-export function getPlaceAgentBinding() {
-  const placeAgent = appEnv.PlaceAgent
-
-  if (!placeAgent) {
-    throw new Error(
-      'Missing the PlaceAgent durable object binding. Add it to wrangler.jsonc before starting the app.',
-    )
-  }
-
-  return placeAgent
+export function getSupabaseUrl() {
+  const url = process.env.SUPABASE_URL
+  if (!url) throw new Error('Missing SUPABASE_URL in .env')
+  return url
 }
 
-export function getUserAgentBinding() {
-  const userAgent = appEnv.UserAgent
-
-  if (!userAgent) {
-    throw new Error(
-      'Missing the UserAgent durable object binding. Add it to wrangler.jsonc before starting the app.',
-    )
-  }
-
-  return userAgent
+export function getSupabaseAnonKey() {
+  const key = process.env.SUPABASE_ANON_KEY
+  if (!key) throw new Error('Missing SUPABASE_ANON_KEY in .env')
+  return key
 }

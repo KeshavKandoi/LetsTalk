@@ -1,6 +1,6 @@
-# Ready to Talk
+# LetsTalk
 
-Ready to Talk is a phone-first web app for starting in-person conversations when
+LetsTalk is a phone-first web app for starting in-person conversations when
 two people are already in the same place and ready right now.
 
 The current app is built with:
@@ -175,7 +175,7 @@ pnpm run db:migrate:remote
 - local migration directory: `./drizzle`
 
 Before deploying, create a real D1 database and either update
-[`wrangler.jsonc`](/Users/craig/Code/wdc/readytotalk/wrangler.jsonc) or target
+[`wrangler.jsonc`](/Users/keshavkandoi/Desktop/Talk/Letstalk/wrangler.jsonc) or target
 the database via Wrangler configuration.
 
 Set the required secrets:

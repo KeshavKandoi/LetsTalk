@@ -177,7 +177,7 @@ export function OnboardingScreen({
         setLocationStatus('denied')
         setLocationError(
           error.code === error.PERMISSION_DENIED
-            ? 'Location is required before you can use Ready to Talk.'
+            ? 'Location is required before you can use LetsTalk.'
             : 'We could not read your location. Try again nearby.',
         )
       },

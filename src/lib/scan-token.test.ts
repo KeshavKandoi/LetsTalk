@@ -4,7 +4,7 @@ import { extractScanToken } from './scan-token'
 describe('extractScanToken', () => {
   it('reads the scan token from a full URL', () => {
     expect(
-      extractScanToken('https://readytotalk.app/?scan=token-123'),
+      extractScanToken('https://letstalk.app/?scan=token-123'),
     ).toBe('token-123')
   })
 

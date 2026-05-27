@@ -1,20 +1,13 @@
-import { Agent, callable } from 'agents'
 import { and, eq, inArray, sql } from 'drizzle-orm'
-import { drizzle } from 'drizzle-orm/d1'
 import type { PlaceAgentState } from '../../app-types'
-import * as schema from '../db/schema'
+import { db } from '../db'
 import { handoffConnection, user, userProfile } from '../db/schema'
+import { getSupabaseUrl, getSupabaseAnonKey } from '../env'
+import { createClient } from '@supabase/supabase-js'
 
-type PlaceAgentEnv = Cloudflare.Env & {
-  DB: D1Database
-}
-
-async function loadPlaceSnapshot(
-  database: D1Database,
-  placeId: string,
-): Promise<PlaceAgentState> {
-  const db = drizzle(database, { schema })
+export async function loadPlaceSnapshot(placeId: string): Promise<PlaceAgentState> {
   const presentStatuses = ['present', 'ready', 'in_conversation'] as const
+
   const [{ readyCount, checkedInCount }] = await db
     .select({
       readyCount: sql<number>`count(case when ${userProfile.status} = 'ready' then 1 end)`,
@@ -73,8 +66,7 @@ async function loadPlaceSnapshot(
     checkedInCount,
     participants: participantRecords.map((record) => ({
       userId: record.userId,
-      username:
-        record.username || record.fallbackUsername || record.fallbackName,
+      username: record.username || record.fallbackUsername || record.fallbackName,
       moodEmoji: record.moodEmoji,
       intentSummary: record.intentSummary,
       status: record.status as PlaceAgentState['participants'][number]['status'],
@@ -92,27 +84,19 @@ async function loadPlaceSnapshot(
   }
 }
 
-export class PlaceAgent extends Agent<PlaceAgentEnv, PlaceAgentState> {
-  initialState: PlaceAgentState = {
-    placeId: '',
-    readyCount: 0,
-    checkedInCount: 0,
-    participants: [],
-    connections: [],
-    updatedAt: null,
-  }
+export async function broadcastPlaceUpdate(placeId: string) {
+  const supabase = createClient(getSupabaseUrl(), getSupabaseAnonKey())
+  const snapshot = await loadPlaceSnapshot(placeId)
+  await supabase.channel(`place:${placeId}`).send({
+    type: 'broadcast',
+    event: 'place_update',
+    payload: snapshot,
+  })
+  return snapshot
+}
 
-  async onConnect() {
-    await this.refresh()
-  }
-
-  // `agents` exposes stage-3 decorator types while local dev needs TS decorator transpilation enabled.
-  // The runtime behavior is correct; this suppresses the signature mismatch in `tsc --noEmit`.
-  // @ts-expect-error decorator signature mismatch between TS modes
-  @callable()
-  async refresh() {
-    const snapshot = await loadPlaceSnapshot(this.env.DB, this.name)
-    this.setState(snapshot)
-    return snapshot
+export class PlaceAgent {
+  async refresh(placeId: string) {
+    return broadcastPlaceUpdate(placeId)
   }
 }

@@ -1,5 +1,5 @@
 import { and, desc, eq, inArray, or, sql } from 'drizzle-orm'
-import { getAgentByName } from 'agents'
+// agents removed
 import { getRequestHeaders } from '@tanstack/react-start/server'
 import type {
   ActiveConnectionState,
@@ -16,7 +16,7 @@ import type {
 } from '../app-types'
 import { auth } from './auth'
 import { db } from './db'
-import type { UserAgent } from './agents/user-agent'
+import { UserAgent } from './agents/user-agent'
 import {
   handoffCode,
   handoffConnection,
@@ -27,7 +27,7 @@ import {
 import {
   getAppBaseUrl,
   getGoogleMapsApiKey,
-  getUserAgentBinding,
+
   getGoogleMapsMapId,
 } from './env'
 
@@ -397,7 +397,7 @@ export async function getAppState(): Promise<AppState> {
 }
 
 async function getUserAgent(userId: string) {
-  return getAgentByName<Cloudflare.Env, UserAgent>(getUserAgentBinding(), userId)
+  return new UserAgent(userId)
 }
 
 export async function saveUserProfile(input: {
@@ -464,7 +464,7 @@ export async function resolveScanToken(input: { token: string }) {
   const token = input.token.trim()
 
   if (!token) {
-    throw new Error('Scan a Ready to Talk QR code first.')
+    throw new Error('Scan a LetsTalk QR code first.')
   }
 
   return resolveScannedHandoff(token, session.user.id)
@@ -527,7 +527,7 @@ export async function previewScanJoin(input: { token: string }) {
   const token = input.token.trim()
 
   if (!token) {
-    throw new Error('Scan a Ready to Talk QR code first.')
+    throw new Error('Scan a LetsTalk QR code first.')
   }
 
   return resolveScanPreview(token, session.user.id)
@@ -538,7 +538,7 @@ export async function joinPlaceAndConnectFromScan(input: { token: string }) {
   const token = input.token.trim()
 
   if (!token) {
-    throw new Error('Scan a Ready to Talk QR code first.')
+    throw new Error('Scan a LetsTalk QR code first.')
   }
 
   const preview = await resolveScanPreview(token, session.user.id)

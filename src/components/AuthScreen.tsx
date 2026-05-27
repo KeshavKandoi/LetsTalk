@@ -106,7 +106,7 @@ export function AuthScreen({
               Nearby conversations
             </div>
             <h1 className="mt-4 text-4xl font-black tracking-[-0.06em] text-[var(--rt-ink)]">
-              Ready to Talk
+              LetsTalk
             </h1>
             <p className="mt-3 text-sm leading-6 text-[var(--rt-ink-soft)] sm:text-base">
               Find local places where people are ready now. Your pseudonym is
@@ -175,7 +175,7 @@ export function AuthScreen({
                   label="Username"
                   name="username"
                   autoComplete="username"
-                  placeholder="readytotalk"
+                  placeholder="letstalk"
                 />
                 <FormField
                   label="Password"
@@ -208,7 +208,7 @@ export function AuthScreen({
                   label="Pseudonym"
                   name="username"
                   autoComplete="username"
-                  placeholder="readytotalk"
+                  placeholder="letstalk"
                 />
                 <FormField
                   label="Password"

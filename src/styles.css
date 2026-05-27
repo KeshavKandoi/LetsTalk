@@ -1,41 +1,36 @@
 @import "tailwindcss";
-
 @theme {
   --font-sans: "Avenir Next", "Trebuchet MS", "Segoe UI", sans-serif;
 }
-
 :root {
-  --rt-bg: #eef6f1;
-  --rt-bg-strong: #dcebdc;
+  --rt-bg: #d4f5d4;
+  --rt-bg-strong: #b8edb8;
   --rt-surface: rgba(255, 255, 255, 0.84);
-  --rt-surface-strong: #f8fcf8;
-  --rt-border: #bfd5c4;
-  --rt-border-strong: #87a994;
-  --rt-ink: #11342c;
-  --rt-ink-soft: #45685a;
-  --rt-accent: #123f35;
-  --rt-accent-strong: #0b5d49;
-  --rt-accent-soft: #dcefe3;
-  --rt-accent-soft-strong: #c2dfcf;
+  --rt-surface-strong: #f0fbf0;
+  --rt-border: #90d490;
+  --rt-border-strong: #5cb85c;
+  --rt-ink: #0f3320;
+  --rt-ink-soft: #2d6e3e;
+  --rt-accent: #1a6b3c;
+  --rt-accent-strong: #0f8a3c;
+  --rt-accent-soft: #c8f0c8;
+  --rt-accent-soft-strong: #a8e0a8;
 }
-
 html {
   min-height: 100%;
 }
-
 body {
   @apply m-0;
   min-height: 100vh;
   font-family: var(--font-sans);
   background:
-    radial-gradient(circle at top left, rgba(11, 93, 73, 0.14), transparent 24%),
-    radial-gradient(circle at bottom right, rgba(45, 92, 62, 0.12), transparent 28%),
-    linear-gradient(180deg, #f5fbf7 0%, var(--rt-bg) 100%);
+    radial-gradient(circle at top left, rgba(15, 138, 60, 0.12), transparent 24%),
+    radial-gradient(circle at bottom right, rgba(28, 120, 60, 0.10), transparent 28%),
+    linear-gradient(180deg, #e8f8e8 0%, var(--rt-bg) 100%);
   color: var(--rt-ink);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
-
 * {
   box-sizing: border-box;
 }

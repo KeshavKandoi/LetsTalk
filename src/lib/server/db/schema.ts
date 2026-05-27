@@ -1,25 +1,24 @@
 import { relations } from 'drizzle-orm'
 import {
+  boolean,
   index,
-  integer,
+  pgTable,
   real,
-  sqliteTable,
   text,
+  timestamp,
   uniqueIndex,
-} from 'drizzle-orm/sqlite-core'
+} from 'drizzle-orm/pg-core'
 
-export const user = sqliteTable(
+export const user = pgTable(
   'user',
   {
     id: text('id').primaryKey(),
     name: text('name').notNull(),
     email: text('email').notNull(),
-    emailVerified: integer('emailVerified', { mode: 'boolean' })
-      .notNull()
-      .default(false),
+    emailVerified: boolean('emailVerified').notNull().default(false),
     image: text('image'),
-    createdAt: integer('createdAt', { mode: 'timestamp_ms' }).notNull(),
-    updatedAt: integer('updatedAt', { mode: 'timestamp_ms' }).notNull(),
+    createdAt: timestamp('createdAt').notNull(),
+    updatedAt: timestamp('updatedAt').notNull(),
     username: text('username'),
     displayUsername: text('displayUsername'),
   },
@@ -29,14 +28,14 @@ export const user = sqliteTable(
   ],
 )
 
-export const session = sqliteTable(
+export const session = pgTable(
   'session',
   {
     id: text('id').primaryKey(),
-    expiresAt: integer('expiresAt', { mode: 'timestamp_ms' }).notNull(),
+    expiresAt: timestamp('expiresAt').notNull(),
     token: text('token').notNull(),
-    createdAt: integer('createdAt', { mode: 'timestamp_ms' }).notNull(),
-    updatedAt: integer('updatedAt', { mode: 'timestamp_ms' }).notNull(),
+    createdAt: timestamp('createdAt').notNull(),
+    updatedAt: timestamp('updatedAt').notNull(),
     ipAddress: text('ipAddress'),
     userAgent: text('userAgent'),
     userId: text('userId')
@@ -49,7 +48,7 @@ export const session = sqliteTable(
   ],
 )
 
-export const account = sqliteTable(
+export const account = pgTable(
   'account',
   {
     id: text('id').primaryKey(),
@@ -61,16 +60,12 @@ export const account = sqliteTable(
     accessToken: text('accessToken'),
     refreshToken: text('refreshToken'),
     idToken: text('idToken'),
-    accessTokenExpiresAt: integer('accessTokenExpiresAt', {
-      mode: 'timestamp_ms',
-    }),
-    refreshTokenExpiresAt: integer('refreshTokenExpiresAt', {
-      mode: 'timestamp_ms',
-    }),
+    accessTokenExpiresAt: timestamp('accessTokenExpiresAt'),
+    refreshTokenExpiresAt: timestamp('refreshTokenExpiresAt'),
     scope: text('scope'),
     password: text('password'),
-    createdAt: integer('createdAt', { mode: 'timestamp_ms' }).notNull(),
-    updatedAt: integer('updatedAt', { mode: 'timestamp_ms' }).notNull(),
+    createdAt: timestamp('createdAt').notNull(),
+    updatedAt: timestamp('updatedAt').notNull(),
   },
   (table) => [
     index('account_userId_idx').on(table.userId),
@@ -81,20 +76,20 @@ export const account = sqliteTable(
   ],
 )
 
-export const verification = sqliteTable(
+export const verification = pgTable(
   'verification',
   {
     id: text('id').primaryKey(),
     identifier: text('identifier').notNull(),
     value: text('value').notNull(),
-    expiresAt: integer('expiresAt', { mode: 'timestamp_ms' }).notNull(),
-    createdAt: integer('createdAt', { mode: 'timestamp_ms' }).notNull(),
-    updatedAt: integer('updatedAt', { mode: 'timestamp_ms' }).notNull(),
+    expiresAt: timestamp('expiresAt').notNull(),
+    createdAt: timestamp('createdAt').notNull(),
+    updatedAt: timestamp('updatedAt').notNull(),
   },
   (table) => [index('verification_identifier_idx').on(table.identifier)],
 )
 
-export const userProfile = sqliteTable('user_profile', {
+export const userProfile = pgTable('user_profile', {
   userId: text('user_id')
     .primaryKey()
     .references(() => user.id, { onDelete: 'cascade' }),
@@ -103,28 +98,26 @@ export const userProfile = sqliteTable('user_profile', {
   intentSummary: text('intent_summary'),
   status: text('status').notNull().default('offline'),
   currentPlaceId: text('current_place_id'),
-  isFindable: integer('is_findable', { mode: 'boolean' })
-    .notNull()
-    .default(false),
+  isFindable: boolean('is_findable').notNull().default(false),
   locationHint: text('location_hint'),
-  pingRequestedAt: integer('ping_requested_at', { mode: 'timestamp_ms' }),
+  pingRequestedAt: timestamp('ping_requested_at'),
   pingRequestedByUserId: text('ping_requested_by_user_id'),
   pingRequestedByUsername: text('ping_requested_by_username'),
-  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+  createdAt: timestamp('created_at').notNull(),
+  updatedAt: timestamp('updated_at').notNull(),
 })
 
-export const place = sqliteTable('place', {
+export const place = pgTable('place', {
   placeId: text('place_id').primaryKey(),
   name: text('name').notNull(),
   address: text('address').notNull(),
   lat: real('lat').notNull(),
   lng: real('lng').notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+  createdAt: timestamp('created_at').notNull(),
+  updatedAt: timestamp('updated_at').notNull(),
 })
 
-export const handoffCode = sqliteTable(
+export const handoffCode = pgTable(
   'handoff_code',
   {
     token: text('token').primaryKey(),
@@ -134,9 +127,9 @@ export const handoffCode = sqliteTable(
     placeId: text('place_id')
       .notNull()
       .references(() => place.placeId, { onDelete: 'cascade' }),
-    expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
-    createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
-    updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+    expiresAt: timestamp('expires_at').notNull(),
+    createdAt: timestamp('created_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
   },
   (table) => [
     uniqueIndex('handoff_code_user_unique').on(table.userId),
@@ -144,7 +137,7 @@ export const handoffCode = sqliteTable(
   ],
 )
 
-export const handoffConnection = sqliteTable(
+export const handoffConnection = pgTable(
   'handoff_connection',
   {
     id: text('id').primaryKey(),
@@ -158,8 +151,8 @@ export const handoffConnection = sqliteTable(
       .notNull()
       .references(() => place.placeId, { onDelete: 'cascade' }),
     status: text('status').notNull().default('accepted'),
-    createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
-    updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+    createdAt: timestamp('created_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
   },
   (table) => [
     index('handoff_connection_requester_idx').on(table.requesterUserId),
@@ -175,22 +168,13 @@ export const userRelations = relations(user, ({ many, one }) => ({
 }))
 
 export const sessionRelations = relations(session, ({ one }) => ({
-  user: one(user, {
-    fields: [session.userId],
-    references: [user.id],
-  }),
+  user: one(user, { fields: [session.userId], references: [user.id] }),
 }))
 
 export const accountRelations = relations(account, ({ one }) => ({
-  user: one(user, {
-    fields: [account.userId],
-    references: [user.id],
-  }),
+  user: one(user, { fields: [account.userId], references: [user.id] }),
 }))
 
 export const userProfileRelations = relations(userProfile, ({ one }) => ({
-  user: one(user, {
-    fields: [userProfile.userId],
-    references: [user.id],
-  }),
+  user: one(user, { fields: [userProfile.userId], references: [user.id] }),
 }))

@@ -1391,7 +1391,7 @@ export function PlaceViewScreen({
               {qrDataUrl ? (
                 <img
                   src={qrDataUrl}
-                  alt={`Ready to Talk QR for ${username}`}
+                  alt={`LetsTalk QR for ${username}`}
                   className={`mx-auto h-48 w-48 rounded-3xl border border-[var(--rt-border)] bg-[var(--rt-surface-strong)] p-3 ${
                     liveStatus === 'ready' ? '' : 'opacity-40'
                   }`}
@@ -1572,7 +1572,7 @@ export function PlaceViewScreen({
                       type="text"
                       value={scanInput}
                       onChange={(event) => setScanInput(event.target.value)}
-                      placeholder="https://readytotalk.app/?scan=..."
+                      placeholder="https://letstalk.app/?scan=..."
                       className="w-full rounded-2xl border border-[var(--rt-border)] bg-[var(--rt-surface-strong)] px-4 py-3 text-sm text-[var(--rt-ink)] outline-none transition focus:border-[var(--rt-accent-strong)]"
                     />
                     <button
