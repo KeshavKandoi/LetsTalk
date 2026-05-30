@@ -103,6 +103,10 @@ export const userProfile = pgTable('user_profile', {
   pingRequestedAt: timestamp('ping_requested_at'),
   pingRequestedByUserId: text('ping_requested_by_user_id'),
   pingRequestedByUsername: text('ping_requested_by_username'),
+  pushToken: text('push_token'),
+  photoUrl: text('photo_url'),
+  age: text('age'),
+  gender: text('gender'),
   createdAt: timestamp('created_at').notNull(),
   updatedAt: timestamp('updated_at').notNull(),
 })
