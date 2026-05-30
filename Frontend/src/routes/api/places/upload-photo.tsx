@@ -1,0 +1,56 @@
+import { createFileRoute } from '@tanstack/react-router'
+import { auth } from '@backend/lib/auth'
+import { db } from '@backend/lib/db'
+import { userProfile } from '@backend/lib/db/schema'
+import { eq } from 'drizzle-orm'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_KEY!
+)
+
+export const Route = createFileRoute('/api/places/upload-photo')({
+  server: {
+    handlers: {
+      POST: async ({ request }) => {
+        try {
+          const session = await auth.api.getSession({ headers: request.headers })
+          if (!session) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
+
+          const { photoBase64 } = await request.json()
+          if (!photoBase64) return new Response(JSON.stringify({ error: 'No photo' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+
+          // Convert base64 to buffer
+          const base64Data = photoBase64.replace(/^data:image\/\w+;base64,/, '')
+          const buffer = Buffer.from(base64Data, 'base64')
+
+          const fileName = `${session.user.id}.jpg`
+
+          // Upload to Supabase Storage
+          const { error: uploadError } = await supabase.storage
+            .from('avatars')
+            .upload(fileName, buffer, {
+              contentType: 'image/jpeg',
+              upsert: true,
+            })
+
+          if (uploadError) throw new Error(uploadError.message)
+
+          // Get public URL
+          const { data } = supabase.storage.from('avatars').getPublicUrl(fileName)
+          const photoUrl = data.publicUrl
+
+          // Save URL to DB
+          await db.update(userProfile)
+            .set({ photoUrl: photoUrl })
+            .where(eq(userProfile.userId, session.user.id))
+
+          return new Response(JSON.stringify({ ok: true, photoUrl }), { headers: { 'Content-Type': 'application/json' } })
+        } catch (e: any) {
+          return new Response(JSON.stringify({ error: e.message }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+        }
+      },
+    },
+  },
+})
