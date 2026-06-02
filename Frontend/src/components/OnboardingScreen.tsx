@@ -497,11 +497,11 @@ export function OnboardingScreen({
 
                     <div className="mt-4">
                       <p className="text-sm font-semibold text-[var(--rt-ink)]">
-                        Ready to talk here
+                        People here now
                       </p>
-                      {placePreview.readyParticipants.length > 0 ? (
+                      {placePreview.participants.length > 0 ? (
                         <div className="mt-3 space-y-3">
-                          {placePreview.readyParticipants.map((participant) => (
+                          {placePreview.participants.map((participant) => (
                             <div
                               key={participant.userId}
                               className="rounded-3xl border border-[var(--rt-border)] bg-[var(--rt-accent-soft)] px-4 py-4"
