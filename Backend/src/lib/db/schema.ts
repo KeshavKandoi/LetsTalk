@@ -103,6 +103,7 @@ export const userProfile = pgTable('user_profile', {
   pingRequestedAt: timestamp('ping_requested_at'),
   pingRequestedByUserId: text('ping_requested_by_user_id'),
   pingRequestedByUsername: text('ping_requested_by_username'),
+  lastSeenAt: timestamp('last_seen_at'),
   pushToken: text('push_token'),
   photoUrl: text('photo_url'),
   age: text('age'),
@@ -162,6 +163,35 @@ export const handoffConnection = pgTable(
     index('handoff_connection_requester_idx').on(table.requesterUserId),
     index('handoff_connection_recipient_idx').on(table.recipientUserId),
     index('handoff_connection_place_idx').on(table.placeId),
+  ],
+)
+
+export const friendRequest = pgTable(
+  'friend_request',
+  {
+    id: text('id').primaryKey(),
+    requesterUserId: text('requester_user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    recipientUserId: text('recipient_user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    placeId: text('place_id').references(() => place.placeId, {
+      onDelete: 'set null',
+    }),
+    requesterAccepted: boolean('requester_accepted').notNull().default(false),
+    recipientAccepted: boolean('recipient_accepted').notNull().default(false),
+    status: text('status').notNull().default('pending'),
+    createdAt: timestamp('created_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
+  },
+  (table) => [
+    index('friend_request_requester_idx').on(table.requesterUserId),
+    index('friend_request_recipient_idx').on(table.recipientUserId),
+    uniqueIndex('friend_request_pair_unique').on(
+      table.requesterUserId,
+      table.recipientUserId,
+    ),
   ],
 )
 
