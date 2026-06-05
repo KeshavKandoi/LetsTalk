@@ -30,6 +30,9 @@ export type UserProfileState = {
   pingRequestedByUsername: string | null
   createdAt: string | Date
   updatedAt: string | Date
+  age?: string | null
+  gender?: string | null
+  photoUrl?: string | null
 }
 
 export type UserAgentState = {
@@ -75,7 +78,7 @@ export type NearbyPlacePreviewState = {
   readyCount: number
   checkedInCount: number
   activeConversationCount: number
-  readyParticipants: PlaceAgentParticipantState[]
+  participants: PlaceAgentParticipantState[]
 }
 
 export type PlaceAgentState = {
@@ -91,10 +94,14 @@ export type PlaceAgentParticipantState = {
   userId: string
   username: string
   moodEmoji: string | null
+  intentText?: string | null
   intentSummary: string | null
   status: PresenceStatus
   isFindable: boolean
   locationHint: string | null
+  age?: string | null
+  gender?: string | null
+  photoUrl?: string | null
   pingRequestedAt: string | Date | null
   pingRequestedByUserId: string | null
   pingRequestedByUsername: string | null
