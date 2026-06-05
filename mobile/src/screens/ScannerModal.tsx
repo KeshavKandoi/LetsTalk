@@ -1,23 +1,21 @@
 import { useState, useEffect, useRef } from 'react'
 import {
   View, Text, StyleSheet, Modal, TouchableOpacity,
-  ActivityIndicator, TextInput, Animated, Vibration,
+  ActivityIndicator, Animated, Vibration,
 } from 'react-native'
 import { CameraView, useCameraPermissions } from 'expo-camera'
 import { apiFetch } from '../lib/api'
 
 interface Props {
   onClose: () => void
-  onConnected: () => void
-  currentPlaceId: string
+  onConnected: (message: string) => void
 }
 
-export default function ScannerModal({ onClose, onConnected, currentPlaceId }: Props) {
+export default function ScannerModal({ onClose, onConnected }: Props) {
   const [permission, requestPermission] = useCameraPermissions()
   const [scanned, setScanned] = useState(false)
   const [preview, setPreview] = useState<any>(null)
   const [loading, setLoading] = useState(false)
-  const [connecting, setConnecting] = useState(false)
   const [error, setError] = useState('')
   const scanLine = useRef(new Animated.Value(0)).current
 
@@ -55,32 +53,19 @@ export default function ScannerModal({ onClose, onConnected, currentPlaceId }: P
     setError('')
     try {
       const result = await apiFetch('/api/places/scan-preview', { token: t })
-      setPreview({ ...result, resolvedToken: t })
+      await apiFetch('/api/friends/request', { token: t })
+      setPreview({ ...result, resolvedToken: t, requestSent: true })
+      onConnected(`Friend request sent to ${result.counterpart?.username}. Waiting for their acceptance.`)
     } catch (e: any) {
-      setError(e.message || 'Could not preview.')
+      setError(e.message || 'Could not send friend request.')
       setScanned(false)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleConnect = async () => {
-    if (!preview) return
-    setConnecting(true)
-    setError('')
-    try {
-      await apiFetch('/api/places/scan-connect', { token: preview.resolvedToken })
-      onConnected()
-    } catch (e: any) {
-      setError(e.message)
-    } finally {
-      setConnecting(false)
-    }
-  }
-
   const resetScan = () => {
     setPreview(null)
-    setToken('')
     setScanned(false)
     setError('')
   }
@@ -98,7 +83,7 @@ export default function ScannerModal({ onClose, onConnected, currentPlaceId }: P
           <View style={s.header}>
             <View>
               <Text style={s.label}>SCAN QR</Text>
-              <Text style={s.title}>Understand, then connect</Text>
+              <Text style={s.title}>Scan to add a friend</Text>
             </View>
             <TouchableOpacity style={s.closeBtn} onPress={onClose}>
               <Text style={s.closeTxt}>✕</Text>
@@ -110,7 +95,7 @@ export default function ScannerModal({ onClose, onConnected, currentPlaceId }: P
           {preview ? (
             /* Preview card */
             <View style={s.previewCard}>
-              <Text style={s.previewLabel}>You're about to connect with</Text>
+              <Text style={s.previewLabel}>Friend request sent to</Text>
               <Text style={s.previewName}>{preview.counterpart?.username}</Text>
               <Text style={s.previewMood}>
                 {preview.counterpart?.moodEmoji} {preview.counterpart?.intentSummary || 'Open to a conversation.'}
@@ -118,10 +103,11 @@ export default function ScannerModal({ onClose, onConnected, currentPlaceId }: P
               <View style={s.previewPlace}>
                 <Text style={s.previewPlaceTxt}>📍 {preview.placeName}</Text>
               </View>
-              <TouchableOpacity style={s.connectBtn} onPress={handleConnect} disabled={connecting}>
-                {connecting
-                  ? <ActivityIndicator color="white" />
-                  : <Text style={s.connectTxt}>Start conversation 🤝</Text>}
+              <Text style={s.successHint}>
+                They need to accept before you become friends.
+              </Text>
+              <TouchableOpacity style={s.connectBtn} onPress={onClose}>
+                <Text style={s.connectTxt}>Done</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.cancelBtn} onPress={resetScan}>
                 <Text style={s.cancelTxt}>Scan another</Text>
@@ -198,7 +184,7 @@ const s = StyleSheet.create({
   tabTxtActive: { color: DARK, fontWeight: '700' },
   cameraWrap: { borderRadius: 20, overflow: 'hidden', height: 340, marginBottom: 12, position: 'relative', backgroundColor: '#000' },
   camera: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  scanOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center' },
+  scanOverlay: { ...StyleSheet.absoluteFill, justifyContent: 'center', alignItems: 'center' },
   scanFrame: { width: 220, height: 220, position: 'relative' },
   corner: { position: 'absolute', width: 24, height: 24, borderColor: 'white', borderWidth: 3 },
   cornerTL: { top: 0, left: 0, borderRightWidth: 0, borderBottomWidth: 0, borderTopLeftRadius: 4 },
@@ -206,7 +192,7 @@ const s = StyleSheet.create({
   cornerBL: { bottom: 0, left: 0, borderRightWidth: 0, borderTopWidth: 0, borderBottomLeftRadius: 4 },
   cornerBR: { bottom: 0, right: 0, borderLeftWidth: 0, borderTopWidth: 0, borderBottomRightRadius: 4 },
   scanLine: { position: 'absolute', left: 4, right: 4, height: 2, backgroundColor: 'rgba(255,255,255,0.8)', borderRadius: 1 },
-  scanLoading: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(15,51,32,0.7)', justifyContent: 'center', alignItems: 'center', gap: 10 },
+  scanLoading: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(15,51,32,0.7)', justifyContent: 'center', alignItems: 'center', gap: 10 },
   scanLoadingTxt: { color: 'white', fontWeight: '700', fontSize: 15 },
   cameraHint: { position: 'absolute', bottom: 14, alignSelf: 'center', color: 'white', fontSize: 13, fontWeight: '600', backgroundColor: 'rgba(15,51,32,0.5)', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20 },
   permissionBox: { alignItems: 'center', padding: 32, gap: 10 },
@@ -215,17 +201,13 @@ const s = StyleSheet.create({
   permissionHint: { fontSize: 13, color: MID, textAlign: 'center' },
   permissionBtn: { backgroundColor: GREEN, borderRadius: 50, paddingVertical: 12, paddingHorizontal: 28, marginTop: 8 },
   permissionBtnTxt: { color: 'white', fontWeight: '700', fontSize: 15 },
-  manualCard: { backgroundColor: 'white', borderRadius: 20, padding: 16, borderWidth: 1, borderColor: 'rgba(144,212,144,0.5)', gap: 10 },
-  manualLabel: { fontSize: 13, fontWeight: '600', color: DARK },
-  input: { backgroundColor: '#f0faf0', borderRadius: 14, padding: 13, fontSize: 14, color: DARK, borderWidth: 1, borderColor: 'rgba(144,212,144,0.6)' },
-  previewBtn: { backgroundColor: GREEN, borderRadius: 50, paddingVertical: 13, alignItems: 'center' },
-  previewBtnTxt: { color: 'white', fontWeight: '700', fontSize: 15 },
   previewCard: { backgroundColor: 'rgba(26,107,60,0.09)', borderRadius: 20, padding: 18, borderWidth: 1, borderColor: 'rgba(26,107,60,0.2)', gap: 8 },
   previewLabel: { fontSize: 12, color: MID, fontWeight: '600' },
   previewName: { fontSize: 24, fontWeight: '800', color: DARK },
   previewMood: { fontSize: 14, color: MID, lineHeight: 20 },
   previewPlace: { backgroundColor: 'white', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, alignSelf: 'flex-start' },
   previewPlaceTxt: { fontSize: 13, color: MID },
+  successHint: { fontSize: 13, color: MID, lineHeight: 19, marginTop: 4 },
   connectBtn: { backgroundColor: GREEN, borderRadius: 50, paddingVertical: 14, alignItems: 'center', marginTop: 6 },
   connectTxt: { color: 'white', fontWeight: '700', fontSize: 15 },
   cancelBtn: { backgroundColor: 'white', borderRadius: 50, paddingVertical: 13, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(144,212,144,0.6)' },
