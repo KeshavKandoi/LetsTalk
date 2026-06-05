@@ -1,7 +1,6 @@
 import { useNavigation } from '@react-navigation/native'
 import { getSession, signOut } from '../lib/auth'
 import DrawerMenu from './DrawerMenu'
-import { apiFetch } from '../lib/api'
 import { useEffect, useRef, useState } from 'react'
 import {
   View, Text, TouchableOpacity, StyleSheet, SafeAreaView,
@@ -19,8 +18,8 @@ export default function LandingScreen() {
     setProfileVisible(true)
     setProfileLoading(true)
     try {
-      const state = await apiFetch('/api/places/state', {})
-      setProfile(state)
+      const session = await getSession()
+      setProfile(session)
     } catch { setProfile(null) }
     setProfileLoading(false)
   }
@@ -29,15 +28,15 @@ export default function LandingScreen() {
     await signOut()
     setProfileVisible(false)
     setProfile(null)
+    navigation.reset({ index: 0, routes: [{ name: 'Landing' }] })
   }
 
   const handleJoin = async () => {
     try {
-      const state = await apiFetch('/api/places/state', {})
-      if (state.session) {
+      const session = await getSession()
+      if (session?.session) {
         navigation.navigate('Onboarding' as never)
       } else {
-        // Token exists but no session — account deleted or expired, clear it
         await signOut()
         navigation.navigate('Signup' as never)
       }
