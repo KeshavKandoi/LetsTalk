@@ -103,7 +103,6 @@ export const userProfile = pgTable('user_profile', {
   pingRequestedAt: timestamp('ping_requested_at'),
   pingRequestedByUserId: text('ping_requested_by_user_id'),
   pingRequestedByUsername: text('ping_requested_by_username'),
-  lastSeenAt: timestamp('last_seen_at'),
   pushToken: text('push_token'),
   photoUrl: text('photo_url'),
   age: text('age'),
@@ -179,6 +178,7 @@ export const friendRequest = pgTable(
     placeId: text('place_id').references(() => place.placeId, {
       onDelete: 'set null',
     }),
+    initiatorUserId: text('initiator_user_id'),
     requesterAccepted: boolean('requester_accepted').notNull().default(false),
     recipientAccepted: boolean('recipient_accepted').notNull().default(false),
     status: text('status').notNull().default('pending'),
@@ -193,6 +193,44 @@ export const friendRequest = pgTable(
       table.recipientUserId,
     ),
   ],
+)
+
+export const friendMessage = pgTable(
+  'friend_message',
+  {
+    id: text('id').primaryKey(),
+    friendRequestId: text('friend_request_id')
+      .notNull()
+      .references(() => friendRequest.id, { onDelete: 'cascade' }),
+    senderUserId: text('sender_user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    recipientUserId: text('recipient_user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    body: text('body').notNull(),
+    status: text('status').notNull().default('pending'),
+    sentAt: timestamp('sent_at'),
+    readAt: timestamp('read_at'),
+    createdAt: timestamp('created_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
+  },
+  (table) => [
+    index('friend_message_request_idx').on(table.friendRequestId),
+    index('friend_message_sender_idx').on(table.senderUserId),
+    index('friend_message_recipient_idx').on(table.recipientUserId),
+  ],
+)
+
+
+export const userActivity = pgTable(
+  'user_activity',
+  {
+    userId: text('user_id').primaryKey().references(() => user.id, { onDelete: 'cascade' }),
+    isOnline: boolean('is_online').notNull().default(false),
+    lastSeenAt: timestamp('last_seen_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
+  },
 )
 
 export const userRelations = relations(user, ({ many, one }) => ({
