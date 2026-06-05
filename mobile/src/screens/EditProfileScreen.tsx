@@ -36,13 +36,16 @@ export default function EditProfileScreen() {
   }, [])
 
   const handleSave = async () => {
+    console.log('Saving with values:', { age, gender, moodEmoji, intentText })
     if (age && (isNaN(Number(age)) || Number(age) < 13 || Number(age) > 100)) {
       Alert.alert('Invalid age', 'Please enter a valid age between 13 and 100.')
       return
     }
     setSaving(true)
     try {
+      console.log('Sending to backend:', { moodEmoji, intentText, age, gender })
       await apiFetch('/api/places/update-profile', { moodEmoji, intentText, age, gender })
+      console.log('Save response received')
       Alert.alert('Saved', 'Profile updated successfully.')
       navigation.goBack()
     } catch (e: any) {
