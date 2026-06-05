@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   View, Text, StyleSheet, SafeAreaView, TouchableOpacity,
-  ScrollView, ActivityIndicator, RefreshControl, Alert, Modal,
+  ScrollView, ActivityIndicator, RefreshControl, Alert, Modal, Image, AppState,
 } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import QRCode from 'react-native-qrcode-svg'
@@ -31,10 +31,14 @@ interface Participant {
   userId: string
   username: string
   moodEmoji: string
+  intentText: string | null
   intentSummary: string | null
   status: string
   isFindable: boolean
   locationHint: string | null
+  age: string | null
+  gender: string | null
+  photoUrl: string | null
 }
 
 interface ActiveConnection {
@@ -54,7 +58,7 @@ interface QrHandoff {
   isActive: boolean
 }
 
-interface AppState {
+interface PlaceViewState {
   profile: Profile | null
   currentPlace: CurrentPlace | null
   activeConnection: ActiveConnection | null
@@ -64,7 +68,7 @@ interface AppState {
 
 export default function PlaceViewScreen() {
   const navigation = useNavigation<any>()
-  const [state, setState] = useState<AppState | null>(null)
+  const [state, setState] = useState<PlaceViewState | null>(null)
   const [participants, setParticipants] = useState<Participant[]>([])
   const [checkedInCount, setCheckedInCount] = useState(0)
   const [activeConversationCount, setActiveConversationCount] = useState(0)
@@ -78,13 +82,13 @@ export default function PlaceViewScreen() {
   const [scannerVisible, setScannerVisible] = useState(false)
   const [finderLoading, setFinderLoading] = useState(false)
   const [pingingUserId, setPingingUserId] = useState<string | null>(null)
+  const [selectedPerson, setSelectedPerson] = useState<Participant | null>(null)
   const [notice, setNotice] = useState('')
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
   const loadState = async (silent = false) => {
     if (!silent) setLoading(true)
     try {
-      const data: AppState = await apiFetch('/api/places/state', {})
+      const data: PlaceViewState = await apiFetch('/api/places/state', {})
       if (!data.profile?.currentPlaceId) {
         navigation.reset({ index: 0, routes: [{ name: 'Onboarding' }] })
         return
@@ -92,7 +96,7 @@ export default function PlaceViewScreen() {
       setState(data)
       if (data.currentPlace?.place?.placeId) {
         const preview = await apiFetch('/api/places/preview', { placeId: data.currentPlace.place.placeId })
-        setParticipants(preview.readyParticipants ?? [])
+        setParticipants(preview.participants ?? [])
         setCheckedInCount(preview.checkedInCount ?? 0)
         setActiveConversationCount(preview.activeConversationCount ?? 0)
       }
@@ -114,7 +118,15 @@ export default function PlaceViewScreen() {
   useEffect(() => {
     loadState()
     pollRef.current = setInterval(() => loadState(true), 8000)
-    return () => { if (pollRef.current) clearInterval(pollRef.current) }
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        void loadState(true)
+      }
+    })
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current)
+      subscription.remove()
+    }
   }, [])
 
   const toggleReady = async () => {
@@ -187,6 +199,13 @@ export default function PlaceViewScreen() {
       setNotice(`👋 Ping sent to ${participant.username}!`)
     } catch (e: any) { setError(e.message) }
     finally { setPingingUserId(null) }
+  }
+
+  const renderPersonAvatar = (person: Participant) => {
+    const initials = (person.username || '?').slice(0, 2).toUpperCase()
+    return person.photoUrl
+      ? <Image source={{ uri: person.photoUrl }} style={styles.personAvatarImg} />
+      : <View style={styles.personAvatar}><Text style={styles.personAvatarText}>{initials}</Text></View>
   }
 
   if (loading) {
@@ -309,15 +328,15 @@ export default function PlaceViewScreen() {
         {/* People ready here */}
         <View style={styles.card}>
           <View style={styles.cardRow}>
-            <Text style={styles.cardTitle}>Who's ready here</Text>
+            <Text style={styles.cardTitle}>People here now</Text>
             <View style={styles.readyBadge}>
-              <Text style={styles.readyBadgeText}>{currentPlace.readyCount} ready</Text>
+              <Text style={styles.readyBadgeText}>{checkedInCount} here</Text>
             </View>
           </View>
-          <Text style={styles.cardHint}>You can see who's open to a conversation before you scan.</Text>
+          <Text style={styles.cardHint}>Tap someone to see their profile, mood, and bio.</Text>
           {participants.length > 0
             ? participants.map((p) => (
-                <View key={p.userId} style={styles.participantCard}>
+                <TouchableOpacity key={p.userId} style={styles.participantCard} onPress={() => setSelectedPerson(p)}>
                   <Text style={styles.participantEmoji}>{p.moodEmoji}</Text>
                   <View style={{ flex: 1 }}>
                     <View style={styles.participantNameRow}>
@@ -349,7 +368,7 @@ export default function PlaceViewScreen() {
                         : <Text style={styles.pingBtnText}>🔔 Ping</Text>}
                     </TouchableOpacity>
                   )}
-                </View>
+                </TouchableOpacity>
               ))
             : (
               <View style={styles.emptyPeople}>
@@ -395,7 +414,7 @@ export default function PlaceViewScreen() {
         {/* QR code */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>🔲 Your QR code</Text>
-          <Text style={styles.cardHint}>Nearby people can scan this to preview you, then confirm before connecting.</Text>
+          <Text style={styles.cardHint}>Nearby people can scan this to send a friend request.</Text>
           {qrHandoff ? (
             <TouchableOpacity style={styles.qrContainer} onPress={() => setQrVisible(true)}>
               <View style={[styles.qrWrapper, !qrHandoff.isActive && styles.qrInactive]}>
@@ -447,13 +466,41 @@ export default function PlaceViewScreen() {
       {scannerVisible && (
         <ScannerModal
           onClose={() => setScannerVisible(false)}
-          onConnected={async () => {
+          onConnected={async (message) => {
             setScannerVisible(false)
+            setNotice(message)
             await loadState(true)
           }}
-          currentPlaceId={profile.currentPlaceId}
         />
       )}
+
+      <Modal visible={!!selectedPerson} transparent animationType="slide" onRequestClose={() => setSelectedPerson(null)}>
+        <TouchableOpacity style={styles.personOverlay} activeOpacity={1} onPress={() => setSelectedPerson(null)}>
+          <TouchableOpacity activeOpacity={1} style={styles.personSheet}>
+            <View style={styles.personHandle} />
+            {selectedPerson ? (
+              <>
+                <View style={styles.personTop}>
+                  {renderPersonAvatar(selectedPerson)}
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.personName}>{selectedPerson.username}</Text>
+                    <View style={styles.personTags}>
+                      {selectedPerson.age ? <Text style={styles.personTag}>{selectedPerson.age} yrs</Text> : null}
+                      {selectedPerson.gender ? <Text style={styles.personTag}>{selectedPerson.gender}</Text> : null}
+                    </View>
+                  </View>
+                </View>
+                <Text style={styles.personMood}>{selectedPerson.moodEmoji} {selectedPerson.intentText || selectedPerson.intentSummary || 'Open to a nearby conversation.'}</Text>
+                {state.session?.user.id !== selectedPerson.userId ? (
+                  <Text style={styles.personHint}>
+                    Scan their QR code to send a friend request.
+                  </Text>
+                ) : null}
+              </>
+            ) : null}
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   )
 }
@@ -518,6 +565,18 @@ const styles = StyleSheet.create({
   participantMood: { fontSize: 12, color: '#2d6e3e', lineHeight: 17 },
   locationHint: { fontSize: 12, color: '#1a6b3c', fontWeight: '600', marginTop: 3 },
   pingBtn: { backgroundColor: 'white', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: 'rgba(144,212,144,0.6)', alignSelf: 'flex-start' },
+  personOverlay: { flex: 1, backgroundColor: 'rgba(15,51,32,0.45)', justifyContent: 'flex-end' },
+  personSheet: { minHeight: '48%', backgroundColor: '#f0faf0', borderTopLeftRadius: 26, borderTopRightRadius: 26, padding: 22, paddingBottom: 40 },
+  personHandle: { width: 42, height: 4, borderRadius: 2, backgroundColor: 'rgba(45,110,62,0.35)', alignSelf: 'center', marginBottom: 18 },
+  personTop: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 16 },
+  personAvatar: { width: 74, height: 74, borderRadius: 37, backgroundColor: '#1a6b3c', justifyContent: 'center', alignItems: 'center' },
+  personAvatarImg: { width: 74, height: 74, borderRadius: 37, backgroundColor: '#1a6b3c' },
+  personAvatarText: { color: 'white', fontWeight: '900', fontSize: 24 },
+  personName: { fontSize: 22, fontWeight: '900', color: '#0f3320', marginBottom: 8 },
+  personTags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  personTag: { backgroundColor: 'rgba(26,107,60,0.1)', color: '#1a6b3c', fontWeight: '700', fontSize: 12, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, overflow: 'hidden' },
+  personMood: { fontSize: 15, color: '#2d6e3e', lineHeight: 22, marginBottom: 18 },
+  personHint: { fontSize: 14, color: '#1a6b3c', fontWeight: '600' },
   pingBtnText: { fontSize: 11, fontWeight: '600', color: '#1a6b3c' },
   emptyPeople: { alignItems: 'center', padding: 20, gap: 6 },
   emptyEmoji: { fontSize: 32 },
