@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, or, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, or, sql } from 'drizzle-orm'
 // agents removed
 import { getRequestHeaders } from '@tanstack/react-start/server'
 import type {
@@ -20,6 +20,9 @@ import { UserAgent } from './agents/user-agent'
 import {
   handoffCode,
   handoffConnection,
+  friendRequest,
+  userActivity,
+  friendMessage,
   place,
   user,
   userProfile,
@@ -74,8 +77,11 @@ function mapUserProfile(
     pingRequestedAt: profileRecord.pingRequestedAt,
     pingRequestedByUserId: profileRecord.pingRequestedByUserId,
     pingRequestedByUsername: profileRecord.pingRequestedByUsername,
-    createdAt: profileRecord.createdAt,
+createdAt: profileRecord.createdAt,
     updatedAt: profileRecord.updatedAt,
+    age: profileRecord.age,
+    gender: profileRecord.gender,
+    photoUrl: profileRecord.photoUrl,
   }
 }
 
@@ -105,6 +111,56 @@ function buildQrUrl(token: string) {
   const url = new URL(getAppBaseUrl())
   url.searchParams.set('scan', token)
   return url.toString()
+}
+
+function normalizeFriendPair(scannerId: string, scannedUserId: string) {
+  // Sort for deduplication — same pair always maps to same row
+  const sorted = scannerId < scannedUserId
+    ? { requesterUserId: scannerId, recipientUserId: scannedUserId }
+    : { requesterUserId: scannedUserId, recipientUserId: scannerId }
+  return { ...sorted, initiatorUserId: scannerId }
+}
+
+function mapFriendUser(record: {
+  id: string
+  otherId: string
+  username: string | null
+  fallbackUsername: string | null
+  fallbackName: string
+  moodEmoji: string | null
+  photoUrl: string | null
+}) {
+  return {
+    userId: record.otherId,
+    username: record.username || record.fallbackUsername || record.fallbackName,
+    moodEmoji: record.moodEmoji,
+    photoUrl: record.photoUrl,
+  }
+}
+
+async function getFriendshipRecordForUserPair(
+  userId: string,
+  otherUserId: string,
+) {
+  // Search both directions since we no longer sort pairs
+  const [requestRecord] = await db
+    .select()
+    .from(friendRequest)
+    .where(
+      or(
+        and(
+          eq(friendRequest.requesterUserId, userId),
+          eq(friendRequest.recipientUserId, otherUserId),
+        ),
+        and(
+          eq(friendRequest.requesterUserId, otherUserId),
+          eq(friendRequest.recipientUserId, userId),
+        ),
+      ),
+    )
+    .limit(1)
+
+  return requestRecord ?? null
 }
 
 async function getOrCreateQrHandoff(
@@ -522,6 +578,332 @@ export async function connectFromScan(input: { token: string }) {
   }
 }
 
+export async function createFriendRequest(input: { token?: string }) {
+  const session = await requireCurrentSession()
+  let targetUserId = ''
+  let placeId: string | null = null
+
+  if (input.token) {
+    const preview = await resolveScannedHandoff(input.token.trim(), session.user.id)
+    targetUserId = preview.counterpart.userId
+    placeId = preview.placeId
+  }
+
+  if (!targetUserId) {
+    throw new Error('Friend requests can only be sent by scanning a QR code.')
+  }
+
+  if (targetUserId === session.user.id) {
+    throw new Error('You cannot send a friend request to yourself.')
+  }
+
+  const [viewerProfile] = await db
+    .select()
+    .from(userProfile)
+    .where(eq(userProfile.userId, session.user.id))
+    .limit(1)
+  const [targetProfile] = await db
+    .select()
+    .from(userProfile)
+    .where(eq(userProfile.userId, targetUserId))
+    .limit(1)
+
+  if (!viewerProfile?.currentPlaceId || !targetProfile?.currentPlaceId) {
+    throw new Error('Both people need to be checked into a place.')
+  }
+
+  if (viewerProfile.currentPlaceId !== targetProfile.currentPlaceId) {
+    throw new Error('You need to be in the same place to add them.')
+  }
+
+  const now = new Date()
+  const pair = normalizeFriendPair(session.user.id, targetUserId)
+  const [existingRequest] = await db
+    .select()
+    .from(friendRequest)
+    .where(
+      and(
+        eq(friendRequest.requesterUserId, pair.requesterUserId),
+        eq(friendRequest.recipientUserId, pair.recipientUserId),
+      ),
+    )
+    .limit(1)
+
+  // Neither side is auto-accepted — both must manually accept
+  const requesterAccepted = existingRequest?.requesterAccepted ?? false
+  const recipientAccepted = existingRequest?.recipientAccepted ?? false
+  const nextStatus = requesterAccepted && recipientAccepted ? 'accepted' : 'pending'
+
+  await db
+    .insert(friendRequest)
+    .values({
+      id: crypto.randomUUID(),
+      requesterUserId: pair.requesterUserId,
+      recipientUserId: pair.recipientUserId,
+      initiatorUserId: session.user.id,
+      placeId: placeId ?? viewerProfile.currentPlaceId,
+      requesterAccepted,
+      recipientAccepted,
+      status: nextStatus,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: [friendRequest.requesterUserId, friendRequest.recipientUserId],
+      set: {
+        status: nextStatus,
+        initiatorUserId: session.user.id,
+        requesterAccepted,
+        recipientAccepted,
+        placeId: placeId ?? viewerProfile.currentPlaceId,
+        updatedAt: now,
+      },
+    })
+
+  return { success: true }
+}
+
+export async function listFriends() {
+  const session = await requireCurrentSession()
+
+  const rows = await db
+    .select({
+      id: friendRequest.id,
+      requesterUserId: friendRequest.requesterUserId,
+      recipientUserId: friendRequest.recipientUserId,
+      initiatorUserId: friendRequest.initiatorUserId,
+      requesterAccepted: friendRequest.requesterAccepted,
+      recipientAccepted: friendRequest.recipientAccepted,
+      status: friendRequest.status,
+      otherId: user.id,
+      username: user.displayUsername,
+      fallbackUsername: user.username,
+      fallbackName: user.name,
+      moodEmoji: userProfile.moodEmoji,
+      photoUrl: userProfile.photoUrl,
+    })
+    .from(friendRequest)
+    .innerJoin(
+      user,
+      or(
+        and(eq(friendRequest.requesterUserId, session.user.id), eq(user.id, friendRequest.recipientUserId)),
+        and(eq(friendRequest.recipientUserId, session.user.id), eq(user.id, friendRequest.requesterUserId)),
+      ),
+    )
+    .leftJoin(userProfile, eq(userProfile.userId, user.id))
+    .where(
+      or(
+        eq(friendRequest.requesterUserId, session.user.id),
+        eq(friendRequest.recipientUserId, session.user.id),
+      ),
+    )
+    .orderBy(desc(friendRequest.updatedAt))
+
+  const acceptedRows = rows.filter((row) => row.status === 'accepted')
+  const latestMessages = await Promise.all(
+    acceptedRows.map(async (row) => {
+      const [latestMessage] = await db
+        .select({
+          friendRequestId: friendMessage.friendRequestId,
+          body: friendMessage.body,
+          createdAt: friendMessage.createdAt,
+        })
+        .from(friendMessage)
+        .where(eq(friendMessage.friendRequestId, row.id))
+        .orderBy(desc(friendMessage.createdAt))
+        .limit(1)
+
+      return [row.id, latestMessage ?? null] as const
+    }),
+  )
+
+  const latestMessageByRequestId = new Map(latestMessages)
+
+  return {
+    friends: acceptedRows.map((row) => ({
+      id: row.id,
+      ...mapFriendUser(row),
+      lastMessage: latestMessageByRequestId.get(row.id)?.body ?? null,
+    })),
+    incoming: rows
+      .filter((row) => {
+        if (row.status !== 'pending') return false
+        // Show as incoming if I haven't accepted yet (regardless of who scanned)
+        const iAmRequester = row.requesterUserId === session.user.id
+        return iAmRequester ? !row.requesterAccepted : !row.recipientAccepted
+      })
+      .map((row) => ({
+        id: row.id,
+        user: mapFriendUser(row),
+      })),
+    outgoing: [],
+  }
+}
+
+export async function respondToFriendRequest(input: {
+  requestId?: string
+  friendUserId?: string
+  action: 'accept' | 'reject' | 'remove'
+}) {
+  const session = await requireCurrentSession()
+  const [requestRecord] = input.requestId
+    ? await db
+        .select()
+        .from(friendRequest)
+        .where(eq(friendRequest.id, input.requestId))
+        .limit(1)
+    : input.friendUserId
+      ? await db
+          .select()
+          .from(friendRequest)
+          .where(
+            or(
+              and(
+                eq(friendRequest.requesterUserId, session.user.id),
+                eq(friendRequest.recipientUserId, input.friendUserId),
+              ),
+              and(
+                eq(friendRequest.recipientUserId, session.user.id),
+                eq(friendRequest.requesterUserId, input.friendUserId),
+              ),
+            ),
+          )
+          .limit(1)
+      : []
+
+  if (
+    !requestRecord ||
+    (requestRecord.requesterUserId !== session.user.id &&
+      requestRecord.recipientUserId !== session.user.id)
+  ) {
+    throw new Error('Friend request not found.')
+  }
+
+  const now = new Date()
+
+  if (input.action === 'remove') {
+    await db
+      .update(friendRequest)
+      .set({
+        status: 'removed',
+        requesterAccepted: false,
+        recipientAccepted: false,
+        updatedAt: now,
+      })
+      .where(eq(friendRequest.id, requestRecord.id))
+    return { success: true }
+  }
+
+  if (input.action === 'reject') {
+    await db
+      .update(friendRequest)
+      .set({ status: 'rejected', updatedAt: now })
+      .where(eq(friendRequest.id, requestRecord.id))
+    return { success: true }
+  }
+
+  const requesterAccepted =
+    requestRecord.requesterAccepted || requestRecord.requesterUserId === session.user.id
+  const recipientAccepted =
+    requestRecord.recipientAccepted || requestRecord.recipientUserId === session.user.id
+
+  await db
+    .update(friendRequest)
+    .set({
+      requesterAccepted,
+      recipientAccepted,
+      status: requesterAccepted && recipientAccepted ? 'accepted' : 'pending',
+      updatedAt: now,
+    })
+    .where(eq(friendRequest.id, requestRecord.id))
+
+  return { success: true }
+}
+
+export async function getConversationMessages(input: { friendUserId: string }) {
+  const session = await requireCurrentSession()
+  const friendUserId = input.friendUserId.trim()
+
+  if (!friendUserId) {
+    throw new Error('Choose a friend first.')
+  }
+
+  const requestRecord = await getFriendshipRecordForUserPair(
+    session.user.id,
+    friendUserId,
+  )
+
+  console.log('[messages] Looking up friendship for:', session.user.id, '↔', friendUserId)
+  console.log('[messages] Found record:', JSON.stringify(requestRecord))
+  if (!requestRecord || requestRecord.status !== 'accepted') {
+    throw new Error('You can only message accepted friends.')
+  }
+
+  const messageRows = await db
+    .select({
+      id: friendMessage.id,
+      body: friendMessage.body,
+      senderUserId: friendMessage.senderUserId,
+      recipientUserId: friendMessage.recipientUserId,
+      createdAt: friendMessage.createdAt,
+    })
+    .from(friendMessage)
+    .where(eq(friendMessage.friendRequestId, requestRecord.id))
+    .orderBy(asc(friendMessage.createdAt))
+
+  return {
+    messages: messageRows,
+  }
+}
+
+export async function sendConversationMessage(input: {
+  friendUserId: string
+  body: string
+}) {
+  const session = await requireCurrentSession()
+  const friendUserId = input.friendUserId.trim()
+  const body = input.body.replace(/\s+/g, ' ').trim()
+
+  if (!friendUserId) {
+    throw new Error('Choose a friend first.')
+  }
+
+  if (!body) {
+    throw new Error('Write a message first.')
+  }
+
+  const requestRecord = await getFriendshipRecordForUserPair(
+    session.user.id,
+    friendUserId,
+  )
+
+  console.log('[messages] Looking up friendship for:', session.user.id, '↔', friendUserId)
+  console.log('[messages] Found record:', JSON.stringify(requestRecord))
+  if (!requestRecord || requestRecord.status !== 'accepted') {
+    throw new Error('You can only message accepted friends.')
+  }
+
+  const now = new Date()
+  await db.insert(friendMessage).values({
+    id: crypto.randomUUID(),
+    friendRequestId: requestRecord.id,
+    senderUserId: session.user.id,
+    recipientUserId: friendUserId,
+    body,
+    status: 'sent',
+    sentAt: now,
+    createdAt: now,
+    updatedAt: now,
+  })
+
+  await db
+    .update(friendRequest)
+    .set({ updatedAt: now })
+    .where(eq(friendRequest.id, requestRecord.id))
+
+  return { success: true }
+}
+
 export async function previewScanJoin(input: { token: string }) {
   const session = await requireCurrentSession()
   const token = input.token.trim()
@@ -748,17 +1130,21 @@ export async function getNearbyPlacePreview(input: { placeId: string }) {
       ),
     )
 
-  const readyParticipantRecords = await db
+  const participantRecords = await db
     .select({
       userId: user.id,
       username: user.displayUsername,
       fallbackUsername: user.username,
       fallbackName: user.name,
       moodEmoji: userProfile.moodEmoji,
+      intentText: userProfile.intentText,
       intentSummary: userProfile.intentSummary,
       status: userProfile.status,
       isFindable: userProfile.isFindable,
       locationHint: userProfile.locationHint,
+      age: userProfile.age,
+      gender: userProfile.gender,
+      photoUrl: userProfile.photoUrl,
       pingRequestedAt: userProfile.pingRequestedAt,
       pingRequestedByUserId: userProfile.pingRequestedByUserId,
       pingRequestedByUsername: userProfile.pingRequestedByUsername,
@@ -768,11 +1154,11 @@ export async function getNearbyPlacePreview(input: { placeId: string }) {
     .where(
       and(
         eq(userProfile.currentPlaceId, placeId),
-        eq(userProfile.status, 'ready'),
+        inArray(userProfile.status, presentStatuses),
       ),
     )
     .orderBy(desc(userProfile.updatedAt))
-    .limit(8)
+    .limit(24)
 
   const [{ activeConversationCount }] = await db
     .select({
@@ -791,15 +1177,19 @@ export async function getNearbyPlacePreview(input: { placeId: string }) {
     readyCount,
     checkedInCount,
     activeConversationCount,
-      readyParticipants: readyParticipantRecords.map((record) => ({
+      participants: participantRecords.map((record) => ({
         userId: record.userId,
         username:
           record.username || record.fallbackUsername || record.fallbackName,
         moodEmoji: record.moodEmoji,
+        intentText: record.intentText,
         intentSummary: record.intentSummary,
-        status: record.status as NearbyPlacePreviewState['readyParticipants'][number]['status'],
+        status: record.status as NearbyPlacePreviewState['participants'][number]['status'],
         isFindable: record.isFindable ?? false,
         locationHint: record.locationHint ?? null,
+        age: record.age ?? null,
+        gender: record.gender ?? null,
+        photoUrl: record.photoUrl ?? null,
         pingRequestedAt: record.pingRequestedAt,
         pingRequestedByUserId: record.pingRequestedByUserId ?? null,
         pingRequestedByUsername: record.pingRequestedByUsername ?? null,
@@ -815,3 +1205,132 @@ export async function getGoogleMapsBrowserConfig() {
     mapId: getGoogleMapsMapId(),
   }
 }
+
+
+// ===== WHATSAPP-LIKE FEATURES =====
+
+export async function markMessageAsDelivered(input: { messageId: string }) {
+  const session = await requireCurrentSession()
+  const [message] = await db
+    .select()
+    .from(friendMessage)
+    .where(eq(friendMessage.id, input.messageId))
+    .limit(1)
+  
+  if (!message) throw new Error('Message not found')
+  if (message.recipientUserId !== session.user.id) {
+    throw new Error('Cannot mark others\' messages as delivered')
+  }
+  
+  await db
+    .update(friendMessage)
+    .set({
+      status: 'delivered',
+      updatedAt: new Date(),
+    })
+    .where(eq(friendMessage.id, input.messageId))
+  
+  return { success: true }
+}
+
+export async function markMessageAsRead(input: { messageId: string }) {
+  const session = await requireCurrentSession()
+  const [message] = await db
+    .select()
+    .from(friendMessage)
+    .where(eq(friendMessage.id, input.messageId))
+    .limit(1)
+  
+  if (!message) throw new Error('Message not found')
+  if (message.recipientUserId !== session.user.id) {
+    throw new Error('Cannot mark others\' messages as read')
+  }
+  
+  const now = new Date()
+  await db
+    .update(friendMessage)
+    .set({
+      status: 'read',
+      readAt: now,
+      updatedAt: now,
+    })
+    .where(eq(friendMessage.id, input.messageId))
+  
+  return { success: true }
+}
+
+export async function updateUserOnlineStatus(input: { isOnline: boolean }) {
+  const session = await requireCurrentSession()
+  const now = new Date()
+  
+  await db
+    .insert(userActivity)
+    .values({
+      userId: session.user.id,
+      isOnline: input.isOnline,
+      lastSeenAt: now,
+      updatedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: [userActivity.userId],
+      set: {
+        isOnline: input.isOnline,
+        lastSeenAt: now,
+        updatedAt: now,
+      },
+    })
+  
+  return { success: true }
+}
+
+export async function getUserOnlineStatus(input: { userId: string }) {
+  const [activity] = await db
+    .select()
+    .from(userActivity)
+    .where(eq(userActivity.userId, input.userId))
+    .limit(1)
+  
+  if (!activity) {
+    return { isOnline: false, lastSeenAt: null }
+  }
+  
+  return {
+    isOnline: activity.isOnline,
+    lastSeenAt: activity.lastSeenAt,
+  }
+}
+
+export async function getConversationMessagesWithStatus(input: { friendUserId: string }) {
+  const session = await requireCurrentSession()
+  const friendUserId = input.friendUserId.trim()
+  
+  if (!friendUserId) throw new Error('Choose a friend first.')
+  
+  const requestRecord = await getFriendshipRecordForUserPair(
+    session.user.id,
+    friendUserId,
+  )
+  
+  if (!requestRecord || requestRecord.status !== 'accepted') {
+    throw new Error('You can only message accepted friends.')
+  }
+  
+  const messages = await db
+    .select({
+      id: friendMessage.id,
+      friendRequestId: friendMessage.friendRequestId,
+      senderUserId: friendMessage.senderUserId,
+      recipientUserId: friendMessage.recipientUserId,
+      body: friendMessage.body,
+      status: friendMessage.status,
+      sentAt: friendMessage.sentAt,
+      readAt: friendMessage.readAt,
+      createdAt: friendMessage.createdAt,
+    })
+    .from(friendMessage)
+    .where(eq(friendMessage.friendRequestId, requestRecord.id))
+    .orderBy(asc(friendMessage.createdAt))
+  
+  return messages
+}
+
