@@ -12,6 +12,28 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiPlacesUploadPhotoRouteImport } from './routes/api/places/upload-photo'
+import { Route as ApiPlacesUpdateProfileRouteImport } from './routes/api/places/update-profile'
+import { Route as ApiPlacesStateRouteImport } from './routes/api/places/state'
+import { Route as ApiPlacesScanPreviewRouteImport } from './routes/api/places/scan-preview'
+import { Route as ApiPlacesScanJoinConnectRouteImport } from './routes/api/places/scan-join-connect'
+import { Route as ApiPlacesScanConnectRouteImport } from './routes/api/places/scan-connect'
+import { Route as ApiPlacesReadyRouteImport } from './routes/api/places/ready'
+import { Route as ApiPlacesPushTokenRouteImport } from './routes/api/places/push-token'
+import { Route as ApiPlacesPreviewRouteImport } from './routes/api/places/preview'
+import { Route as ApiPlacesNearbyRouteImport } from './routes/api/places/nearby'
+import { Route as ApiPlacesLeaveRouteImport } from './routes/api/places/leave'
+import { Route as ApiPlacesJoinRouteImport } from './routes/api/places/join'
+import { Route as ApiPlacesFinderRouteImport } from './routes/api/places/finder'
+import { Route as ApiPlacesEndConnectionRouteImport } from './routes/api/places/end-connection'
+import { Route as ApiPlacesDeleteAccountRouteImport } from './routes/api/places/delete-account'
+import { Route as ApiPlacesChangePasswordRouteImport } from './routes/api/places/change-password'
+import { Route as ApiFriendsRespondRouteImport } from './routes/api/friends/respond'
+import { Route as ApiFriendsRequestRouteImport } from './routes/api/friends/request'
+import { Route as ApiFriendsOnlineStatusRouteImport } from './routes/api/friends/online-status'
+import { Route as ApiFriendsMessagesRouteImport } from './routes/api/friends/messages'
+import { Route as ApiFriendsMessageStatusRouteImport } from './routes/api/friends/message-status'
+import { Route as ApiFriendsListRouteImport } from './routes/api/friends/list'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const SignupRoute = SignupRouteImport.update({
@@ -29,6 +51,117 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPlacesUploadPhotoRoute = ApiPlacesUploadPhotoRouteImport.update({
+  id: '/api/places/upload-photo',
+  path: '/api/places/upload-photo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPlacesUpdateProfileRoute = ApiPlacesUpdateProfileRouteImport.update({
+  id: '/api/places/update-profile',
+  path: '/api/places/update-profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPlacesStateRoute = ApiPlacesStateRouteImport.update({
+  id: '/api/places/state',
+  path: '/api/places/state',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPlacesScanPreviewRoute = ApiPlacesScanPreviewRouteImport.update({
+  id: '/api/places/scan-preview',
+  path: '/api/places/scan-preview',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPlacesScanJoinConnectRoute =
+  ApiPlacesScanJoinConnectRouteImport.update({
+    id: '/api/places/scan-join-connect',
+    path: '/api/places/scan-join-connect',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPlacesScanConnectRoute = ApiPlacesScanConnectRouteImport.update({
+  id: '/api/places/scan-connect',
+  path: '/api/places/scan-connect',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPlacesReadyRoute = ApiPlacesReadyRouteImport.update({
+  id: '/api/places/ready',
+  path: '/api/places/ready',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPlacesPushTokenRoute = ApiPlacesPushTokenRouteImport.update({
+  id: '/api/places/push-token',
+  path: '/api/places/push-token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPlacesPreviewRoute = ApiPlacesPreviewRouteImport.update({
+  id: '/api/places/preview',
+  path: '/api/places/preview',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPlacesNearbyRoute = ApiPlacesNearbyRouteImport.update({
+  id: '/api/places/nearby',
+  path: '/api/places/nearby',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPlacesLeaveRoute = ApiPlacesLeaveRouteImport.update({
+  id: '/api/places/leave',
+  path: '/api/places/leave',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPlacesJoinRoute = ApiPlacesJoinRouteImport.update({
+  id: '/api/places/join',
+  path: '/api/places/join',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPlacesFinderRoute = ApiPlacesFinderRouteImport.update({
+  id: '/api/places/finder',
+  path: '/api/places/finder',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPlacesEndConnectionRoute = ApiPlacesEndConnectionRouteImport.update({
+  id: '/api/places/end-connection',
+  path: '/api/places/end-connection',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPlacesDeleteAccountRoute = ApiPlacesDeleteAccountRouteImport.update({
+  id: '/api/places/delete-account',
+  path: '/api/places/delete-account',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPlacesChangePasswordRoute = ApiPlacesChangePasswordRouteImport.update({
+  id: '/api/places/change-password',
+  path: '/api/places/change-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiFriendsRespondRoute = ApiFriendsRespondRouteImport.update({
+  id: '/api/friends/respond',
+  path: '/api/friends/respond',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiFriendsRequestRoute = ApiFriendsRequestRouteImport.update({
+  id: '/api/friends/request',
+  path: '/api/friends/request',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiFriendsOnlineStatusRoute = ApiFriendsOnlineStatusRouteImport.update({
+  id: '/api/friends/online-status',
+  path: '/api/friends/online-status',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiFriendsMessagesRoute = ApiFriendsMessagesRouteImport.update({
+  id: '/api/friends/messages',
+  path: '/api/friends/messages',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiFriendsMessageStatusRoute = ApiFriendsMessageStatusRouteImport.update({
+  id: '/api/friends/message-status',
+  path: '/api/friends/message-status',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiFriendsListRoute = ApiFriendsListRouteImport.update({
+  id: '/api/friends/list',
+  path: '/api/friends/list',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -40,12 +173,56 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/friends/list': typeof ApiFriendsListRoute
+  '/api/friends/message-status': typeof ApiFriendsMessageStatusRoute
+  '/api/friends/messages': typeof ApiFriendsMessagesRoute
+  '/api/friends/online-status': typeof ApiFriendsOnlineStatusRoute
+  '/api/friends/request': typeof ApiFriendsRequestRoute
+  '/api/friends/respond': typeof ApiFriendsRespondRoute
+  '/api/places/change-password': typeof ApiPlacesChangePasswordRoute
+  '/api/places/delete-account': typeof ApiPlacesDeleteAccountRoute
+  '/api/places/end-connection': typeof ApiPlacesEndConnectionRoute
+  '/api/places/finder': typeof ApiPlacesFinderRoute
+  '/api/places/join': typeof ApiPlacesJoinRoute
+  '/api/places/leave': typeof ApiPlacesLeaveRoute
+  '/api/places/nearby': typeof ApiPlacesNearbyRoute
+  '/api/places/preview': typeof ApiPlacesPreviewRoute
+  '/api/places/push-token': typeof ApiPlacesPushTokenRoute
+  '/api/places/ready': typeof ApiPlacesReadyRoute
+  '/api/places/scan-connect': typeof ApiPlacesScanConnectRoute
+  '/api/places/scan-join-connect': typeof ApiPlacesScanJoinConnectRoute
+  '/api/places/scan-preview': typeof ApiPlacesScanPreviewRoute
+  '/api/places/state': typeof ApiPlacesStateRoute
+  '/api/places/update-profile': typeof ApiPlacesUpdateProfileRoute
+  '/api/places/upload-photo': typeof ApiPlacesUploadPhotoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/friends/list': typeof ApiFriendsListRoute
+  '/api/friends/message-status': typeof ApiFriendsMessageStatusRoute
+  '/api/friends/messages': typeof ApiFriendsMessagesRoute
+  '/api/friends/online-status': typeof ApiFriendsOnlineStatusRoute
+  '/api/friends/request': typeof ApiFriendsRequestRoute
+  '/api/friends/respond': typeof ApiFriendsRespondRoute
+  '/api/places/change-password': typeof ApiPlacesChangePasswordRoute
+  '/api/places/delete-account': typeof ApiPlacesDeleteAccountRoute
+  '/api/places/end-connection': typeof ApiPlacesEndConnectionRoute
+  '/api/places/finder': typeof ApiPlacesFinderRoute
+  '/api/places/join': typeof ApiPlacesJoinRoute
+  '/api/places/leave': typeof ApiPlacesLeaveRoute
+  '/api/places/nearby': typeof ApiPlacesNearbyRoute
+  '/api/places/preview': typeof ApiPlacesPreviewRoute
+  '/api/places/push-token': typeof ApiPlacesPushTokenRoute
+  '/api/places/ready': typeof ApiPlacesReadyRoute
+  '/api/places/scan-connect': typeof ApiPlacesScanConnectRoute
+  '/api/places/scan-join-connect': typeof ApiPlacesScanJoinConnectRoute
+  '/api/places/scan-preview': typeof ApiPlacesScanPreviewRoute
+  '/api/places/state': typeof ApiPlacesStateRoute
+  '/api/places/update-profile': typeof ApiPlacesUpdateProfileRoute
+  '/api/places/upload-photo': typeof ApiPlacesUploadPhotoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +230,114 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/friends/list': typeof ApiFriendsListRoute
+  '/api/friends/message-status': typeof ApiFriendsMessageStatusRoute
+  '/api/friends/messages': typeof ApiFriendsMessagesRoute
+  '/api/friends/online-status': typeof ApiFriendsOnlineStatusRoute
+  '/api/friends/request': typeof ApiFriendsRequestRoute
+  '/api/friends/respond': typeof ApiFriendsRespondRoute
+  '/api/places/change-password': typeof ApiPlacesChangePasswordRoute
+  '/api/places/delete-account': typeof ApiPlacesDeleteAccountRoute
+  '/api/places/end-connection': typeof ApiPlacesEndConnectionRoute
+  '/api/places/finder': typeof ApiPlacesFinderRoute
+  '/api/places/join': typeof ApiPlacesJoinRoute
+  '/api/places/leave': typeof ApiPlacesLeaveRoute
+  '/api/places/nearby': typeof ApiPlacesNearbyRoute
+  '/api/places/preview': typeof ApiPlacesPreviewRoute
+  '/api/places/push-token': typeof ApiPlacesPushTokenRoute
+  '/api/places/ready': typeof ApiPlacesReadyRoute
+  '/api/places/scan-connect': typeof ApiPlacesScanConnectRoute
+  '/api/places/scan-join-connect': typeof ApiPlacesScanJoinConnectRoute
+  '/api/places/scan-preview': typeof ApiPlacesScanPreviewRoute
+  '/api/places/state': typeof ApiPlacesStateRoute
+  '/api/places/update-profile': typeof ApiPlacesUpdateProfileRoute
+  '/api/places/upload-photo': typeof ApiPlacesUploadPhotoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/signup' | '/api/auth/$'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/signup'
+    | '/api/auth/$'
+    | '/api/friends/list'
+    | '/api/friends/message-status'
+    | '/api/friends/messages'
+    | '/api/friends/online-status'
+    | '/api/friends/request'
+    | '/api/friends/respond'
+    | '/api/places/change-password'
+    | '/api/places/delete-account'
+    | '/api/places/end-connection'
+    | '/api/places/finder'
+    | '/api/places/join'
+    | '/api/places/leave'
+    | '/api/places/nearby'
+    | '/api/places/preview'
+    | '/api/places/push-token'
+    | '/api/places/ready'
+    | '/api/places/scan-connect'
+    | '/api/places/scan-join-connect'
+    | '/api/places/scan-preview'
+    | '/api/places/state'
+    | '/api/places/update-profile'
+    | '/api/places/upload-photo'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/signup' | '/api/auth/$'
-  id: '__root__' | '/' | '/login' | '/signup' | '/api/auth/$'
+  to:
+    | '/'
+    | '/login'
+    | '/signup'
+    | '/api/auth/$'
+    | '/api/friends/list'
+    | '/api/friends/message-status'
+    | '/api/friends/messages'
+    | '/api/friends/online-status'
+    | '/api/friends/request'
+    | '/api/friends/respond'
+    | '/api/places/change-password'
+    | '/api/places/delete-account'
+    | '/api/places/end-connection'
+    | '/api/places/finder'
+    | '/api/places/join'
+    | '/api/places/leave'
+    | '/api/places/nearby'
+    | '/api/places/preview'
+    | '/api/places/push-token'
+    | '/api/places/ready'
+    | '/api/places/scan-connect'
+    | '/api/places/scan-join-connect'
+    | '/api/places/scan-preview'
+    | '/api/places/state'
+    | '/api/places/update-profile'
+    | '/api/places/upload-photo'
+  id:
+    | '__root__'
+    | '/'
+    | '/login'
+    | '/signup'
+    | '/api/auth/$'
+    | '/api/friends/list'
+    | '/api/friends/message-status'
+    | '/api/friends/messages'
+    | '/api/friends/online-status'
+    | '/api/friends/request'
+    | '/api/friends/respond'
+    | '/api/places/change-password'
+    | '/api/places/delete-account'
+    | '/api/places/end-connection'
+    | '/api/places/finder'
+    | '/api/places/join'
+    | '/api/places/leave'
+    | '/api/places/nearby'
+    | '/api/places/preview'
+    | '/api/places/push-token'
+    | '/api/places/ready'
+    | '/api/places/scan-connect'
+    | '/api/places/scan-join-connect'
+    | '/api/places/scan-preview'
+    | '/api/places/state'
+    | '/api/places/update-profile'
+    | '/api/places/upload-photo'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,6 +345,28 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiFriendsListRoute: typeof ApiFriendsListRoute
+  ApiFriendsMessageStatusRoute: typeof ApiFriendsMessageStatusRoute
+  ApiFriendsMessagesRoute: typeof ApiFriendsMessagesRoute
+  ApiFriendsOnlineStatusRoute: typeof ApiFriendsOnlineStatusRoute
+  ApiFriendsRequestRoute: typeof ApiFriendsRequestRoute
+  ApiFriendsRespondRoute: typeof ApiFriendsRespondRoute
+  ApiPlacesChangePasswordRoute: typeof ApiPlacesChangePasswordRoute
+  ApiPlacesDeleteAccountRoute: typeof ApiPlacesDeleteAccountRoute
+  ApiPlacesEndConnectionRoute: typeof ApiPlacesEndConnectionRoute
+  ApiPlacesFinderRoute: typeof ApiPlacesFinderRoute
+  ApiPlacesJoinRoute: typeof ApiPlacesJoinRoute
+  ApiPlacesLeaveRoute: typeof ApiPlacesLeaveRoute
+  ApiPlacesNearbyRoute: typeof ApiPlacesNearbyRoute
+  ApiPlacesPreviewRoute: typeof ApiPlacesPreviewRoute
+  ApiPlacesPushTokenRoute: typeof ApiPlacesPushTokenRoute
+  ApiPlacesReadyRoute: typeof ApiPlacesReadyRoute
+  ApiPlacesScanConnectRoute: typeof ApiPlacesScanConnectRoute
+  ApiPlacesScanJoinConnectRoute: typeof ApiPlacesScanJoinConnectRoute
+  ApiPlacesScanPreviewRoute: typeof ApiPlacesScanPreviewRoute
+  ApiPlacesStateRoute: typeof ApiPlacesStateRoute
+  ApiPlacesUpdateProfileRoute: typeof ApiPlacesUpdateProfileRoute
+  ApiPlacesUploadPhotoRoute: typeof ApiPlacesUploadPhotoRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -92,6 +392,160 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/places/upload-photo': {
+      id: '/api/places/upload-photo'
+      path: '/api/places/upload-photo'
+      fullPath: '/api/places/upload-photo'
+      preLoaderRoute: typeof ApiPlacesUploadPhotoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/places/update-profile': {
+      id: '/api/places/update-profile'
+      path: '/api/places/update-profile'
+      fullPath: '/api/places/update-profile'
+      preLoaderRoute: typeof ApiPlacesUpdateProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/places/state': {
+      id: '/api/places/state'
+      path: '/api/places/state'
+      fullPath: '/api/places/state'
+      preLoaderRoute: typeof ApiPlacesStateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/places/scan-preview': {
+      id: '/api/places/scan-preview'
+      path: '/api/places/scan-preview'
+      fullPath: '/api/places/scan-preview'
+      preLoaderRoute: typeof ApiPlacesScanPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/places/scan-join-connect': {
+      id: '/api/places/scan-join-connect'
+      path: '/api/places/scan-join-connect'
+      fullPath: '/api/places/scan-join-connect'
+      preLoaderRoute: typeof ApiPlacesScanJoinConnectRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/places/scan-connect': {
+      id: '/api/places/scan-connect'
+      path: '/api/places/scan-connect'
+      fullPath: '/api/places/scan-connect'
+      preLoaderRoute: typeof ApiPlacesScanConnectRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/places/ready': {
+      id: '/api/places/ready'
+      path: '/api/places/ready'
+      fullPath: '/api/places/ready'
+      preLoaderRoute: typeof ApiPlacesReadyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/places/push-token': {
+      id: '/api/places/push-token'
+      path: '/api/places/push-token'
+      fullPath: '/api/places/push-token'
+      preLoaderRoute: typeof ApiPlacesPushTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/places/preview': {
+      id: '/api/places/preview'
+      path: '/api/places/preview'
+      fullPath: '/api/places/preview'
+      preLoaderRoute: typeof ApiPlacesPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/places/nearby': {
+      id: '/api/places/nearby'
+      path: '/api/places/nearby'
+      fullPath: '/api/places/nearby'
+      preLoaderRoute: typeof ApiPlacesNearbyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/places/leave': {
+      id: '/api/places/leave'
+      path: '/api/places/leave'
+      fullPath: '/api/places/leave'
+      preLoaderRoute: typeof ApiPlacesLeaveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/places/join': {
+      id: '/api/places/join'
+      path: '/api/places/join'
+      fullPath: '/api/places/join'
+      preLoaderRoute: typeof ApiPlacesJoinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/places/finder': {
+      id: '/api/places/finder'
+      path: '/api/places/finder'
+      fullPath: '/api/places/finder'
+      preLoaderRoute: typeof ApiPlacesFinderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/places/end-connection': {
+      id: '/api/places/end-connection'
+      path: '/api/places/end-connection'
+      fullPath: '/api/places/end-connection'
+      preLoaderRoute: typeof ApiPlacesEndConnectionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/places/delete-account': {
+      id: '/api/places/delete-account'
+      path: '/api/places/delete-account'
+      fullPath: '/api/places/delete-account'
+      preLoaderRoute: typeof ApiPlacesDeleteAccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/places/change-password': {
+      id: '/api/places/change-password'
+      path: '/api/places/change-password'
+      fullPath: '/api/places/change-password'
+      preLoaderRoute: typeof ApiPlacesChangePasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/friends/respond': {
+      id: '/api/friends/respond'
+      path: '/api/friends/respond'
+      fullPath: '/api/friends/respond'
+      preLoaderRoute: typeof ApiFriendsRespondRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/friends/request': {
+      id: '/api/friends/request'
+      path: '/api/friends/request'
+      fullPath: '/api/friends/request'
+      preLoaderRoute: typeof ApiFriendsRequestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/friends/online-status': {
+      id: '/api/friends/online-status'
+      path: '/api/friends/online-status'
+      fullPath: '/api/friends/online-status'
+      preLoaderRoute: typeof ApiFriendsOnlineStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/friends/messages': {
+      id: '/api/friends/messages'
+      path: '/api/friends/messages'
+      fullPath: '/api/friends/messages'
+      preLoaderRoute: typeof ApiFriendsMessagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/friends/message-status': {
+      id: '/api/friends/message-status'
+      path: '/api/friends/message-status'
+      fullPath: '/api/friends/message-status'
+      preLoaderRoute: typeof ApiFriendsMessageStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/friends/list': {
+      id: '/api/friends/list'
+      path: '/api/friends/list'
+      fullPath: '/api/friends/list'
+      preLoaderRoute: typeof ApiFriendsListRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -107,6 +561,28 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiFriendsListRoute: ApiFriendsListRoute,
+  ApiFriendsMessageStatusRoute: ApiFriendsMessageStatusRoute,
+  ApiFriendsMessagesRoute: ApiFriendsMessagesRoute,
+  ApiFriendsOnlineStatusRoute: ApiFriendsOnlineStatusRoute,
+  ApiFriendsRequestRoute: ApiFriendsRequestRoute,
+  ApiFriendsRespondRoute: ApiFriendsRespondRoute,
+  ApiPlacesChangePasswordRoute: ApiPlacesChangePasswordRoute,
+  ApiPlacesDeleteAccountRoute: ApiPlacesDeleteAccountRoute,
+  ApiPlacesEndConnectionRoute: ApiPlacesEndConnectionRoute,
+  ApiPlacesFinderRoute: ApiPlacesFinderRoute,
+  ApiPlacesJoinRoute: ApiPlacesJoinRoute,
+  ApiPlacesLeaveRoute: ApiPlacesLeaveRoute,
+  ApiPlacesNearbyRoute: ApiPlacesNearbyRoute,
+  ApiPlacesPreviewRoute: ApiPlacesPreviewRoute,
+  ApiPlacesPushTokenRoute: ApiPlacesPushTokenRoute,
+  ApiPlacesReadyRoute: ApiPlacesReadyRoute,
+  ApiPlacesScanConnectRoute: ApiPlacesScanConnectRoute,
+  ApiPlacesScanJoinConnectRoute: ApiPlacesScanJoinConnectRoute,
+  ApiPlacesScanPreviewRoute: ApiPlacesScanPreviewRoute,
+  ApiPlacesStateRoute: ApiPlacesStateRoute,
+  ApiPlacesUpdateProfileRoute: ApiPlacesUpdateProfileRoute,
+  ApiPlacesUploadPhotoRoute: ApiPlacesUploadPhotoRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
