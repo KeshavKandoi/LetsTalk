@@ -20,7 +20,13 @@ interface PlacePreview {
   checkedInCount: number
   readyCount: number
   activeConversationCount: number
-  readyParticipants: {
+  participants?: {
+    userId: string
+    username: string
+    moodEmoji: string
+    intentSummary: string | null
+  }[]
+  readyParticipants?: {
     userId: string
     username: string
     moodEmoji: string
@@ -39,6 +45,7 @@ export default function OnboardingScreen() {
   const [intentText, setIntentText] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const previewParticipants = preview?.participants ?? preview?.readyParticipants ?? []
 
   const fetchNearbyPlaces = async () => {
     setPlacesLoading(true)
@@ -58,7 +65,7 @@ export default function OnboardingScreen() {
         coords = lastKnown.coords
       } else {
         const fresh = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Lowest, maximumAge: 300000,
+          accuracy: Location.Accuracy.Lowest,
         })
         coords = fresh.coords
       }
@@ -182,10 +189,10 @@ export default function OnboardingScreen() {
                     </View>
                   ))}
                 </View>
-                {preview.readyParticipants.length > 0 && (
+                {previewParticipants.length > 0 && (
                   <>
                     <Text style={styles.participantsTitle}>Ready to talk here</Text>
-                    {preview.readyParticipants.map((p) => (
+                    {previewParticipants.map((p) => (
                       <View key={p.userId} style={styles.participantRow}>
                         <Text style={styles.participantEmoji}>{p.moodEmoji}</Text>
                         <View>
