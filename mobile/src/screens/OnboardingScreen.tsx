@@ -189,20 +189,7 @@ export default function OnboardingScreen() {
                     </View>
                   ))}
                 </View>
-                {previewParticipants.length > 0 && (
-                  <>
-                    <Text style={styles.participantsTitle}>Ready to talk here</Text>
-                    {previewParticipants.map((p) => (
-                      <View key={p.userId} style={styles.participantRow}>
-                        <Text style={styles.participantEmoji}>{p.moodEmoji}</Text>
-                        <View>
-                          <Text style={styles.participantName}>{p.username}</Text>
-                          <Text style={styles.participantMood}>{p.intentSummary || 'Open to a conversation.'}</Text>
-                        </View>
-                      </View>
-                    ))}
-                  </>
-                )}
+
               </View>
             )}
 
