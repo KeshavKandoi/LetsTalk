@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import {
   View, Text, StyleSheet, SafeAreaView, ScrollView,
   TouchableOpacity, ActivityIndicator, Alert, Image,
@@ -14,33 +14,30 @@ const MID = '#006d36'
 const DARK = '#002111'
 const SURFACE = '#e9ffed'
 const CARD = '#cff8da'
-const HIGH = '#caf2d5'
 
 export default function ProfileScreen() {
   const navigation = useNavigation<any>()
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
 
-  useEffect(() => {
-    apiFetch('/api/places/state', {})
-      .then((data) => setProfile(data))
-      .catch(() => {})
-      .finally(() => setLoading(false))
+  const loadProfile = useCallback(async () => {
+    setLoading(true)
+    try {
+      const state = await apiFetch('/api/places/state', {})
+      setProfile(state)
+      if (state?.profile?.photoUrl) setPhotoUrl(state.profile.photoUrl)
+    } catch {}
+    setLoading(false)
   }, [])
 
-  const handleLogout = () => {
-    Alert.alert('Log out', 'Are you sure you want to log out?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Log out', style: 'destructive',
-        onPress: async () => {
-          await signOut()
-          navigation.reset({ index: 0, routes: [{ name: 'Landing' }] })
-        },
-      },
-    ])
-  }
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadProfile()
+    })
+    return unsubscribe
+  }, [navigation, loadProfile])
 
   const pickPhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
@@ -57,6 +54,7 @@ export default function ProfileScreen() {
       const base64 = await FileSystem.readAsStringAsync(result.assets[0].uri, { encoding: FileSystem.EncodingType.Base64 })
       const dataUri = `data:image/jpeg;base64,${base64}`
       await apiFetch('/api/places/upload-photo', { photoBase64: dataUri })
+      setPhotoUrl(dataUri)
       setProfile((prev: any) => ({ ...prev, profile: { ...prev?.profile, photoUrl: dataUri } }))
     } catch (e: any) {
       Alert.alert('Upload failed', e.message)
@@ -65,17 +63,29 @@ export default function ProfileScreen() {
     }
   }
 
+  const handleLogout = () => {
+    Alert.alert('Log out', 'Are you sure you want to log out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Log out', style: 'destructive',
+        onPress: async () => {
+          await signOut()
+          navigation.reset({ index: 0, routes: [{ name: 'Landing' }] })
+        },
+      },
+    ])
+  }
+
   const username = profile?.session?.user?.username || profile?.session?.user?.name || '—'
   const email = profile?.session?.user?.email || ''
   const mood = profile?.profile?.moodEmoji || '🙂'
-  const age = profile?.profile?.age || ''
-  const gender = profile?.profile?.gender || ''
+  const age = profile?.profile?.age ? String(profile.profile.age) : ''
+  const gender = profile?.profile?.gender ? String(profile.profile.gender) : ''
   const intent = profile?.profile?.intentText || 'Open to a conversation.'
   const initials = username.slice(0, 2).toUpperCase()
 
   return (
     <SafeAreaView style={s.container}>
-      {/* Header */}
       <View style={s.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={s.iconBtn}>
           <Text style={s.iconTxt}>←</Text>
@@ -89,15 +99,14 @@ export default function ProfileScreen() {
       ) : (
         <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
-          {/* Avatar + name */}
           <View style={s.heroSection}>
             <TouchableOpacity style={s.avatarWrap} onPress={pickPhoto} disabled={uploading}>
-              {profile?.profile?.photoUrl
-                ? <Image source={{ uri: profile.profile.photoUrl }} style={s.avatarImg} />
+              {photoUrl
+                ? <Image source={{ uri: photoUrl }} style={s.avatarImg} />
                 : <View style={s.avatar}><Text style={s.avatarText}>{initials}</Text></View>}
               <View style={s.avatarEditBadge}>
                 {uploading
-                  ? <ActivityIndicator size="small" color="#005129" />
+                  ? <ActivityIndicator size="small" color={G} />
                   : <Text style={s.avatarEditTxt}>✏️</Text>}
               </View>
             </TouchableOpacity>
@@ -106,11 +115,10 @@ export default function ProfileScreen() {
             <Text style={s.bio}>{intent}</Text>
           </View>
 
-          {/* Mood tags */}
           <View style={s.tagsRow}>
             <View style={s.tag}><Text style={s.tagTxt}>{mood} Mood</Text></View>
-            {age ? <View style={s.tag}><Text style={s.tagTxt}>🎂 {age} yrs</Text></View> : null}
-            {gender ? <View style={s.tag}><Text style={s.tagTxt}>👤 {gender}</Text></View> : null}
+            <View style={s.tag}><Text style={s.tagTxt}>🎂 {age || 'Not set'} yrs</Text></View>
+            <View style={s.tag}><Text style={s.tagTxt}>👤 {gender || 'Not set'}</Text></View>
             {profile?.profile?.currentPlaceId
               ? <View style={s.tag}><Text style={s.tagTxt}>📍 Checked in</Text></View>
               : <View style={s.tag}><Text style={s.tagTxt}>🏠 Not checked in</Text></View>}
@@ -119,7 +127,6 @@ export default function ProfileScreen() {
               : null}
           </View>
 
-          {/* Account card */}
           <View style={s.card}>
             <View style={s.cardRow}>
               <View style={s.cardRowLeft}>
@@ -150,12 +157,10 @@ export default function ProfileScreen() {
             ) : null}
           </View>
 
-          {/* Edit profile button */}
           <TouchableOpacity style={s.editBtn} onPress={() => navigation.navigate('EditProfile')}>
             <Text style={s.editBtnTxt}>✏️  Edit Profile</Text>
           </TouchableOpacity>
 
-          {/* Logout */}
           <TouchableOpacity style={s.logoutBtn} onPress={handleLogout}>
             <Text style={s.logoutTxt}>Log out</Text>
           </TouchableOpacity>
@@ -175,17 +180,17 @@ const s = StyleSheet.create({
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   scroll: { padding: 20, paddingBottom: 60, alignItems: 'center' },
   heroSection: { alignItems: 'center', marginBottom: 20 },
-  avatarWrap: { marginBottom: 12 },
+  avatarWrap: { marginBottom: 12, position: 'relative' },
   avatar: { width: 96, height: 96, borderRadius: 48, backgroundColor: G, justifyContent: 'center', alignItems: 'center', borderWidth: 4, borderColor: CARD },
   avatarImg: { width: 96, height: 96, borderRadius: 48, borderWidth: 4, borderColor: CARD },
+  avatarText: { fontSize: 32, fontWeight: '800', color: 'white' },
   avatarEditBadge: { position: 'absolute', bottom: 2, right: 2, backgroundColor: 'white', borderRadius: 14, width: 28, height: 28, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(0,81,41,0.2)', elevation: 2 },
   avatarEditTxt: { fontSize: 14 },
-  avatarText: { fontSize: 32, fontWeight: '800', color: 'white' },
   username: { fontSize: 26, fontWeight: '800', color: DARK, marginBottom: 4 },
   handle: { fontSize: 14, fontWeight: '600', color: MID, marginBottom: 8 },
   bio: { fontSize: 15, color: '#404940', textAlign: 'center', maxWidth: 260, lineHeight: 22 },
   tagsRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginBottom: 24 },
-  tag: { backgroundColor: HIGH, borderRadius: 50, paddingHorizontal: 14, paddingVertical: 6 },
+  tag: { backgroundColor: '#caf2d5', borderRadius: 50, paddingHorizontal: 14, paddingVertical: 6 },
   tagActive: { backgroundColor: G },
   tagTxt: { fontSize: 13, fontWeight: '600', color: G },
   tagTxtActive: { color: 'white' },
