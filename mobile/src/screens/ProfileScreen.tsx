@@ -25,9 +25,9 @@ export default function ProfileScreen() {
   const loadProfile = useCallback(async () => {
     setLoading(true)
     try {
-      const state = await apiFetch('/api/places/state', {})
+      const state = await apiFetch('/api/places/state', { _t: Date.now() })
       setProfile(state)
-      if (state?.profile?.photoUrl) setPhotoUrl(state.profile.photoUrl)
+      if (state?.profile?.photoUrl) setPhotoUrl(state.profile.photoUrl + '?t=' + Date.now())
     } catch {}
     setLoading(false)
   }, [])
@@ -53,9 +53,10 @@ export default function ProfileScreen() {
     try {
       const base64 = await FileSystem.readAsStringAsync(result.assets[0].uri, { encoding: FileSystem.EncodingType.Base64 })
       const dataUri = `data:image/jpeg;base64,${base64}`
-      await apiFetch('/api/places/upload-photo', { photoBase64: dataUri })
-      setPhotoUrl(dataUri)
-      setProfile((prev: any) => ({ ...prev, profile: { ...prev?.profile, photoUrl: dataUri } }))
+      const res = await apiFetch('/api/places/upload-photo', { photoBase64: dataUri })
+      const savedUrl = res.photoUrl || dataUri
+      setPhotoUrl(savedUrl)
+      setProfile((prev: any) => ({ ...prev, profile: { ...prev?.profile, photoUrl: savedUrl } }))
     } catch (e: any) {
       Alert.alert('Upload failed', e.message)
     } finally {
