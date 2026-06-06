@@ -3,12 +3,15 @@ import { getSession, signOut } from '../lib/auth'
 import DrawerMenu from './DrawerMenu'
 import { useEffect, useRef, useState } from 'react'
 import {
-  View, Text, TouchableOpacity, StyleSheet, SafeAreaView,
+  View, Text, TouchableOpacity, StyleSheet,
   ScrollView, Animated, Modal, ActivityIndicator,
 } from 'react-native'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
+import { MaterialIcons } from '@expo/vector-icons'
 
 export default function LandingScreen() {
   const navigation = useNavigation<any>()
+  const insets = useSafeAreaInsets()
   const [profileVisible, setProfileVisible] = useState(false)
   const [drawerVisible, setDrawerVisible] = useState(false)
   const [profile, setProfile] = useState<any>(null)
@@ -45,6 +48,7 @@ export default function LandingScreen() {
       navigation.navigate('Signup' as never)
     }
   }
+
   const fadeAnim = useRef(new Animated.Value(0)).current
   const slideAnim = useRef(new Animated.Value(30)).current
   const floatAnim = useRef(new Animated.Value(0)).current
@@ -53,13 +57,11 @@ export default function LandingScreen() {
   const step3 = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
-    // Fade + slide hero
     Animated.parallel([
       Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
       Animated.timing(slideAnim, { toValue: 0, duration: 800, useNativeDriver: true }),
     ]).start()
 
-    // Float card
     Animated.loop(
       Animated.sequence([
         Animated.timing(floatAnim, { toValue: -10, duration: 2000, useNativeDriver: true }),
@@ -67,7 +69,6 @@ export default function LandingScreen() {
       ])
     ).start()
 
-    // Bounce steps sequentially
     const bounceStep = (anim: Animated.Value, delay: number) => {
       setTimeout(() => {
         Animated.spring(anim, { toValue: 1, useNativeDriver: true, friction: 5 }).start()
@@ -79,12 +80,12 @@ export default function LandingScreen() {
   }, [])
 
   return (
-    <SafeAreaView style={s.container}>
+    <SafeAreaView style={s.container} edges={['top']}>
       {/* Nav */}
       <View style={s.nav}>
         <View style={s.navBrand}>
-          <Text style={s.navIcon}>💬</Text>
-          <Text style={s.navTitle}>LetsTalk</Text>
+          <MaterialIcons name="forum" size={22} color={AMBER} />
+          <Text style={s.navTitle}>Let's Talk</Text>
         </View>
         <TouchableOpacity style={s.joinBtn} onPress={handleJoin}>
           <Text style={s.joinBtnText}>Join Now</Text>
@@ -92,6 +93,7 @@ export default function LandingScreen() {
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+
         {/* Hero */}
         <Animated.View style={[s.hero, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
           <Text style={s.heroTitle}>Connect with real people, right where you are.</Text>
@@ -104,10 +106,18 @@ export default function LandingScreen() {
           {/* Floating card */}
           <Animated.View style={[s.floatCard, { transform: [{ translateY: floatAnim }] }]}>
             <View style={s.avatarRow}>
-              <View style={[s.avatar, { backgroundColor: '#a5f4b8' }]}><Text style={s.avatarText}>A</Text></View>
-              <View style={[s.avatar, { backgroundColor: '#6dfe9c', marginLeft: -8 }]}><Text style={s.avatarText}>B</Text></View>
-              <View style={[s.avatar, { backgroundColor: '#89d89e', marginLeft: -8 }]}><Text style={s.avatarText}>C</Text></View>
-              <View style={[s.avatar, { backgroundColor: '#1a6b3c', marginLeft: -8 }]}><Text style={[s.avatarText, { color: 'white', fontSize: 10 }]}>+1</Text></View>
+              {[
+                { l: 'A', bg: '#e8824a' },
+                { l: 'B', bg: '#5b8dee' },
+                { l: 'C', bg: '#3dbf7a' },
+              ].map((item, i) => (
+                <View key={item.l} style={[s.avatar, { marginLeft: i === 0 ? 0 : -8, backgroundColor: item.bg }]}>
+                  <Text style={s.avatarText}>{item.l}</Text>
+                </View>
+              ))}
+              <View style={[s.avatar, { backgroundColor: '#2a2a2a', marginLeft: -8 }]}>
+                <Text style={[s.avatarText, { color: AMBER, fontSize: 10 }]}>+1</Text>
+              </View>
             </View>
             <View>
               <Text style={s.floatTitle}>4 people ready</Text>
@@ -121,7 +131,7 @@ export default function LandingScreen() {
           <Text style={s.sectionTitle}>Three steps to a real conversation.</Text>
           <View style={s.steps}>
             {[
-              { anim: step1, icon: '🎭', title: 'Set mood', desc: "Let others know if you're up for a deep chat or just some casual banter.", emoji: '🎭' },
+              { anim: step1, icon: '🎭', title: 'Set mood', desc: "Let others know if you're up for a deep chat or just some casual banter." },
               { anim: step2, icon: '📍', title: 'Check in', desc: 'Arrive at a participating venue and tap to join the local digital lounge.' },
               { anim: step3, icon: '💬', title: 'Connect', desc: 'Break the ice digitally, then look up and say hello in person.' },
             ].map((step) => (
@@ -154,30 +164,27 @@ export default function LandingScreen() {
           </View>
         </View>
 
-        {/* CTA */}
-
-
         {/* Footer */}
         <View style={s.footer}>
-          <Text style={s.footerBrand}>LetsTalk</Text>
+          <Text style={s.footerBrand}>Let's Talk</Text>
           <View style={s.footerLinks}>
             {['Privacy', 'Terms', 'Safety', 'Support'].map(l => (
               <Text key={l} style={s.footerLink}>{l}</Text>
             ))}
           </View>
-          <Text style={s.footerCopy}>© 2024 LetsTalk Social. Built for connection.</Text>
+          <Text style={s.footerCopy}>© 2024 Let's Talk. Built for connection.</Text>
         </View>
       </ScrollView>
 
       <DrawerMenu visible={drawerVisible} onClose={() => setDrawerVisible(false)} />
 
-      {/* Profile half-sheet modal */}
+      {/* Profile modal */}
       <Modal visible={profileVisible} transparent animationType="slide" onRequestClose={() => setProfileVisible(false)}>
         <TouchableOpacity style={ps.overlay} activeOpacity={1} onPress={() => setProfileVisible(false)}>
           <TouchableOpacity activeOpacity={1} style={ps.sheet}>
             <View style={ps.handle} />
             {profileLoading ? (
-              <ActivityIndicator color="#005129" size="large" style={{ marginVertical: 40 }} />
+              <ActivityIndicator color={AMBER} size="large" style={{ marginVertical: 40 }} />
             ) : profile?.session ? (
               <>
                 <View style={ps.avatarRow}>
@@ -206,7 +213,7 @@ export default function LandingScreen() {
             ) : (
               <>
                 <Text style={ps.name}>Not logged in</Text>
-                <Text style={ps.bio}>Join LetsTalk to explore more.</Text>
+                <Text style={ps.bio}>Join Let's Talk to explore more.</Text>
                 <TouchableOpacity style={ps.fullBtn} onPress={() => { setProfileVisible(false); navigation.navigate('Signup' as never) }}>
                   <Text style={ps.fullBtnTxt}>Sign up →</Text>
                 </TouchableOpacity>
@@ -220,15 +227,28 @@ export default function LandingScreen() {
       </Modal>
 
       {/* Bottom nav */}
-      <View style={s.bottomNav}>
+      <View style={[s.bottomNav, { paddingBottom: insets.bottom + 8 }]}>
         {[
-          { icon: '🧭', label: 'Explore', active: true },
-          { icon: '🗺️', label: 'Map', active: false },
-          { icon: '💬', label: 'Chats', active: false },
-          { icon: '👤', label: 'Profile', active: false },
+          { icon: 'explore', label: 'Explore', active: true, guard: false },
+          { icon: 'near-me', label: 'Nearby', active: false, guard: true },
+          { icon: 'chat-bubble-outline', label: 'Chats', active: false, guard: true },
+          { icon: 'person-outline', label: 'Profile', active: false, guard: false },
         ].map(item => (
-          <TouchableOpacity key={item.label} style={[s.navItem, item.active && s.navItemActive]} onPress={item.label === 'Profile' ? () => setDrawerVisible(true) : undefined}>
-            <Text style={s.navItemIcon}>{item.icon}</Text>
+          <TouchableOpacity
+            key={item.label}
+            style={[s.navItem, item.active && s.navItemActive]}
+            onPress={async () => {
+              if (item.label === 'Profile') { setDrawerVisible(true); return }
+              if (item.guard) {
+                try {
+                  const session = await getSession()
+                  if (!session?.session) { navigation.navigate('Signup' as never); return }
+                  navigation.navigate('Onboarding' as never)
+                } catch { navigation.navigate('Signup' as never) }
+              }
+            }}
+          >
+            <MaterialIcons name={item.icon as any} size={22} color={item.active ? '#e8824a' : 'rgba(255,220,160,0.5)'} />
             <Text style={[s.navItemLabel, item.active && s.navItemLabelActive]}>{item.label}</Text>
           </TouchableOpacity>
         ))}
@@ -237,81 +257,87 @@ export default function LandingScreen() {
   )
 }
 
-const G = '#1a6b3c'
-const DARK = '#0f3320'
-const MID = '#2d6e3e'
+const DARK   = '#0a0704'
+const AMBER  = '#e8824a'
+const WARM   = '#e8824a'
+const BG     = '#0a0704'
+const CARD   = '#1a1008'
+const MUTED  = 'rgba(255,180,100,0.6)'
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#e9ffed' },
-  nav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12, backgroundColor: 'rgba(233,255,237,0.85)', borderBottomWidth: 1, borderBottomColor: 'rgba(191,201,190,0.3)' },
-  navBrand: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  navIcon: { fontSize: 20 },
-  navTitle: { fontSize: 20, fontWeight: '800', color: G },
-  joinBtn: { backgroundColor: G, borderRadius: 50, paddingHorizontal: 20, paddingVertical: 8 },
-  joinBtnText: { color: 'white', fontWeight: '700', fontSize: 14 },
-  scroll: { paddingBottom: 100 },
-  hero: { padding: 24, paddingTop: 32, alignItems: 'center' },
-  heroTitle: { fontSize: 28, fontWeight: '800', color: DARK, textAlign: 'center', lineHeight: 36, marginBottom: 12 },
-  heroSub: { fontSize: 16, color: MID, textAlign: 'center', lineHeight: 24, marginBottom: 24 },
-  heroBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: G, borderRadius: 50, paddingHorizontal: 28, paddingVertical: 16, marginBottom: 32 },
+  container: { flex: 1, backgroundColor: BG },
+
+  nav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, backgroundColor: '#12100c', borderBottomWidth: 1, borderBottomColor: 'rgba(232,130,74,0.15)' },
+  navBrand: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  navTitle: { fontSize: 20, fontWeight: '800', color: AMBER },
+  joinBtn: { backgroundColor: AMBER, borderRadius: 50, paddingHorizontal: 18, paddingVertical: 8 },
+  joinBtnText: { color: '#ffffff', fontWeight: '800', fontSize: 14 },
+
+  scroll: { paddingBottom: 120 },
+
+  hero: { padding: 24, paddingTop: 40, alignItems: 'center', backgroundColor: '#0a0704' },
+  heroTitle: { fontSize: 30, fontWeight: '900', color: '#ffffff', textAlign: 'center', lineHeight: 38, marginBottom: 14, letterSpacing: -0.5 },
+  heroSub: { fontSize: 16, color: MUTED, textAlign: 'center', lineHeight: 24, marginBottom: 28 },
+  heroBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: AMBER, borderRadius: 50, paddingHorizontal: 28, paddingVertical: 16, marginBottom: 36, shadowColor: '#0d0a06', shadowOpacity: 0.2, shadowRadius: 16, elevation: 8 },
   heroBtnIcon: { fontSize: 18 },
-  heroBtnText: { color: 'white', fontWeight: '700', fontSize: 17 },
-  floatCard: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: 'white', borderRadius: 20, padding: 16, borderWidth: 1, borderColor: 'rgba(26,107,60,0.1)', shadowColor: DARK, shadowOpacity: 0.08, shadowRadius: 16, elevation: 4 },
+  heroBtnText: { color: '#fff', fontWeight: '800', fontSize: 17 },
+
+  floatCard: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#fff', borderRadius: 20, padding: 16, borderWidth: 1, borderColor: 'rgba(232,130,74,0.15)', shadowColor: '#0d0a06', shadowOpacity: 0.1, shadowRadius: 16, elevation: 4, width: '100%' },
   avatarRow: { flexDirection: 'row', alignItems: 'center' },
-  avatar: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: 'white' },
-  avatarText: { fontSize: 12, fontWeight: '700', color: DARK },
-  floatTitle: { fontSize: 13, fontWeight: '700', color: G },
-  floatSub: { fontSize: 9, color: MID, letterSpacing: 1.5, marginTop: 2 },
-  section: { paddingHorizontal: 20, paddingVertical: 32, backgroundColor: '#cff8da' },
-  sectionTitle: { fontSize: 22, fontWeight: '700', color: DARK, textAlign: 'center', marginBottom: 20 },
-  steps: { gap: 12 },
-  stepCard: { flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: 'white', borderRadius: 20, padding: 20, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, elevation: 3 },
-  stepIconWrap: { backgroundColor: '#eef0ee', borderRadius: 50, width: 60, height: 60, justifyContent: 'center', alignItems: 'center' },
+  avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: WARM, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: BG },
+  avatarText: { fontSize: 12, fontWeight: '700', color: '#ffffff' },
+  floatTitle: { fontSize: 13, fontWeight: '700', color: '#000000' },
+  floatSub: { fontSize: 9, color: '#000000', letterSpacing: 1.5, marginTop: 2 },
+
+  section: { paddingHorizontal: 20, paddingVertical: 36, backgroundColor: '#0d0a06' },
+  sectionTitle: { fontSize: 22, fontWeight: '800', color: '#ffffff', textAlign: 'center', marginBottom: 24, lineHeight: 30 },
+  steps: { gap: 14 },
+  stepCard: { flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: '#1c1610', borderRadius: 20, padding: 20, borderWidth: 1, borderColor: 'rgba(232,130,74,0.15)' },
+  stepIconWrap: { backgroundColor: 'rgba(232,130,74,0.18)', borderRadius: 16, width: 60, height: 60, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(232,130,74,0.3)' },
   stepIcon: { fontSize: 26 },
-  stepTitle: { fontSize: 16, fontWeight: '700', color: G, marginBottom: 6 },
-  stepDesc: { fontSize: 14, color: MID, lineHeight: 22 },
-  mapCard: { margin: 20, backgroundColor: DARK, borderRadius: 20, padding: 24, minHeight: 280, justifyContent: 'flex-end' },
-  livePill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: G, borderRadius: 50, paddingHorizontal: 12, paddingVertical: 5, alignSelf: 'flex-start', marginBottom: 16 },
-  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'white' },
-  livePillText: { fontSize: 9, fontWeight: '700', color: 'white', letterSpacing: 2 },
-  mapTitle: { fontSize: 22, fontWeight: '800', color: 'white', lineHeight: 30, marginBottom: 12 },
-  mapDesc: { fontSize: 14, color: 'rgba(210,250,221,0.8)', lineHeight: 20, marginBottom: 20 },
-  mapFooter: { flexDirection: 'row', alignItems: 'center', gap: 12, borderTopWidth: 1, borderTopColor: 'rgba(191,201,190,0.2)', paddingTop: 16 },
-  mapCount: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#6dfe9c', justifyContent: 'center', alignItems: 'center' },
-  mapCountText: { fontSize: 9, fontWeight: '900', color: DARK },
-  mapCountLabel: { fontSize: 13, fontWeight: '600', color: 'rgba(210,250,221,0.9)' },
-  primaryBtn: { backgroundColor: G, borderRadius: 50, paddingVertical: 16, alignItems: 'center', marginHorizontal: 20, marginTop: 8, marginBottom: 12 },
-  primaryText: { color: 'white', fontWeight: '700', fontSize: 17 },
-  secondaryBtn: { backgroundColor: 'white', borderRadius: 50, paddingVertical: 16, alignItems: 'center', marginHorizontal: 20, borderWidth: 2, borderColor: 'rgba(26,107,60,0.25)' },
-  secondaryText: { color: G, fontWeight: '700', fontSize: 17 },
-  footer: { alignItems: 'center', paddingVertical: 32, paddingHorizontal: 20, backgroundColor: '#d5fde0', marginTop: 32, gap: 12 },
-  footerBrand: { fontSize: 22, fontWeight: '900', color: G },
+  stepTitle: { fontSize: 16, fontWeight: '700', color: '#e8824a', marginBottom: 6 },
+  stepDesc: { fontSize: 14, color: MUTED, lineHeight: 22 },
+
+  mapCard: { margin: 20, backgroundColor: '#0d0a06', borderRadius: 24, padding: 24, borderWidth: 1, borderColor: 'rgba(232,130,74,0.15)' },
+  livePill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#e8824a', borderRadius: 50, paddingHorizontal: 12, paddingVertical: 5, alignSelf: 'flex-start', marginBottom: 16 },
+  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#fff' },
+  livePillText: { fontSize: 9, fontWeight: '700', color: '#fff', letterSpacing: 2 },
+  mapTitle: { fontSize: 22, fontWeight: '800', color: '#ffffff', lineHeight: 30, marginBottom: 12 },
+  mapDesc: { fontSize: 14, color: MUTED, lineHeight: 20, marginBottom: 20 },
+  mapFooter: { flexDirection: 'row', alignItems: 'center', gap: 12, borderTopWidth: 1, borderTopColor: 'rgba(232,130,74,0.15)', paddingTop: 16 },
+  mapCount: { width: 44, height: 44, borderRadius: 22, backgroundColor: AMBER, justifyContent: 'center', alignItems: 'center' },
+  mapCountText: { fontSize: 10, fontWeight: '900', color: '#ffffff' },
+  mapCountLabel: { fontSize: 13, fontWeight: '600', color: MUTED },
+
+  footer: { alignItems: 'center', paddingVertical: 36, paddingHorizontal: 20, backgroundColor: '#17130d', gap: 14, borderTopWidth: 1, borderTopColor: 'rgba(232,130,74,0.15)' },
+  footerBrand: { fontSize: 22, fontWeight: '900', color: '#ffffff' },
   footerLinks: { flexDirection: 'row', gap: 20, flexWrap: 'wrap', justifyContent: 'center' },
-  footerLink: { fontSize: 14, color: MID },
-  footerCopy: { fontSize: 12, color: MID, opacity: 0.6, textAlign: 'center' },
-  bottomNav: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', backgroundColor: 'rgba(233,255,237,0.95)', paddingTop: 8, paddingBottom: 20, paddingHorizontal: 16, justifyContent: 'space-around', borderTopLeftRadius: 20, borderTopRightRadius: 20, shadowColor: DARK, shadowOpacity: 0.06, shadowRadius: 12, elevation: 8 },
-  navItem: { alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 50 },
-  navItemActive: { backgroundColor: '#6dfe9c' },
+  footerLink: { fontSize: 14, color: MUTED },
+  footerCopy: { fontSize: 12, color: 'rgba(255,200,150,0.3)', textAlign: 'center' },
+
+  bottomNav: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', backgroundColor: '#0d0a06', paddingTop: 10, paddingHorizontal: 16, justifyContent: 'space-around', borderTopWidth: 1, borderTopColor: 'rgba(232,130,74,0.25)' },
+  navItem: { alignItems: 'center', paddingHorizontal: 16, paddingVertical: 6, borderRadius: 50 },
+  navItemActive: { backgroundColor: 'rgba(232,130,74,0.15)', borderRadius: 12, paddingHorizontal: 14 },
   navItemIcon: { fontSize: 20, marginBottom: 2 },
-  navItemLabel: { fontSize: 10, fontWeight: '600', color: MID },
-  navItemLabelActive: { color: DARK },
+  navItemLabel: { fontSize: 10, fontWeight: '600', color: 'rgba(255,200,150,0.4)', marginTop: 2 },
+  navItemLabelActive: { color: '#ffffff' },
 })
 
 const ps = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,33,17,0.4)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: '#e9ffed', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 40 },
-  handle: { width: 40, height: 4, backgroundColor: 'rgba(0,81,41,0.2)', borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+  sheet: { backgroundColor: '#1c1610', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 40, borderTopWidth: 1, borderTopColor: 'rgba(232,130,74,0.15)' },
+  handle: { width: 40, height: 4, backgroundColor: 'rgba(232,130,74,0.15)', borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
   avatarRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 12 },
-  avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#005129', justifyContent: 'center', alignItems: 'center' },
-  avatarTxt: { fontSize: 22, fontWeight: '800', color: 'white' },
-  name: { fontSize: 20, fontWeight: '800', color: '#002111' },
-  email: { fontSize: 13, color: '#006d36', marginTop: 2 },
-  bio: { fontSize: 14, color: '#404940', lineHeight: 20, marginBottom: 14 },
+  avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#0d0a06', justifyContent: 'center', alignItems: 'center' },
+  avatarTxt: { fontSize: 22, fontWeight: '800', color: '#ffffff' },
+  name: { fontSize: 20, fontWeight: '800', color: '#ffffff' },
+  email: { fontSize: 13, color: MUTED, marginTop: 2 },
+  bio: { fontSize: 14, color: MUTED, lineHeight: 20, marginBottom: 14 },
   tagsRow: { flexDirection: 'row', gap: 8, marginBottom: 20, flexWrap: 'wrap' },
-  tag: { backgroundColor: '#caf2d5', borderRadius: 50, paddingHorizontal: 14, paddingVertical: 6 },
-  tagTxt: { fontSize: 13, fontWeight: '600', color: '#005129' },
-  fullBtn: { backgroundColor: '#005129', borderRadius: 50, paddingVertical: 14, alignItems: 'center', marginBottom: 10 },
-  fullBtnTxt: { color: 'white', fontWeight: '700', fontSize: 15 },
-  logoutBtn: { borderWidth: 2, borderColor: 'rgba(186,26,26,0.25)', borderRadius: 50, paddingVertical: 13, alignItems: 'center' },
-  logoutTxt: { color: '#ba1a1a', fontWeight: '700', fontSize: 15 },
+  tag: { backgroundColor: 'rgba(232,130,74,0.12)', borderRadius: 50, paddingHorizontal: 14, paddingVertical: 6 },
+  tagTxt: { fontSize: 13, fontWeight: '600', color: '#ffffff' },
+  fullBtn: { backgroundColor: '#0d0a06', borderRadius: 50, paddingVertical: 14, alignItems: 'center', marginBottom: 10 },
+  fullBtnTxt: { color: '#ffffff', fontWeight: '800', fontSize: 15 },
+  logoutBtn: { borderWidth: 1.5, borderColor: 'rgba(186,26,26,0.4)', borderRadius: 50, paddingVertical: 13, alignItems: 'center' },
+  logoutTxt: { color: '#ff6b6b', fontWeight: '700', fontSize: 15 },
 })
