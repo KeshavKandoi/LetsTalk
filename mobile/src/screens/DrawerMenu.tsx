@@ -35,7 +35,7 @@ export default function DrawerMenu({ visible, onClose }: Props) {
 
   // One animation value per row: header + menu items + logout
   const TOTAL_ROWS = MENU_ITEMS.length + 2 // header, items, logout
-  const rowAnims = useRef(Array.from({ length: TOTAL_ROWS }, () => new Animated.Value(DRAWER_WIDTH))).current
+  const rowAnims = useRef(Array.from({ length: TOTAL_ROWS }, () => new Animated.Value(30))).current
   const rowFades = useRef(Array.from({ length: TOTAL_ROWS }, () => new Animated.Value(0))).current
 
   const animateRowsIn = () => {
@@ -58,9 +58,10 @@ export default function DrawerMenu({ visible, onClose }: Props) {
       resetRows()
       // Start animation immediately
       Animated.parallel([
-        Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, friction: 8 }),
+        Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, friction: 12, tension: 120 }),
         Animated.timing(fadeAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
-      ]).start(() => animateRowsIn())
+      ]).start()
+      animateRowsIn()
       // Load from cache first (instant), then fetch fresh data
       AsyncStorage.getItem('cached_profile').then(cached => {
         if (cached) setProfile(JSON.parse(cached))
