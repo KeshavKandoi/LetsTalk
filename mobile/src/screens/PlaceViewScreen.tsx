@@ -337,7 +337,12 @@ export default function PlaceViewScreen() {
           {participants.length > 0
             ? participants.map((p) => (
                 <TouchableOpacity key={p.userId} style={styles.participantCard} onPress={() => setSelectedPerson(p)}>
-                  <Text style={styles.participantEmoji}>{p.moodEmoji}</Text>
+                  {p.photoUrl
+                    ? <Image source={{ uri: p.photoUrl }} style={styles.participantAvatar} />
+                    : <View style={styles.participantAvatarPlaceholder}>
+                        <Text style={styles.participantEmoji}>{p.moodEmoji}</Text>
+                      </View>
+                  }
                   <View style={{ flex: 1 }}>
                     <View style={styles.participantNameRow}>
                       <Text style={styles.participantName}>{p.username}</Text>
@@ -553,6 +558,21 @@ const styles = StyleSheet.create({
   readyBadge: { backgroundColor: 'rgba(26,107,60,0.1)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
   readyBadgeText: { fontSize: 12, color: '#1a6b3c', fontWeight: '600' },
   participantCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: 'rgba(26,107,60,0.06)', borderRadius: 14, padding: 12, marginTop: 8 },
+  participantAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    marginRight: 12,
+  },
+  participantAvatarPlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#e0f2e9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
   participantEmoji: { fontSize: 26, marginTop: 2 },
   participantNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4, flexWrap: 'wrap' },
   participantName: { fontSize: 14, fontWeight: '700', color: '#0f3320' },
