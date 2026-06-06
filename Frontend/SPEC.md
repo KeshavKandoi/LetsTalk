@@ -121,7 +121,6 @@ Fields:
 - `status`
 - `current_place_id`
 - `last_location_at`
-- `last_presence_heartbeat_at`
 - `created_at`
 - `updated_at`
 
@@ -333,11 +332,6 @@ Purpose:
 - same-place logic is based on exact `place_id`
 - the app refreshes location roughly once per minute in MVP
 - if location becomes stale for multiple refresh cycles, mark the user `offline` or remove them from the place
-
-Recommended MVP rule:
-
-- heartbeat every 60 seconds
-- mark presence stale after 3 missed heartbeats
 
 ## QR Rules
 

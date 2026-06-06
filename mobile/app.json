@@ -24,7 +24,8 @@
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION"
-      ]
+      ],
+      "package": "com.letstalk.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -36,7 +37,8 @@
           "locationAlwaysAndWhenInUsePermission": "LetsTalk needs your location to find nearby places."
         }
       ],
-      "expo-barcode-scanner"
+      "expo-barcode-scanner",
+      "expo-web-browser"
     ]
   }
 }
