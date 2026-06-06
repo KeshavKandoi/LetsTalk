@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavigationContainer } from '@react-navigation/native'
+import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { getSession, signOut } from './src/lib/auth'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { StatusBar } from 'expo-status-bar'
@@ -15,6 +16,7 @@ import AccountSettingsScreen from './src/screens/AccountSettingsScreen'
 import AboutUsScreen from './src/screens/AboutUsScreen'
 import FriendsScreen from './src/screens/FriendsScreen'
 import ConversationScreen from './src/screens/ConversationScreen'
+import OTPScreen from './src/screens/OTPScreen'
 
 const Stack = createNativeStackNavigator()
 
@@ -50,9 +52,10 @@ export default function App() {
   }
 
   return (
-    <NavigationContainer>
-      <StatusBar style="dark" />
-      <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRoute}>
+    <SafeAreaProvider>
+      <NavigationContainer>
+        <StatusBar style="dark" />
+        <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRoute}>
         <Stack.Screen name="Landing" component={LandingScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Signup" component={SignupScreen} />
@@ -64,7 +67,9 @@ export default function App() {
         <Stack.Screen name="AboutUs" component={AboutUsScreen} />
         <Stack.Screen name="Friends" component={FriendsScreen} />
         <Stack.Screen name="Conversation" component={ConversationScreen} />
-      </Stack.Navigator>
-    </NavigationContainer>
+        <Stack.Screen name="OTP" component={OTPScreen} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </SafeAreaProvider>
   )
 }
