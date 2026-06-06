@@ -25,7 +25,7 @@ export const Route = createFileRoute('/api/auth/send-otp')({
           otpStore.set(email, { otp, expires })
 
           // Send email
-          await resend.emails.send({
+          const emailResult = await resend.emails.send({
             from: 'LetsTalk <onboarding@resend.dev>',
             to: email,
             subject: 'Your LetsTalk verification code',
@@ -42,6 +42,7 @@ export const Route = createFileRoute('/api/auth/send-otp')({
             `,
           })
 
+          console.log('Resend result:', JSON.stringify(emailResult))
           return new Response(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json' } })
         } catch (e: any) {
           return new Response(JSON.stringify({ error: e.message }), { status: 400, headers: { 'Content-Type': 'application/json' } })
