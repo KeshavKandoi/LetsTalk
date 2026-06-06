@@ -38,7 +38,8 @@
         }
       ],
       "expo-barcode-scanner",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-image"
     ]
   }
 }
