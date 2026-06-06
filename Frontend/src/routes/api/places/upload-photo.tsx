@@ -41,10 +41,35 @@ export const Route = createFileRoute('/api/places/upload-photo')({
           const { data } = supabase.storage.from('avatars').getPublicUrl(fileName)
           const photoUrl = data.publicUrl
 
-          // Save URL to DB
-          await db.update(userProfile)
-            .set({ photoUrl: photoUrl })
+          // Save URL to DB - insert if not exists, update if exists
+          const [existing] = await db
+            .select()
+            .from(userProfile)
             .where(eq(userProfile.userId, session.user.id))
+            .limit(1)
+
+          if (existing) {
+            await db.update(userProfile)
+              .set({ photoUrl: photoUrl })
+              .where(eq(userProfile.userId, session.user.id))
+          } else {
+            await db.insert(userProfile).values({
+              userId: session.user.id,
+              photoUrl: photoUrl,
+              moodEmoji: '🙂',
+              intentText: '',
+              intentSummary: '',
+              status: 'offline',
+              currentPlaceId: null,
+              isFindable: false,
+              locationHint: null,
+              pingRequestedAt: null,
+              pingRequestedByUserId: null,
+              pingRequestedByUsername: null,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            })
+          }
 
           return new Response(JSON.stringify({ ok: true, photoUrl }), { headers: { 'Content-Type': 'application/json' } })
         } catch (e: any) {
