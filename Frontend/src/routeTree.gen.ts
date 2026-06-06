@@ -34,6 +34,8 @@ import { Route as ApiFriendsOnlineStatusRouteImport } from './routes/api/friends
 import { Route as ApiFriendsMessagesRouteImport } from './routes/api/friends/messages'
 import { Route as ApiFriendsMessageStatusRouteImport } from './routes/api/friends/message-status'
 import { Route as ApiFriendsListRouteImport } from './routes/api/friends/list'
+import { Route as ApiAuthVerifyOtpRouteImport } from './routes/api/auth/verify-otp'
+import { Route as ApiAuthSendOtpRouteImport } from './routes/api/auth/send-otp'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const SignupRoute = SignupRouteImport.update({
@@ -162,6 +164,16 @@ const ApiFriendsListRoute = ApiFriendsListRouteImport.update({
   path: '/api/friends/list',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthVerifyOtpRoute = ApiAuthVerifyOtpRouteImport.update({
+  id: '/api/auth/verify-otp',
+  path: '/api/auth/verify-otp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthSendOtpRoute = ApiAuthSendOtpRouteImport.update({
+  id: '/api/auth/send-otp',
+  path: '/api/auth/send-otp',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -173,6 +185,8 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/auth/send-otp': typeof ApiAuthSendOtpRoute
+  '/api/auth/verify-otp': typeof ApiAuthVerifyOtpRoute
   '/api/friends/list': typeof ApiFriendsListRoute
   '/api/friends/message-status': typeof ApiFriendsMessageStatusRoute
   '/api/friends/messages': typeof ApiFriendsMessagesRoute
@@ -201,6 +215,8 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/auth/send-otp': typeof ApiAuthSendOtpRoute
+  '/api/auth/verify-otp': typeof ApiAuthVerifyOtpRoute
   '/api/friends/list': typeof ApiFriendsListRoute
   '/api/friends/message-status': typeof ApiFriendsMessageStatusRoute
   '/api/friends/messages': typeof ApiFriendsMessagesRoute
@@ -230,6 +246,8 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/auth/send-otp': typeof ApiAuthSendOtpRoute
+  '/api/auth/verify-otp': typeof ApiAuthVerifyOtpRoute
   '/api/friends/list': typeof ApiFriendsListRoute
   '/api/friends/message-status': typeof ApiFriendsMessageStatusRoute
   '/api/friends/messages': typeof ApiFriendsMessagesRoute
@@ -260,6 +278,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/api/auth/$'
+    | '/api/auth/send-otp'
+    | '/api/auth/verify-otp'
     | '/api/friends/list'
     | '/api/friends/message-status'
     | '/api/friends/messages'
@@ -288,6 +308,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/api/auth/$'
+    | '/api/auth/send-otp'
+    | '/api/auth/verify-otp'
     | '/api/friends/list'
     | '/api/friends/message-status'
     | '/api/friends/messages'
@@ -316,6 +338,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/api/auth/$'
+    | '/api/auth/send-otp'
+    | '/api/auth/verify-otp'
     | '/api/friends/list'
     | '/api/friends/message-status'
     | '/api/friends/messages'
@@ -345,6 +369,8 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiAuthSendOtpRoute: typeof ApiAuthSendOtpRoute
+  ApiAuthVerifyOtpRoute: typeof ApiAuthVerifyOtpRoute
   ApiFriendsListRoute: typeof ApiFriendsListRoute
   ApiFriendsMessageStatusRoute: typeof ApiFriendsMessageStatusRoute
   ApiFriendsMessagesRoute: typeof ApiFriendsMessagesRoute
@@ -546,6 +572,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiFriendsListRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/verify-otp': {
+      id: '/api/auth/verify-otp'
+      path: '/api/auth/verify-otp'
+      fullPath: '/api/auth/verify-otp'
+      preLoaderRoute: typeof ApiAuthVerifyOtpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/send-otp': {
+      id: '/api/auth/send-otp'
+      path: '/api/auth/send-otp'
+      fullPath: '/api/auth/send-otp'
+      preLoaderRoute: typeof ApiAuthSendOtpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -561,6 +601,8 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiAuthSendOtpRoute: ApiAuthSendOtpRoute,
+  ApiAuthVerifyOtpRoute: ApiAuthVerifyOtpRoute,
   ApiFriendsListRoute: ApiFriendsListRoute,
   ApiFriendsMessageStatusRoute: ApiFriendsMessageStatusRoute,
   ApiFriendsMessagesRoute: ApiFriendsMessagesRoute,
