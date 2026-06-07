@@ -22,10 +22,22 @@ export default function LandingScreen() {
   const player = useVideoPlayer(videoSource, (player) => {
     player.loop = true
     player.muted = true
+    player.playbackRate = 1.0
   })
 
   useEffect(() => {
     player.play()
+    const sub1 = player.addListener('playingChange', (isPlaying) => {
+      if (!isPlaying) {
+        try { player.play() } catch {}
+      }
+    })
+    const sub2 = player.addListener('statusChange', (status) => {
+      if (status === 'idle' || status === 'error') {
+        try { player.replay() } catch { try { player.play() } catch {} }
+      }
+    })
+    return () => { sub1.remove(); sub2.remove() }
   }, [player])
 
 
