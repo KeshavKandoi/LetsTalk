@@ -1,55 +1,38 @@
 import { useEffect, useState, useRef } from 'react'
 import {
-  Alert,
-  ActivityIndicator,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-  FlatList,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
+  Alert, ActivityIndicator, StyleSheet, Text, TextInput,
+  TouchableOpacity, View, FlatList, Image, KeyboardAvoidingView, Platform,
 } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRoute, useNavigation } from '@react-navigation/native'
 import { apiFetch } from '../lib/api'
 
+function Avatar({ uri, username, size = 32 }: { uri?: string | null; username?: string; size?: number }) {
+  const initials = (username || '?').slice(0, 1).toUpperCase()
+  return uri
+    ? <Image source={{ uri }} style={{ width: size, height: size, borderRadius: size / 2 }} />
+    : (
+      <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: '#e9f0e5', justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ color: '#006b2c', fontWeight: '700', fontSize: size * 0.4 }}>{initials}</Text>
+      </View>
+    )
+}
+
 export default function ConversationScreen() {
   const route = useRoute()
-  const navigation = useNavigation()
-  const { friend } = route.params || {}
-
-  const [messages, setMessages] = useState([])
+  const navigation = useNavigation<any>()
+  const { friend } = (route.params as any) || {}
+  const [messages, setMessages] = useState<any[]>([])
   const [newMessage, setNewMessage] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
-  const [isTyping, setIsTyping] = useState(false)
-  const [friendIsOnline, setFriendIsOnline] = useState(false)
-  const [friendLastSeen, setFriendLastSeen] = useState(null)
-  const typingTimeoutRef = useRef(null)
-  const messageListRef = useRef(null)
+  const listRef = useRef<FlatList>(null)
 
-  // Load messages
   const loadMessages = async () => {
     if (!friend) return
     try {
-      setLoading(true)
-      const data = await apiFetch('/api/friends/messages', {
-        action: 'list',
-        friendUserId: friend.userId,
-      })
+      const data = await apiFetch('/api/friends/messages', { action: 'list', friendUserId: friend.userId })
       setMessages(data?.messages || [])
-      
-      // Mark all unread messages as read
-      if (data && Array.isArray(data)) {
-        data.forEach(msg => {
-          if (msg.status !== 'read') {
-            markMessageAsRead(msg.id)
-          }
-        })
-      }
     } catch (e) {
       Alert.alert('Error', (e as Error).message)
     } finally {
@@ -57,53 +40,14 @@ export default function ConversationScreen() {
     }
   }
 
-  // Check friend online status
-  const checkFriendStatus = async () => {
-    if (!friend) return
-    try {
-      const status = await apiFetch('/api/friends/online-status', {
-        userId: friend.userId,
-      })
-      setFriendIsOnline(status.isOnline)
-      setFriendLastSeen(status.lastSeenAt)
-    } catch (e) {
-      console.error('Error checking status:', e)
-    }
-  }
-
-  // Mark message as read
-  const markMessageAsRead = async (messageId: string) => {
-    try {
-      await apiFetch('/api/friends/message-status', {
-        messageId,
-        action: 'read',
-      })
-    } catch (e) {
-      console.error('Error marking read:', e)
-    }
-  }
-
-  // Send message
   const sendMessage = async () => {
     if (!newMessage.trim() || !friend) return
-
     try {
       setSending(true)
-      const result = await apiFetch('/api/friends/messages', {
-        action: 'send',
-        friendUserId: friend.userId,
-        body: newMessage.trim(),
-      })
-
-      if (result.success) {
-        setNewMessage('')
-        // Refresh messages
-        await loadMessages()
-        // Scroll to bottom
-        setTimeout(() => {
-          messageListRef.current?.scrollToEnd({ animated: true })
-        }, 100)
-      }
+      await apiFetch('/api/friends/messages', { action: 'send', friendUserId: friend.userId, body: newMessage.trim() })
+      setNewMessage('')
+      await loadMessages()
+      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100)
     } catch (e) {
       Alert.alert('Error', (e as Error).message)
     } finally {
@@ -111,416 +55,155 @@ export default function ConversationScreen() {
     }
   }
 
-  // Handle typing
-  const handleTyping = () => {
-    // Cancel previous timeout
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current)
-    }
-    
-    setIsTyping(true)
-
-    // Reset typing after 2 seconds of no input
-    typingTimeoutRef.current = setTimeout(() => {
-      setIsTyping(false)
-    }, 2000)
-  }
-
   useEffect(() => {
     loadMessages()
-    checkFriendStatus()
-
-    // Set up navigation header with friend info
-    navigation.setOptions({
-      headerTitle: () => (
-        <View style={styles.headerTitle}>
-          <View style={styles.headerLeft}>
-            {friend?.photoUrl ? (
-              <Image
-                source={{ uri: friend.photoUrl }}
-                style={styles.headerProfilePic}
-              />
-            ) : (
-              <View style={styles.headerProfilePicPlaceholder}>
-                <Text style={styles.placeholderText}>
-                  {friend?.username?.[0]?.toUpperCase()}
-                </Text>
-              </View>
-            )}
-            <View style={styles.headerInfo}>
-              <Text style={styles.headerName}>{friend?.username}</Text>
-              <Text style={styles.headerStatus}>
-                {friendIsOnline ? (
-                  <Text style={styles.onlineText}>● Online</Text>
-                ) : friendLastSeen ? (
-                  <Text style={styles.lastSeenText}>
-                    Last seen {formatTime(new Date(friendLastSeen))}
-                  </Text>
-                ) : (
-                  <Text style={styles.lastSeenText}>Offline</Text>
-                )}
-              </Text>
-            </View>
-          </View>
-        </View>
-      ),
-    })
-
-    // Auto-refresh messages every 3 seconds
-    const interval = setInterval(() => {
-      loadMessages()
-      checkFriendStatus()
-    }, 3000)
-
-    return () => {
-      clearInterval(interval)
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current)
-      }
-    }
+    const interval = setInterval(loadMessages, 3000)
+    return () => clearInterval(interval)
   }, [friend])
 
-  if (loading && messages.length === 0 && !friend) {
+  if (loading && messages.length === 0) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#075E54" />
+      <View style={{ flex: 1, backgroundColor: '#0a0a0a', justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#006b2c" />
       </View>
     )
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-      keyboardVerticalOffset={100}
-    >
-      <SafeAreaView style={styles.container}>
-        <FlatList
-          ref={messageListRef}
-          data={messages}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item, index }) => {
-            const isOwn = item.senderUserId === friend?.userId ? false : true
-            const prevMsg = index > 0 ? messages[index - 1] : null
-            const showTimestamp =
-              !prevMsg ||
-              new Date(item.createdAt).getTime() -
-                new Date(prevMsg.createdAt).getTime() >
-                5 * 60 * 1000 // 5 minutes
+    <View style={s.root}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
 
-            return (
-              <View key={item.id}>
-                {showTimestamp && (
-                  <Text style={styles.timestamp}>
-                    {formatDateSeparator(new Date(item.createdAt))}
-                  </Text>
-                )}
-                <View
-                  style={[
-                    styles.messageRow,
-                    isOwn ? styles.ownMessage : styles.theirMessage,
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.messageBubble,
-                      isOwn
-                        ? styles.ownBubble
-                        : styles.theirBubble,
-                    ]}
-                  >
-                    <Text style={isOwn ? styles.ownText : styles.theirText}>
-                      {item.body}
-                    </Text>
-                    <View style={styles.messageFooter}>
-                      <Text
-                        style={[
-                          styles.messageTime,
-                          isOwn ? styles.ownTime : styles.theirTime,
-                        ]}
-                      >
-                        {formatTime(new Date(item.createdAt))}
-                      </Text>
-                      {isOwn && (
-                        <Text
-                          style={[
-                            styles.statusIcon,
-                            item.status === 'read'
-                              ? styles.readIcon
-                              : item.status === 'delivered'
-                                ? styles.deliveredIcon
-                                : styles.sentIcon,
-                          ]}
-                        >
-                          {item.status === 'read'
-                            ? '✓✓'
-                            : item.status === 'delivered'
-                              ? '✓✓'
-                              : '✓'}
-                        </Text>
-                      )}
-                    </View>
-                  </View>
-                </View>
-              </View>
-            )
-          }}
-          onEndReached={() => {
-            if (messages.length > 0) {
-              messageListRef.current?.scrollToEnd({ animated: true })
-            }
-          }}
-          scrollEnabled={true}
-          contentContainerStyle={styles.messageList}
-        />
-
-        {isTyping && (
-          <View style={styles.typingIndicator}>
-            <Text style={styles.typingText}>
-              {friend?.username} is typing
-            </Text>
-            <View style={styles.typingDots}>
-              <View style={styles.dot} />
-              <View style={styles.dot} />
-              <View style={styles.dot} />
+        {/* Header */}
+        <View style={s.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={s.headerBtn}>
+            <Text style={s.headerBtnTxt}>←</Text>
+          </TouchableOpacity>
+          <View style={s.headerCenter}>
+            <Avatar uri={friend?.photoUrl} username={friend?.username} size={40} />
+            <View>
+              <Text style={s.headerName}>{friend?.username}</Text>
+              <Text style={s.headerOnline}>Online</Text>
             </View>
           </View>
-        )}
-
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Type a message..."
-            value={newMessage}
-            onChangeText={(text) => {
-              setNewMessage(text)
-              handleTyping()
-            }}
-            editable={!sending}
-            placeholderTextColor="#999"
-          />
-          <TouchableOpacity
-            style={[
-              styles.sendButton,
-              (!newMessage.trim() || sending) && styles.sendButtonDisabled,
-            ]}
-            onPress={sendMessage}
-            disabled={!newMessage.trim() || sending}
-          >
-            <Text style={styles.sendButtonText}>
-              {sending ? '...' : '➤'}
-            </Text>
-          </TouchableOpacity>
+          <View style={s.headerBtn} />
         </View>
+
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <FlatList
+            ref={listRef}
+            data={messages}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={s.list}
+            style={{ backgroundColor: '#0a0a0a' }}
+            onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
+            ListHeaderComponent={
+              <View style={s.datePill}>
+                <Text style={s.datePillTxt}>TODAY</Text>
+              </View>
+            }
+            renderItem={({ item, index }) => {
+              const isOwn = item.senderUserId !== friend?.userId
+              const prev = index > 0 ? messages[index - 1] : null
+              const next = index < messages.length - 1 ? messages[index + 1] : null
+              const prevSame = prev && prev.senderUserId === item.senderUserId
+              const nextSame = next && next.senderUserId === item.senderUserId
+              const showName = !isOwn && !prevSame
+              const showTime = !nextSame
+              const showAvatar = !isOwn && !nextSame
+
+              return (
+                <View style={[s.msgGroup, isOwn ? s.msgGroupOwn : s.msgGroupTheir]}>
+                  {/* Avatar spacer */}
+                  {!isOwn && (
+                    <View style={s.avatarCol}>
+                      {showAvatar
+                        ? <Avatar uri={friend?.photoUrl} username={friend?.username} size={32} />
+                        : <View style={{ width: 32 }} />
+                      }
+                    </View>
+                  )}
+
+                  <View style={[s.msgCol, isOwn ? { alignItems: 'flex-end' } : { alignItems: 'flex-start' }]}>
+                    {showName && <Text style={s.senderName}>{friend?.username}</Text>}
+                    <View style={[s.bubble, isOwn ? s.bubbleOwn : s.bubbleTheir]}>
+                      <Text style={[s.bubbleTxt, isOwn ? s.bubbleTxtOwn : s.bubbleTxtTheir]}>{item.body}</Text>
+                    </View>
+                    {showTime && (
+                      <Text style={[s.timeLabel, isOwn ? s.timeLabelOwn : s.timeLabelTheir]}>
+                        {formatTime(new Date(item.createdAt))}{isOwn ? (item.status === 'read' ? ' ✓✓' : ' ✓') : ''}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              )
+            }}
+          />
+
+          {/* Input */}
+          <View style={s.inputArea}>
+            <View style={s.inputPill}>
+              <TextInput
+                style={s.input}
+                placeholder="Type a message..."
+                placeholderTextColor="rgba(255,255,255,0.3)"
+                value={newMessage}
+                onChangeText={setNewMessage}
+                editable={!sending}
+                multiline
+              />
+            </View>
+            <TouchableOpacity
+              style={[s.sendBtn, (!newMessage.trim() || sending) && s.sendBtnOff]}
+              onPress={sendMessage}
+              disabled={!newMessage.trim() || sending}
+            >
+              <Text style={s.sendTxt}>➤</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+
       </SafeAreaView>
-    </KeyboardAvoidingView>
+    </View>
   )
 }
 
-function formatTime(date: Date): string {
-  const hours = date.getHours().toString().padStart(2, '0')
-  const minutes = date.getMinutes().toString().padStart(2, '0')
-  return `${hours}:${minutes}`
+function formatTime(date: Date) {
+  const h = date.getHours()
+  const m = date.getMinutes().toString().padStart(2, '0')
+  const ampm = h >= 12 ? 'PM' : 'AM'
+  return `${h % 12 || 12}:${m} ${ampm}`
 }
 
-function formatDateSeparator(date: Date): string {
-  const today = new Date()
-  const yesterday = new Date(today)
-  yesterday.setDate(yesterday.getDate() - 1)
-
-  if (date.toDateString() === today.toDateString()) return 'Today'
-  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday'
-
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined,
-  })
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    flex: 1,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-  },
-  headerProfilePic: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 10,
-  },
-  headerProfilePicPlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#075E54',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  placeholderText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  headerInfo: {
-    flex: 1,
-  },
-  headerName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  headerStatus: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
-  },
-  onlineText: {
-    color: '#075E54',
-    fontWeight: '600',
-  },
-  lastSeenText: {
-    color: '#999',
-  },
-  messageList: {
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-  },
-  messageRow: {
-    marginVertical: 5,
-    flexDirection: 'row',
-  },
-  ownMessage: {
-    justifyContent: 'flex-end',
-  },
-  theirMessage: {
-    justifyContent: 'flex-start',
-  },
-  messageBubble: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    maxWidth: '80%',
-  },
-  ownBubble: {
-    backgroundColor: '#DCF8C6',
-  },
-  theirBubble: {
-    backgroundColor: '#E5E5EA',
-  },
-  ownText: {
-    color: '#000',
-    fontSize: 16,
-  },
-  theirText: {
-    color: '#000',
-    fontSize: 16,
-  },
-  messageFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  messageTime: {
-    fontSize: 11,
-    marginRight: 4,
-  },
-  ownTime: {
-    color: '#666',
-  },
-  theirTime: {
-    color: '#999',
-  },
-  statusIcon: {
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  sentIcon: {
-    color: '#999',
-  },
-  deliveredIcon: {
-    color: '#999',
-  },
-  readIcon: {
-    color: '#0084FF',
-  },
-  timestamp: {
-    textAlign: 'center',
-    color: '#999',
-    fontSize: 12,
-    marginVertical: 10,
-    fontStyle: 'italic',
-  },
-  typingIndicator: {
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: '#f5f5f5',
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  typingText: {
-    fontSize: 13,
-    color: '#666',
-    marginRight: 8,
-  },
-  typingDots: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#999',
-    marginHorizontal: 2,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    backgroundColor: '#fff',
-  },
-  input: {
-    flex: 1,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    fontSize: 16,
-    maxHeight: 100,
-  },
-  sendButton: {
-    marginLeft: 10,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: '#075E54',
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sendButtonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  sendButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: '#0a0a0a' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#111111', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  headerBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
+  headerBtnTxt: { fontSize: 22, color: '#006b2c', fontWeight: '700' },
+  headerCenter: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  headerName: { fontSize: 18, fontWeight: '700', color: '#ffffff' },
+  headerOnline: { fontSize: 12, fontWeight: '500', color: '#4ade80', marginTop: 1 },
+  datePill: { alignSelf: 'center', backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 14, paddingVertical: 4, borderRadius: 999, marginBottom: 16, marginTop: 8 },
+  datePillTxt: { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.5)', letterSpacing: 0.8 },
+  list: { paddingHorizontal: 20, paddingBottom: 12 },
+  msgGroup: { flexDirection: 'row', alignItems: 'flex-end', marginBottom: 3, gap: 8 },
+  msgGroupTheir: { justifyContent: 'flex-start' },
+  msgGroupOwn: { justifyContent: 'flex-end' },
+  avatarCol: { width: 32, alignItems: 'center', justifyContent: 'flex-end', marginBottom: 2 },
+  msgCol: { flex: 1, maxWidth: '78%' },
+  senderName: { fontSize: 12, fontWeight: '500', color: 'rgba(255,255,255,0.4)', marginBottom: 3, marginLeft: 2 },
+  bubble: { paddingHorizontal: 16, paddingVertical: 11, borderRadius: 20, maxWidth: '100%' },
+  bubbleTheir: { backgroundColor: 'rgba(255,255,255,0.08)', borderBottomLeftRadius: 4, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' },
+  bubbleOwn: { backgroundColor: 'rgba(0,107,44,0.35)', borderBottomRightRadius: 4 },
+  bubbleTxt: { fontSize: 15, lineHeight: 22 },
+  bubbleTxtTheir: { color: 'rgba(255,255,255,0.9)' },
+  bubbleTxtOwn: { color: 'rgba(255,255,255,0.9)' },
+  timeLabel: { fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 3 },
+  timeLabelTheir: { marginLeft: 2 },
+  timeLabelOwn: { marginRight: 2 },
+  inputArea: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#0a0a0a', gap: 10 },
+  inputPill: { flex: 1, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 26, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', paddingHorizontal: 16, paddingVertical: 4, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, elevation: 2 },
+  input: { fontSize: 15, color: '#ffffff', paddingVertical: 8, maxHeight: 100 },
+  sendBtn: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#006b2c', justifyContent: 'center', alignItems: 'center', shadowColor: '#006b2c', shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
+  sendBtnOff: { backgroundColor: 'rgba(0,107,44,0.3)', shadowOpacity: 0 },
+  sendTxt: { color: '#fff', fontSize: 18, fontWeight: '700' },
 })
