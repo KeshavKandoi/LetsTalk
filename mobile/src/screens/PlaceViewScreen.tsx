@@ -89,6 +89,7 @@ export default function PlaceViewScreen() {
     if (!silent) setLoading(true)
     try {
       const data: PlaceViewState = await apiFetch('/api/places/state', {})
+      console.log('PlaceView: got data', JSON.stringify(data).slice(0,200))
       if (!data.profile?.currentPlaceId) {
         navigation.reset({ index: 0, routes: [{ name: 'Onboarding' }] })
         return
@@ -108,6 +109,7 @@ export default function PlaceViewScreen() {
         }
       }
     } catch (e: any) {
+      console.log('PlaceView loadState error:', JSON.stringify(e))
       setError(e.message || 'Could not load place.')
     } finally {
       setLoading(false)
@@ -216,7 +218,14 @@ export default function PlaceViewScreen() {
     )
   }
 
-  if (!state?.profile || !state.currentPlace) return null
+  if (!state?.profile || !state.currentPlace) return (
+    <SafeAreaView style={styles.container}>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#1a6b3c" />
+        <Text style={{ color: '#1a6b3c', marginTop: 12, fontSize: 14 }}>Loading place...</Text>
+      </View>
+    </SafeAreaView>
+  )
 
   const { profile, currentPlace, activeConnection, qrHandoff } = state
   const isReady = profile.status === 'ready'

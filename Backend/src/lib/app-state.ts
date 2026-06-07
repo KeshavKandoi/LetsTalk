@@ -663,8 +663,8 @@ export async function createFriendRequest(input: { token?: string }) {
   return { success: true }
 }
 
-export async function listFriends() {
-  const session = await requireCurrentSession()
+export async function listFriends(input?: { viewerUserId?: string }) {
+  const session = input?.viewerUserId ? { user: { id: input.viewerUserId } } : await requireCurrentSession()
 
   const rows = await db
     .select({
@@ -820,8 +820,8 @@ export async function respondToFriendRequest(input: {
   return { success: true }
 }
 
-export async function getConversationMessages(input: { friendUserId: string }) {
-  const session = await requireCurrentSession()
+export async function getConversationMessages(input: { friendUserId: string; viewerUserId?: string }) {
+  const session = input.viewerUserId ? { user: { id: input.viewerUserId } } : await requireCurrentSession()
   const friendUserId = input.friendUserId.trim()
 
   if (!friendUserId) {
@@ -859,8 +859,9 @@ export async function getConversationMessages(input: { friendUserId: string }) {
 export async function sendConversationMessage(input: {
   friendUserId: string
   body: string
+  viewerUserId?: string
 }) {
-  const session = await requireCurrentSession()
+  const session = input.viewerUserId ? { user: { id: input.viewerUserId } } : await requireCurrentSession()
   const friendUserId = input.friendUserId.trim()
   const body = input.body.replace(/\s+/g, ' ').trim()
 
@@ -915,8 +916,8 @@ export async function previewScanJoin(input: { token: string }) {
   return resolveScanPreview(token, session.user.id)
 }
 
-export async function joinPlaceAndConnectFromScan(input: { token: string }) {
-  const session = await requireCurrentSession()
+export async function joinPlaceAndConnectFromScan(input: { token: string; viewerUserId?: string }) {
+  const session = input.viewerUserId ? { user: { id: input.viewerUserId } } : await requireCurrentSession()
   const token = input.token.trim()
 
   if (!token) {
