@@ -8,6 +8,7 @@ import {
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { MaterialIcons } from '@expo/vector-icons'
+import { VideoView, useVideoPlayer } from 'expo-video'
 
 export default function LandingScreen() {
   const navigation = useNavigation<any>()
@@ -16,6 +17,13 @@ export default function LandingScreen() {
   const [drawerVisible, setDrawerVisible] = useState(false)
   const [profile, setProfile] = useState<any>(null)
   const [profileLoading, setProfileLoading] = useState(false)
+
+  const videoSource = require('../video/animation.mp4')
+  const player = useVideoPlayer(videoSource, player => {
+    player.loop = true
+    player.muted = true
+    player.play()
+  })
 
   const openProfile = async () => {
     setProfileVisible(true)
@@ -81,6 +89,15 @@ export default function LandingScreen() {
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
+      {/* Video Background */}
+      <VideoView
+        style={s.videoBackground}
+        player={player}
+        allowsFullscreen={false}
+        nativeControls={false}
+      />
+      <View style={s.overlay} />
+
       {/* Nav */}
       <View style={s.nav}>
         <View style={s.navBrand}>
@@ -257,17 +274,15 @@ export default function LandingScreen() {
   )
 }
 
-const DARK   = '#0a0704'
 const AMBER  = '#e8824a'
-const WARM   = '#e8824a'
-const BG     = '#0a0704'
-const CARD   = '#1a1008'
 const MUTED  = 'rgba(255,180,100,0.6)'
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BG },
+  container: { flex: 1, backgroundColor: '#0a0704' },
+  videoBackground: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' },
+  overlay: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0, 0, 0, 0.65)' },
 
-  nav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, backgroundColor: '#12100c', borderBottomWidth: 1, borderBottomColor: 'rgba(232,130,74,0.15)' },
+  nav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, backgroundColor: 'rgba(18, 16, 12, 0.9)', borderBottomWidth: 1, borderBottomColor: 'rgba(232,130,74,0.15)' },
   navBrand: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   navTitle: { fontSize: 20, fontWeight: '800', color: AMBER },
   joinBtn: { backgroundColor: AMBER, borderRadius: 50, paddingHorizontal: 18, paddingVertical: 8 },
@@ -275,30 +290,30 @@ const s = StyleSheet.create({
 
   scroll: { paddingBottom: 120 },
 
-  hero: { padding: 24, paddingTop: 40, alignItems: 'center', backgroundColor: '#0a0704' },
+  hero: { padding: 24, paddingTop: 40, alignItems: 'center' },
   heroTitle: { fontSize: 30, fontWeight: '900', color: '#ffffff', textAlign: 'center', lineHeight: 38, marginBottom: 14, letterSpacing: -0.5 },
   heroSub: { fontSize: 16, color: MUTED, textAlign: 'center', lineHeight: 24, marginBottom: 28 },
   heroBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: AMBER, borderRadius: 50, paddingHorizontal: 28, paddingVertical: 16, marginBottom: 36, shadowColor: '#0d0a06', shadowOpacity: 0.2, shadowRadius: 16, elevation: 8 },
   heroBtnIcon: { fontSize: 18 },
   heroBtnText: { color: '#fff', fontWeight: '800', fontSize: 17 },
 
-  floatCard: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#fff', borderRadius: 20, padding: 16, borderWidth: 1, borderColor: 'rgba(232,130,74,0.15)', shadowColor: '#0d0a06', shadowOpacity: 0.1, shadowRadius: 16, elevation: 4, width: '100%' },
+  floatCard: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#fff', borderRadius: 20, padding: 16, borderWidth: 1, borderColor: 'rgba(232,130,74,0.15)', shadowColor: '#0d0a06', shadowOpacity: 0.1, shadowRadius: 16, elevation: 4, width: '90%' },
   avatarRow: { flexDirection: 'row', alignItems: 'center' },
-  avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: WARM, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: BG },
+  avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: AMBER, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#0a0704' },
   avatarText: { fontSize: 12, fontWeight: '700', color: '#ffffff' },
   floatTitle: { fontSize: 13, fontWeight: '700', color: '#000000' },
   floatSub: { fontSize: 9, color: '#000000', letterSpacing: 1.5, marginTop: 2 },
 
-  section: { paddingHorizontal: 20, paddingVertical: 36, backgroundColor: '#0d0a06' },
+  section: { paddingHorizontal: 20, paddingVertical: 36 },
   sectionTitle: { fontSize: 22, fontWeight: '800', color: '#ffffff', textAlign: 'center', marginBottom: 24, lineHeight: 30 },
   steps: { gap: 14 },
-  stepCard: { flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: '#1c1610', borderRadius: 20, padding: 20, borderWidth: 1, borderColor: 'rgba(232,130,74,0.15)' },
+  stepCard: { flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: 'rgba(28, 22, 16, 0.85)', borderRadius: 20, padding: 20, borderWidth: 1, borderColor: 'rgba(232,130,74,0.15)' },
   stepIconWrap: { backgroundColor: 'rgba(232,130,74,0.18)', borderRadius: 16, width: 60, height: 60, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(232,130,74,0.3)' },
   stepIcon: { fontSize: 26 },
   stepTitle: { fontSize: 16, fontWeight: '700', color: '#e8824a', marginBottom: 6 },
   stepDesc: { fontSize: 14, color: MUTED, lineHeight: 22 },
 
-  mapCard: { margin: 20, backgroundColor: '#0d0a06', borderRadius: 24, padding: 24, borderWidth: 1, borderColor: 'rgba(232,130,74,0.15)' },
+  mapCard: { margin: 20, backgroundColor: 'rgba(13, 10, 6, 0.8)', borderRadius: 24, padding: 24, borderWidth: 1, borderColor: 'rgba(232,130,74,0.15)' },
   livePill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#e8824a', borderRadius: 50, paddingHorizontal: 12, paddingVertical: 5, alignSelf: 'flex-start', marginBottom: 16 },
   liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#fff' },
   livePillText: { fontSize: 9, fontWeight: '700', color: '#fff', letterSpacing: 2 },
@@ -309,23 +324,22 @@ const s = StyleSheet.create({
   mapCountText: { fontSize: 10, fontWeight: '900', color: '#ffffff' },
   mapCountLabel: { fontSize: 13, fontWeight: '600', color: MUTED },
 
-  footer: { alignItems: 'center', paddingVertical: 36, paddingHorizontal: 20, backgroundColor: '#17130d', gap: 14, borderTopWidth: 1, borderTopColor: 'rgba(232,130,74,0.15)' },
+  footer: { alignItems: 'center', paddingVertical: 36, paddingHorizontal: 20, gap: 14, borderTopWidth: 1, borderTopColor: 'rgba(232,130,74,0.15)' },
   footerBrand: { fontSize: 22, fontWeight: '900', color: '#ffffff' },
   footerLinks: { flexDirection: 'row', gap: 20, flexWrap: 'wrap', justifyContent: 'center' },
   footerLink: { fontSize: 14, color: MUTED },
   footerCopy: { fontSize: 12, color: 'rgba(255,200,150,0.3)', textAlign: 'center' },
 
-  bottomNav: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', backgroundColor: '#0d0a06', paddingTop: 10, paddingHorizontal: 16, justifyContent: 'space-around', borderTopWidth: 1, borderTopColor: 'rgba(232,130,74,0.25)' },
+  bottomNav: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', backgroundColor: 'rgba(13, 10, 6, 0.95)', paddingTop: 10, paddingHorizontal: 16, justifyContent: 'space-around', borderTopWidth: 1, borderTopColor: 'rgba(232,130,74,0.25)' },
   navItem: { alignItems: 'center', paddingHorizontal: 16, paddingVertical: 6, borderRadius: 50 },
   navItemActive: { backgroundColor: 'rgba(232,130,74,0.15)', borderRadius: 12, paddingHorizontal: 14 },
-  navItemIcon: { fontSize: 20, marginBottom: 2 },
   navItemLabel: { fontSize: 10, fontWeight: '600', color: 'rgba(255,200,150,0.4)', marginTop: 2 },
   navItemLabelActive: { color: '#ffffff' },
 })
 
 const ps = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: '#1c1610', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 40, borderTopWidth: 1, borderTopColor: 'rgba(232,130,74,0.15)' },
+  sheet: { backgroundColor: 'rgba(28, 22, 16, 0.95)', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 40, borderTopWidth: 1, borderTopColor: 'rgba(232,130,74,0.15)' },
   handle: { width: 40, height: 4, backgroundColor: 'rgba(232,130,74,0.15)', borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
   avatarRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 12 },
   avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#0d0a06', justifyContent: 'center', alignItems: 'center' },
