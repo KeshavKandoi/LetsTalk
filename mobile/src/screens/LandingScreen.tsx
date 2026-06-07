@@ -19,11 +19,14 @@ export default function LandingScreen() {
   const [profileLoading, setProfileLoading] = useState(false)
 
   const videoSource = require('../video/animation.mp4')
-  const player = useVideoPlayer(videoSource, player => {
+  const player = useVideoPlayer(videoSource, (player) => {
     player.loop = true
     player.muted = true
-    player.play()
   })
+
+  useEffect(() => {
+    player.play()
+  }, [player])
 
   const openProfile = async () => {
     setProfileVisible(true)
@@ -95,6 +98,7 @@ export default function LandingScreen() {
         player={player}
         allowsFullscreen={false}
         nativeControls={false}
+        contentFit="cover"
       />
       <View style={s.overlay} />
 
