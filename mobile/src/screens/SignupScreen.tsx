@@ -54,7 +54,8 @@ export default function SignupScreen() {
     setLoading(true)
     setError('')
     try {
-      await signUp(email, username, password)
+      const dob = `${dobYear}-${dobMonth}-${dobDay}`
+      await signUp(email, username, password, dob, gender)
       const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.29.59:3000'
       await fetch(`${BASE_URL}/api/auth/send-otp`, {
         method: 'POST',
