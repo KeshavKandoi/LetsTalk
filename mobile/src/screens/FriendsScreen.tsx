@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import {
   Image,
-  View, Text, StyleSheet, SafeAreaView, TouchableOpacity,
+  View, Text, StyleSheet, TouchableOpacity,
   ActivityIndicator, ScrollView, RefreshControl,
 } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { LinearGradient } from 'expo-linear-gradient'
 import { useNavigation } from '@react-navigation/native'
-import QRCode from 'react-native-qrcode-svg'
 import { apiFetch } from '../lib/api'
 type FriendUser = {
   id: string
@@ -23,9 +24,9 @@ type OutgoingRequest = {
   id: string
   user: FriendUser
 }
-const G = '#005129'
-const DARK = '#002111'
-const MID = '#006d36'
+const AMBER = '#e8824a'
+const DARK = '#0a0704'
+const MID = 'rgba(255,180,100,0.6)'
 function Avatar({ user }: { user: FriendUser }) {
   const initials = (user.username || '?').slice(0, 2).toUpperCase()
   return user.photoUrl
@@ -34,11 +35,10 @@ function Avatar({ user }: { user: FriendUser }) {
 }
 export default function FriendsScreen() {
   const navigation = useNavigation<any>()
-  const [tab, setTab] = useState<'friends' | 'requests' | 'qr'>('friends')
+  const [tab, setTab] = useState<'friends' | 'requests'>('friends')
   const [friends, setFriends] = useState<FriendUser[]>([])
   const [incoming, setIncoming] = useState<IncomingRequest[]>([])
   const [outgoing, setOutgoing] = useState<OutgoingRequest[]>([])
-  const [qrUrl, setQrUrl] = useState('')
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -50,7 +50,7 @@ export default function FriendsScreen() {
     setFriends(friendsData.friends ?? [])
     setIncoming(friendsData.incoming ?? [])
     setOutgoing(friendsData.outgoing ?? [])
-    setQrUrl(stateData.qrHandoff?.url ?? '')
+    
   }
   useEffect(() => {
     load().catch(() => {}).finally(() => setLoading(false))
@@ -75,7 +75,13 @@ export default function FriendsScreen() {
     }
   }
   return (
-    <SafeAreaView style={s.container}>
+    <LinearGradient
+      colors={['#0a1628', '#0d1f3c', '#051015', '#0a1628']}
+      start={{ x: 0.3, y: 0 }}
+      end={{ x: 0.7, y: 1 }}
+      style={s.gradientContainer}
+    >
+      <SafeAreaView style={s.container}>
       <View style={s.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={s.iconBtn}>
           <Text style={s.iconTxt}>←</Text>
@@ -87,7 +93,6 @@ export default function FriendsScreen() {
         {[
           ['friends', 'Friends'],
           ['requests', 'Requests'],
-          ['qr', 'My QR'],
         ].map(([key, label]) => (
           <TouchableOpacity key={key} style={[s.tab, tab === key && s.tabActive]} onPress={() => setTab(key as any)}>
             <Text style={[s.tabTxt, tab === key && s.tabTxtActive]}>{label}</Text>
@@ -95,11 +100,11 @@ export default function FriendsScreen() {
         ))}
       </View>
       {loading ? (
-        <View style={s.centered}><ActivityIndicator color={G} size="large" /></View>
+        <View style={s.centered}><ActivityIndicator color={AMBER} size="large" /></View>
       ) : (
         <ScrollView
           contentContainerStyle={s.scroll}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={G} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={AMBER} />}
         >
           {tab === 'friends' && (
             friends.length ? friends.map((friend) => (
@@ -155,57 +160,46 @@ export default function FriendsScreen() {
               </>
             ) : <Text style={s.empty}>Friend requests will show up here.</Text>
           )}
-          {tab === 'qr' && (
-            <View style={s.qrCard}>
-              {qrUrl ? (
-                <>
-                  <View style={s.qrBox}>
-                    <QRCode value={qrUrl} size={220} backgroundColor="white" color="#0f3320" />
-                  </View>
-                  <Text style={s.qrHint}>Others can scan this to send a friend request.</Text>
-                </>
-              ) : (
-                <Text style={s.empty}>Check into a place to create your QR code.</Text>
-              )}
-            </View>
-          )}
+
         </ScrollView>
       )}
-    </SafeAreaView>
+      </SafeAreaView>
+    </LinearGradient>
   )
 }
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#e9ffed' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(191,201,190,0.3)' },
-  headerTitle: { fontSize: 20, fontWeight: '700', color: G },
+  gradientContainer: { flex: 1 },
+  container: { flex: 1, backgroundColor: 'transparent' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(100,180,220,0.15)' },
+  headerTitle: { fontSize: 20, fontWeight: '700', color: '#fff' },
   iconBtn: { width: 40, alignItems: 'center' },
-  iconTxt: { fontSize: 20, color: G, fontWeight: '700' },
-  tabs: { flexDirection: 'row', margin: 16, padding: 4, borderRadius: 16, backgroundColor: 'rgba(0,81,41,0.08)' },
+  iconTxt: { fontSize: 20, color: '#fff', fontWeight: '700' },
+  tabs: { flexDirection: 'row', margin: 16, padding: 4, borderRadius: 16, backgroundColor: 'rgba(232,130,74,0.08)' },
   tab: { flex: 1, borderRadius: 12, paddingVertical: 10, alignItems: 'center' },
-  tabActive: { backgroundColor: 'white' },
-  tabTxt: { color: MID, fontWeight: '700', fontSize: 13 },
-  tabTxtActive: { color: DARK },
+  tabActive: { backgroundColor: 'rgba(255,255,255,0.95)' },
+  tabTxt: { color: MID, fontWeight: '900', fontSize: 16 },
+  tabTxtActive: { color: AMBER },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   scroll: { padding: 20, paddingTop: 4, paddingBottom: 60 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'white', borderRadius: 18, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: 'rgba(191,201,190,0.3)' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#1a1008', borderRadius: 18, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: 'rgba(232,130,74,0.15)' },
   rowInner: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: G, justifyContent: 'center', alignItems: 'center' },
-  avatarImg: { width: 52, height: 52, borderRadius: 26, backgroundColor: G },
+  avatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: AMBER, justifyContent: 'center', alignItems: 'center' },
+  avatarImg: { width: 52, height: 52, borderRadius: 26, backgroundColor: AMBER },
   avatarTxt: { color: 'white', fontWeight: '800', fontSize: 18 },
-  name: { color: DARK, fontWeight: '800', fontSize: 16, marginBottom: 3 },
+  name: { color: '#fff', fontWeight: '800', fontSize: 16, marginBottom: 3 },
   mood: { color: MID, fontWeight: '600', fontSize: 13 },
   messagePreview: { color: MID, fontWeight: '600', fontSize: 13 },
-  requestCard: { backgroundColor: 'white', borderRadius: 18, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(191,201,190,0.3)', gap: 12 },
-  pendingCard: { backgroundColor: 'white', borderRadius: 18, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(0,81,41,0.12)' },
+  requestCard: { backgroundColor: '#1a1008', borderRadius: 18, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(232,130,74,0.15)', gap: 12 },
+  pendingCard: { backgroundColor: '#1a1008', borderRadius: 18, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(232,130,74,0.15)' },
   actions: { flexDirection: 'row', gap: 10 },
   rejectBtn: { flex: 1, borderRadius: 50, borderWidth: 1, borderColor: 'rgba(186,26,26,0.25)', paddingVertical: 12, alignItems: 'center' },
   rejectTxt: { color: '#ba1a1a', fontWeight: '800' },
-  acceptBtn: { flex: 1, borderRadius: 50, backgroundColor: G, paddingVertical: 12, alignItems: 'center' },
-  acceptTxt: { color: 'white', fontWeight: '800' },
-  pendingBadge: { backgroundColor: 'rgba(0,81,41,0.08)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
-  pendingBadgeTxt: { color: G, fontWeight: '800', fontSize: 11 },
-  qrCard: { alignItems: 'center', backgroundColor: 'white', borderRadius: 20, padding: 22, borderWidth: 1, borderColor: 'rgba(191,201,190,0.3)' },
-  qrBox: { padding: 16, backgroundColor: 'white', borderRadius: 16 },
+  acceptBtn: { flex: 1, borderRadius: 50, backgroundColor: AMBER, paddingVertical: 12, alignItems: 'center' },
+  acceptTxt: { color: '#151515', fontWeight: '800' },
+  pendingBadge: { backgroundColor: 'rgba(232,130,74,0.08)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
+  pendingBadgeTxt: { color: '#fff', fontWeight: '800', fontSize: 11 },
+  qrCard: { alignItems: 'center', backgroundColor: '#1a1008', borderRadius: 20, padding: 22, borderWidth: 1, borderColor: 'rgba(232,130,74,0.15)' },
+  qrBox: { padding: 16, backgroundColor: '#fff', borderRadius: 16 },
   qrHint: { color: MID, fontWeight: '600', marginTop: 14, textAlign: 'center' },
   empty: { color: MID, fontWeight: '600', textAlign: 'center', marginTop: 28 },
 })
