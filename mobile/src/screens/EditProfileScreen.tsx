@@ -1,153 +1,167 @@
 import { useEffect, useState } from 'react'
 import {
-  View, Text, StyleSheet, SafeAreaView, ScrollView,
-  TouchableOpacity, TextInput, ActivityIndicator, Alert,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  TextInput, ActivityIndicator, Alert,
 } from 'react-native'
+import { Image } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
+import { MaterialIcons } from '@expo/vector-icons'
+import * as ImagePicker from 'expo-image-picker'
+import * as FileSystem from 'expo-file-system/legacy'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { apiFetch } from '../lib/api'
+import { getSession, getStoredSessionToken } from '../lib/auth'
 
-const MOOD_OPTIONS = ['🙂', '😌', '☕', '🤝', '💬', '🌿', '😄', '🧠', '🎯', '✨']
-const GENDER_OPTIONS = ['Male', 'Female', 'Non-binary', 'Prefer not to say']
-const G = '#005129'
-const DARK = '#002111'
-const MID = '#006d36'
+const DARK = '#151515'
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.29.59:3000'
 
 export default function EditProfileScreen() {
   const navigation = useNavigation<any>()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [moodEmoji, setMoodEmoji] = useState('🙂')
   const [intentText, setIntentText] = useState('')
   const [username, setUsername] = useState('')
-  const [age, setAge] = useState('')
-  const [gender, setGender] = useState('')
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
 
   useEffect(() => {
-    apiFetch('/api/places/state', {})
-      .then((data) => {
-        setMoodEmoji(data?.profile?.moodEmoji || '🙂')
+    Promise.all([apiFetch('/api/places/state', {}), getSession()])
+      .then(([data, session]) => {
         setIntentText(data?.profile?.intentText || '')
         setUsername(data?.session?.user?.username || '')
-        setAge(data?.profile?.age || '')
-        setGender(data?.profile?.gender || '')
+        const u = session?.user || session?.session?.user
+        const rawUrl = data?.profile?.photoUrl || u?.image || null
+        AsyncStorage.getItem('photo_ts').then(ts => {
+          setPhotoUrl(rawUrl ? rawUrl.split('?')[0] + '?t=' + (ts || '1') : null)
+        })
       })
-      .catch(() => {})
+      .catch((e) => console.log('Load error:', e))
       .finally(() => setLoading(false))
   }, [])
 
-  const handleSave = async () => {
-    console.log('Saving with values:', { age, gender, moodEmoji, intentText })
-    if (age && (isNaN(Number(age)) || Number(age) < 13 || Number(age) > 100)) {
-      Alert.alert('Invalid age', 'Please enter a valid age between 13 and 100.')
-      return
-    }
-    setSaving(true)
-    try {
-      console.log('Sending to backend:', { moodEmoji, intentText, age, gender })
-      await apiFetch('/api/places/update-profile', { moodEmoji, intentText, age, gender })
-      console.log('Save response received')
-      Alert.alert('Saved', 'Profile updated successfully.')
-      navigation.goBack()
-    } catch (e: any) {
-      Alert.alert('Error', e.message)
-    } finally {
-      setSaving(false)
+  const pickPhoto = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (status !== 'granted') { Alert.alert('Permission needed', 'Allow photo access.'); return }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'] as any,
+      allowsEditing: true, aspect: [1, 1], quality: 0.7,
+    })
+    if (!result.canceled && result.assets[0]) {
+      setUploadingPhoto(true)
+      try {
+        const uri = result.assets[0].uri
+        // Read as base64
+        const base64 = await FileSystem.readAsStringAsync(uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        })
+        const photoBase64 = `data:image/jpeg;base64,${base64}`
+        const token = await getStoredSessionToken()
+        console.log('Uploading to:', `${BASE_URL}/api/places/upload-photo`)
+        console.log('Base64 length:', base64.length)
+        const res = await fetch(`${BASE_URL}/api/places/upload-photo`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ photoBase64 }),
+        })
+        const data = await res.json()
+        console.log('Upload response status:', res.status)
+        console.log('Upload response:', JSON.stringify(data))
+        if (data?.photoUrl) {
+          const ts = Date.now().toString()
+          await AsyncStorage.setItem('photo_ts', ts)
+          setPhotoUrl(data.photoUrl + '?t=' + ts)
+          Alert.alert('Done!', 'Photo uploaded.')
+        } else {
+          Alert.alert('Error', data?.error || 'Upload failed.')
+        }
+      } catch (e: any) {
+        console.log('Upload error:', e)
+        Alert.alert('Error', 'Could not upload photo.')
+      }
+      setUploadingPhoto(false)
     }
   }
 
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      const res = await apiFetch('/api/places/update-profile', { intentText })
+      console.log('Save response:', res)
+      navigation.goBack()
+    } catch (e: any) {
+      console.log('Save error:', e)
+      Alert.alert('Error', e.message || 'Could not save.')
+    }
+    setSaving(false)
+  }
+
   if (loading) return (
-    <SafeAreaView style={s.container}>
-      <View style={s.centered}><ActivityIndicator color={G} size="large" /></View>
-    </SafeAreaView>
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff8ee' }}>
+      <ActivityIndicator color="#F5C500" size="large" />
+    </View>
   )
 
   return (
-    <SafeAreaView style={s.container}>
+    <SafeAreaView style={s.root} edges={['top']}>
       <View style={s.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
-          <Text style={s.backTxt}>← Back</Text>
+          <MaterialIcons name="chevron-left" size={28} color={DARK} />
+          <Text style={s.backText}>Back</Text>
         </TouchableOpacity>
         <Text style={s.headerTitle}>Edit Profile</Text>
-        <View style={{ width: 60 }} />
+        <TouchableOpacity style={s.saveBtn} onPress={handleSave} disabled={saving}>
+          {saving ? <ActivityIndicator color={DARK} size="small" /> : <Text style={s.saveBtnText}>Save</Text>}
+        </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* Username - read only */}
+        {/* Photo */}
         <View style={s.card}>
-          <Text style={s.label}>USERNAME</Text>
-          <View style={s.disabledInput}>
-            <Text style={s.disabledTxt}>{username}</Text>
-            <Text style={s.disabledHint}>Cannot be changed</Text>
+          <Text style={s.label}>PHOTO</Text>
+          <View style={s.photoRow}>
+            <View style={s.photoWrap}>
+              {photoUrl
+                ? <Image
+                source={{ uri: photoUrl }}
+                style={s.photo}
+                contentFit="cover"
+                placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+                transition={200}
+              />
+                : <View style={s.photoPlaceholder}><Text style={s.photoInitial}>{username[0]?.toUpperCase() || '?'}</Text></View>
+              }
+              {uploadingPhoto && (
+                <View style={s.photoOverlay}>
+                  <ActivityIndicator color="#fff" />
+                </View>
+              )}
+            </View>
+            <TouchableOpacity style={s.changePhotoBtn} onPress={pickPhoto} disabled={uploadingPhoto}>
+              <MaterialIcons name="camera-alt" size={18} color={DARK} />
+              <Text style={s.changePhotoText}>{uploadingPhoto ? 'Uploading...' : 'Change Photo'}</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
-        {/* Age */}
+        {/* My Vibe */}
         <View style={s.card}>
-          <Text style={s.label}>AGE</Text>
-          <TextInput
-            style={s.input}
-            value={age}
-            onChangeText={setAge}
-            placeholder="Your age"
-            placeholderTextColor="rgba(0,109,54,0.4)"
-            keyboardType="numeric"
-            maxLength={3}
-          />
-        </View>
-
-        {/* Gender */}
-        <View style={s.card}>
-          <Text style={s.label}>GENDER</Text>
-          <View style={s.optionsRow}>
-            {GENDER_OPTIONS.map((g) => (
-              <TouchableOpacity
-                key={g}
-                style={[s.optionBtn, gender === g && s.optionBtnActive]}
-                onPress={() => setGender(g)}
-              >
-                <Text style={[s.optionTxt, gender === g && s.optionTxtActive]}>{g}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Mood */}
-        <View style={s.card}>
-          <Text style={s.label}>YOUR MOOD</Text>
-          <View style={s.moodRow}>
-            {MOOD_OPTIONS.map((m) => (
-              <TouchableOpacity
-                key={m}
-                style={[s.moodBtn, moodEmoji === m && s.moodBtnActive]}
-                onPress={() => setMoodEmoji(m)}
-              >
-                <Text style={s.moodEmoji}>{m}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* About */}
-        <View style={s.card}>
-          <Text style={s.label}>ABOUT YOU</Text>
+          <Text style={s.label}>MY VIBE</Text>
+          <Text style={s.sublabel}>Describe your vibe to others</Text>
           <TextInput
             style={s.textArea}
             value={intentText}
             onChangeText={setIntentText}
-            placeholder="What are you open to talking about?"
-            placeholderTextColor="rgba(0,109,54,0.4)"
             multiline
-            maxLength={200}
+            numberOfLines={4}
+            placeholder="Open to a conversation..."
+            placeholderTextColor="rgba(21,21,21,0.35)"
           />
-          <Text style={s.charCount}>{intentText.length}/200</Text>
         </View>
-
-        <TouchableOpacity style={s.saveBtn} onPress={handleSave} disabled={saving}>
-          {saving
-            ? <ActivityIndicator color="white" />
-            : <Text style={s.saveBtnTxt}>Save Changes</Text>}
-        </TouchableOpacity>
 
       </ScrollView>
     </SafeAreaView>
@@ -155,30 +169,52 @@ export default function EditProfileScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#e9ffed' },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(191,201,190,0.3)' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: G },
-  backBtn: { width: 60 },
-  backTxt: { color: G, fontWeight: '700', fontSize: 15 },
-  scroll: { padding: 20, paddingBottom: 48, gap: 16 },
-  card: { backgroundColor: 'white', borderRadius: 20, padding: 18, borderWidth: 1, borderColor: 'rgba(191,201,190,0.3)' },
-  label: { fontSize: 11, fontWeight: '700', color: MID, marginBottom: 12, letterSpacing: 1.5 },
-  disabledInput: { backgroundColor: '#f0faf0', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: 'rgba(191,201,190,0.4)', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  disabledTxt: { fontSize: 15, fontWeight: '600', color: DARK },
-  disabledHint: { fontSize: 11, color: MID, opacity: 0.6 },
-  input: { backgroundColor: '#f0faf0', borderRadius: 12, padding: 14, fontSize: 15, color: DARK, borderWidth: 1, borderColor: 'rgba(191,201,190,0.4)' },
-  optionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  optionBtn: { borderRadius: 50, paddingHorizontal: 16, paddingVertical: 9, backgroundColor: '#f0faf0', borderWidth: 2, borderColor: 'transparent' },
-  optionBtnActive: { borderColor: G, backgroundColor: '#caf2d5' },
-  optionTxt: { fontSize: 14, fontWeight: '600', color: MID },
-  optionTxtActive: { color: G },
-  moodRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  moodBtn: { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f0faf0', borderWidth: 2, borderColor: 'transparent' },
-  moodBtnActive: { borderColor: G, backgroundColor: '#caf2d5' },
-  moodEmoji: { fontSize: 24 },
-  textArea: { backgroundColor: '#f0faf0', borderRadius: 12, padding: 14, fontSize: 15, color: DARK, borderWidth: 1, borderColor: 'rgba(191,201,190,0.4)', minHeight: 100, textAlignVertical: 'top' },
-  charCount: { fontSize: 11, color: MID, textAlign: 'right', marginTop: 6, opacity: 0.6 },
-  saveBtn: { backgroundColor: G, borderRadius: 50, paddingVertical: 16, alignItems: 'center', marginTop: 8 },
-  saveBtnTxt: { color: 'white', fontWeight: '700', fontSize: 16 },
+  root: { flex: 1, backgroundColor: '#fff8ee' },
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 12,
+    backgroundColor: '#fff8ee',
+    borderBottomWidth: 1, borderBottomColor: 'rgba(245,197,0,0.3)',
+  },
+  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  backText: { fontSize: 16, fontWeight: '700', color: DARK },
+  headerTitle: { fontSize: 18, fontWeight: '900', color: DARK },
+  saveBtn: {
+    backgroundColor: '#F5C500', borderRadius: 50,
+    paddingHorizontal: 20, paddingVertical: 8,
+  },
+  saveBtnText: { color: DARK, fontWeight: '800', fontSize: 14 },
+  scroll: { padding: 16, gap: 16, paddingBottom: 60 },
+  card: {
+    backgroundColor: '#fff', borderRadius: 20, padding: 20,
+    borderWidth: 1.5, borderColor: 'rgba(245,197,0,0.4)',
+    shadowColor: '#F0956A', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1, shadowRadius: 8, elevation: 3,
+  },
+  label: { fontSize: 12, fontWeight: '900', color: '#F0956A', letterSpacing: 1.5, marginBottom: 6 },
+  sublabel: { fontSize: 13, color: 'rgba(21,21,21,0.5)', marginBottom: 14 },
+  photoRow: { flexDirection: 'row', alignItems: 'center', gap: 20 },
+  photoWrap: { width: 80, height: 80, borderRadius: 40, overflow: 'hidden' },
+  photo: { width: 80, height: 80, borderRadius: 40 },
+  photoPlaceholder: {
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: '#F5C500', justifyContent: 'center', alignItems: 'center',
+  },
+  photoInitial: { fontSize: 32, fontWeight: '900', color: DARK },
+  photoOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center',
+  },
+  changePhotoBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#F5C500', borderRadius: 50,
+    paddingHorizontal: 18, paddingVertical: 12,
+  },
+  changePhotoText: { color: DARK, fontWeight: '800', fontSize: 14 },
+  textArea: {
+    backgroundColor: '#fff8ee', borderRadius: 14,
+    borderWidth: 1.5, borderColor: 'rgba(245,197,0,0.4)',
+    padding: 14, fontSize: 14, color: DARK,
+    minHeight: 100, textAlignVertical: 'top',
+  },
 })
