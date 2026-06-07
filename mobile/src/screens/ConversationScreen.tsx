@@ -180,7 +180,7 @@ export default function ConversationScreen() {
     }
   }, [friend])
 
-  if (loading && messages.length === 0) {
+  if (loading && messages.length === 0 && !friend) {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#075E54" />
