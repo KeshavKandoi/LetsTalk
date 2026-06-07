@@ -1,210 +1,250 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
-  View, Text, StyleSheet, SafeAreaView, ScrollView,
-  TouchableOpacity, ActivityIndicator, Alert, Image,
+  View, Text, TouchableOpacity, StyleSheet, ScrollView,
+  Animated, Image, Dimensions, ActivityIndicator, Alert,
 } from 'react-native'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
+import { LinearGradient } from 'expo-linear-gradient'
+import { MaterialIcons } from '@expo/vector-icons'
 import { useNavigation } from '@react-navigation/native'
-import * as ImagePicker from 'expo-image-picker'
-import * as FileSystem from 'expo-file-system/legacy'
-import { signOut } from '../lib/auth'
+import { getSession, signOut } from '../lib/auth'
 import { apiFetch } from '../lib/api'
 
-const G = '#005129'
-const MID = '#006d36'
-const DARK = '#002111'
-const SURFACE = '#e9ffed'
-const CARD = '#cff8da'
+const { width, height } = Dimensions.get('window')
+const AMBER = '#F5C500'
+const AMBER2 = '#F0956A'
+const PANEL_COLLAPSED = height * 0.42
+const PANEL_EXPANDED = height * 0.72
 
 export default function ProfileScreen() {
   const navigation = useNavigation<any>()
+  const insets = useSafeAreaInsets()
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [uploading, setUploading] = useState(false)
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
-
-  const loadProfile = useCallback(async () => {
-    setLoading(true)
-    try {
-      const state = await apiFetch('/api/places/state', { _t: Date.now() })
-      setProfile(state)
-      if (state?.profile?.photoUrl) setPhotoUrl(state.profile.photoUrl + '?t=' + Date.now())
-    } catch {}
-    setLoading(false)
-  }, [])
+  const panelY = useRef(new Animated.Value(PANEL_COLLAPSED)).current
+  const [expanded, setExpanded] = useState(false)
 
   useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      loadProfile()
-    })
-    return unsubscribe
-  }, [navigation, loadProfile])
+    loadProfile()
+  }, [])
 
-  const pickPhoto = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (status !== 'granted') { return }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.5,
-    })
-    if (result.canceled) return
-    setUploading(true)
+  const loadProfile = async () => {
     try {
-      const base64 = await FileSystem.readAsStringAsync(result.assets[0].uri, { encoding: FileSystem.EncodingType.Base64 })
-      const dataUri = `data:image/jpeg;base64,${base64}`
-      const res = await apiFetch('/api/places/upload-photo', { photoBase64: dataUri })
-      const savedUrl = res.photoUrl || dataUri
-      setPhotoUrl(savedUrl)
-      setProfile((prev: any) => ({ ...prev, profile: { ...prev?.profile, photoUrl: savedUrl } }))
-    } catch (e: any) {
-      Alert.alert('Upload failed', e.message)
-    } finally {
-      setUploading(false)
+      const session = await getSession()
+      if (!session?.session) { navigation.goBack(); return }
+      const u = session.user
+      setProfile({
+        username: u?.username || u?.name || 'You',
+        full_name: u?.name || u?.username || 'You',
+        email: u?.email || '',
+        photoUrl: u?.image || null,
+        created_at: u?.createdAt || null,
+        dob: u?.dob || null,
+        gender: u?.gender || null,
+        intent_text: 'Open to a conversation.',
+        current_place_id: null,
+      })
+    } catch (e) {
+      console.log(e)
     }
+    setLoading(false)
   }
 
-  const handleLogout = () => {
-    Alert.alert('Log out', 'Are you sure you want to log out?', [
+  const togglePanel = () => {
+    const toValue = expanded ? PANEL_COLLAPSED : PANEL_EXPANDED
+    Animated.spring(panelY, { toValue, useNativeDriver: false, friction: 8 }).start()
+    setExpanded(!expanded)
+  }
+
+  const handleLogout = async () => {
+    Alert.alert('Log out', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Log out', style: 'destructive',
-        onPress: async () => {
+        text: 'Log out', style: 'destructive', onPress: async () => {
           await signOut()
           navigation.reset({ index: 0, routes: [{ name: 'Landing' }] })
-        },
-      },
+        }
+      }
     ])
   }
 
-  const username = profile?.session?.user?.username || profile?.session?.user?.name || '—'
-  const email = profile?.session?.user?.email || ''
-  const mood = profile?.profile?.moodEmoji || '🙂'
-  const age = profile?.profile?.age ? String(profile.profile.age) : ''
-  const gender = profile?.profile?.gender ? String(profile.profile.gender) : ''
-  const intent = profile?.profile?.intentText || 'Open to a conversation.'
-  const initials = username.slice(0, 2).toUpperCase()
+  const photoUrl = profile?.photoUrl || profile?.photo_url
+  const username = profile?.username || 'You'
+  const displayName = profile?.full_name || username
+  const email = profile?.email || ''
+  const mood = profile?.mood_emoji || '🙂'
+  const intentText = profile?.intent_text || 'Open to a conversation.'
+  const checkedIn = !!profile?.current_place_id
+  const calcAge = (dob: string) => {
+    if (!dob) return null
+    const b = new Date(dob)
+    const today = new Date()
+    let age = today.getFullYear() - b.getFullYear()
+    const m = today.getMonth() - b.getMonth()
+    if (m < 0 || (m === 0 && today.getDate() < b.getDate())) age--
+    return isNaN(age) ? null : `${age}`
+  }
+  const age = profile?.age ? `${profile.age}` : calcAge(profile?.dob || profile?.date_of_birth)
+  const gender = profile?.gender || null
 
   return (
-    <SafeAreaView style={s.container}>
-      <View style={s.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={s.iconBtn}>
-          <Text style={s.iconTxt}>←</Text>
-        </TouchableOpacity>
-        <Text style={s.headerTitle}>Profile</Text>
-        <View style={s.iconBtn} />
+    <View style={s.root}>
+      {/* Photo section — full top half */}
+      <View style={s.photoSection}>
+        <SafeAreaView edges={['top']} style={s.topBar}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
+            <MaterialIcons name="chevron-left" size={28} color="#000" />
+            <Text style={s.backText}>Profile</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.settingsBtn} onPress={() => navigation.navigate('Settings' as never)}>
+            <MaterialIcons name="settings" size={22} color="#000" />
+          </TouchableOpacity>
+        </SafeAreaView>
+
+        {loading ? (
+          <ActivityIndicator color={AMBER} size="large" style={{ marginTop: 80 }} />
+        ) : photoUrl ? (
+          <Image source={{ uri: photoUrl }} style={s.profilePhoto} resizeMode="cover" />
+        ) : (
+          <View style={s.photoPlaceholder}>
+            <Text style={s.photoInitial}>{displayName[0]?.toUpperCase()}</Text>
+          </View>
+        )}
       </View>
 
-      {loading ? (
-        <View style={s.centered}><ActivityIndicator color={G} size="large" /></View>
-      ) : (
-        <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+      {/* Sliding amber panel */}
+      <Animated.View style={[s.panel, { top: panelY }]}>
+        <LinearGradient
+          colors={['#F5C500', '#F5C500', '#F2A96B', '#F0956A']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+        {/* Drag handle */}
+        <TouchableOpacity style={s.handleArea} onPress={togglePanel} activeOpacity={0.8}>
+          <View style={s.handle} />
+        </TouchableOpacity>
 
-          <View style={s.heroSection}>
-            <TouchableOpacity style={s.avatarWrap} onPress={pickPhoto} disabled={uploading}>
-              {photoUrl
-                ? <Image source={{ uri: photoUrl }} style={s.avatarImg} />
-                : <View style={s.avatar}><Text style={s.avatarText}>{initials}</Text></View>}
-              <View style={s.avatarEditBadge}>
-                {uploading
-                  ? <ActivityIndicator size="small" color={G} />
-                  : <Text style={s.avatarEditTxt}>✏️</Text>}
-              </View>
-            </TouchableOpacity>
-            <Text style={s.username}>{username}</Text>
-            {email ? <Text style={s.handle}>@{email.split('@')[0]}</Text> : null}
-            <Text style={s.bio}>{intent}</Text>
-          </View>
-
-          <View style={s.tagsRow}>
-            <View style={s.tag}><Text style={s.tagTxt}>{mood} Mood</Text></View>
-            <View style={s.tag}><Text style={s.tagTxt}>🎂 {age || 'Not set'} yrs</Text></View>
-            <View style={s.tag}><Text style={s.tagTxt}>👤 {gender || 'Not set'}</Text></View>
-            {profile?.profile?.currentPlaceId
-              ? <View style={s.tag}><Text style={s.tagTxt}>📍 Checked in</Text></View>
-              : <View style={s.tag}><Text style={s.tagTxt}>🏠 Not checked in</Text></View>}
-            {profile?.profile?.status === 'ready'
-              ? <View style={[s.tag, s.tagActive]}><Text style={[s.tagTxt, s.tagTxtActive]}>✅ Ready</Text></View>
-              : null}
-          </View>
-
-          <View style={s.card}>
-            <View style={s.cardRow}>
-              <View style={s.cardRowLeft}>
-                <Text style={s.cardIcon}>🔐</Text>
-                <Text style={s.cardLabel}>Active Account</Text>
-              </View>
-              <View style={s.secureBadge}>
-                <Text style={s.secureBadgeTxt}>Secure</Text>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+          {/* Name + location */}
+          <View style={s.nameRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.displayName}>{displayName}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                {checkedIn && (
+                  <View style={s.locationPill}>
+                    <MaterialIcons name="location-on" size={11} color="#000" />
+                    <Text style={s.locationText}>Checked in</Text>
+                  </View>
+                )}
               </View>
             </View>
 
-            <View style={s.divider} />
-
-            <View style={s.cardRow}>
-              <View style={s.cardRowLeft}>
-                <Text style={s.cardIcon}>👤</Text>
-                <Text style={s.cardLabel}>{username}</Text>
-              </View>
-            </View>
-
-            {email ? (
-              <View style={s.cardRow}>
-                <View style={s.cardRowLeft}>
-                  <Text style={s.cardIcon}>✉️</Text>
-                  <Text style={s.cardLabel}>{email}</Text>
-                </View>
-              </View>
-            ) : null}
           </View>
 
-          <TouchableOpacity style={s.editBtn} onPress={() => navigation.navigate('EditProfile')}>
-            <Text style={s.editBtnTxt}>✏️  Edit Profile</Text>
+          {/* About section */}
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>MY VIBE</Text>
+            <Text style={s.sectionBody}>{intentText}</Text>
+          </View>
+
+          {/* Stats row */}
+          <View style={s.statsRow}>
+            <View style={s.statItem}>
+              <Text style={s.statNum}>{age || '—'}</Text>
+              <Text style={s.statLabel}>Age</Text>
+            </View>
+            <View style={s.statDivider} />
+            <View style={s.statItem}>
+              <Text style={s.statNum}>{gender ? gender[0].toUpperCase() + gender.slice(1) : '—'}</Text>
+              <Text style={s.statLabel}>Gender</Text>
+            </View>
+          </View>
+
+          {/* Edit Profile button */}
+          <TouchableOpacity style={s.editBtn} onPress={() => navigation.navigate('EditProfile' as never)}>
+            <Text style={s.editBtnText}>Edit Profile</Text>
           </TouchableOpacity>
 
+          {/* Account section */}
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>ACCOUNT</Text>
+            <View style={s.accountRow}>
+              <MaterialIcons name="person" size={16} color="#151515" />
+              <Text style={s.accountText}>{username}</Text>
+            </View>
+            <View style={s.accountRow}>
+              <MaterialIcons name="email" size={16} color="#151515" />
+              <Text style={s.accountText}>{email || 'No email'}</Text>
+            </View>
+            <View style={s.accountRow}>
+              <MaterialIcons name="calendar-today" size={16} color="#151515" />
+              <Text style={s.accountText}>Joined {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Recently'}</Text>
+            </View>
+            <View style={s.accountRow}>
+              <MaterialIcons name="verified" size={16} color="#151515" />
+              <Text style={s.accountText}>Active Account</Text>
+              <View style={s.secureBadge}><Text style={s.secureBadgeText}>Secure</Text></View>
+            </View>
+          </View>
+
+          {/* Log out */}
           <TouchableOpacity style={s.logoutBtn} onPress={handleLogout}>
-            <Text style={s.logoutTxt}>Log out</Text>
+            <Text style={s.logoutText}>Log out</Text>
           </TouchableOpacity>
-
         </ScrollView>
-      )}
-    </SafeAreaView>
+      </Animated.View>
+    </View>
   )
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: SURFACE },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(191,201,190,0.3)' },
-  headerTitle: { fontSize: 20, fontWeight: '700', color: G },
-  iconBtn: { width: 40, alignItems: 'center' },
-  iconTxt: { fontSize: 20, color: G, fontWeight: '700' },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  scroll: { padding: 20, paddingBottom: 60, alignItems: 'center' },
-  heroSection: { alignItems: 'center', marginBottom: 20 },
-  avatarWrap: { marginBottom: 12, position: 'relative' },
-  avatar: { width: 96, height: 96, borderRadius: 48, backgroundColor: G, justifyContent: 'center', alignItems: 'center', borderWidth: 4, borderColor: CARD },
-  avatarImg: { width: 96, height: 96, borderRadius: 48, borderWidth: 4, borderColor: CARD },
-  avatarText: { fontSize: 32, fontWeight: '800', color: 'white' },
-  avatarEditBadge: { position: 'absolute', bottom: 2, right: 2, backgroundColor: 'white', borderRadius: 14, width: 28, height: 28, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(0,81,41,0.2)', elevation: 2 },
-  avatarEditTxt: { fontSize: 14 },
-  username: { fontSize: 26, fontWeight: '800', color: DARK, marginBottom: 4 },
-  handle: { fontSize: 14, fontWeight: '600', color: MID, marginBottom: 8 },
-  bio: { fontSize: 15, color: '#404940', textAlign: 'center', maxWidth: 260, lineHeight: 22 },
-  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginBottom: 24 },
-  tag: { backgroundColor: '#caf2d5', borderRadius: 50, paddingHorizontal: 14, paddingVertical: 6 },
-  tagActive: { backgroundColor: G },
-  tagTxt: { fontSize: 13, fontWeight: '600', color: G },
-  tagTxtActive: { color: 'white' },
-  card: { width: '100%', backgroundColor: 'white', borderRadius: 24, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(191,201,190,0.3)', gap: 12 },
-  cardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cardRowLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  cardIcon: { fontSize: 18 },
-  cardLabel: { fontSize: 14, fontWeight: '600', color: DARK },
-  secureBadge: { backgroundColor: '#6dfe9c', borderRadius: 50, paddingHorizontal: 10, paddingVertical: 3 },
-  secureBadgeTxt: { fontSize: 11, fontWeight: '700', color: DARK },
-  divider: { height: 1, backgroundColor: 'rgba(191,201,190,0.4)' },
-  editBtn: { width: '100%', backgroundColor: G, borderRadius: 50, paddingVertical: 16, alignItems: 'center', marginBottom: 12 },
-  editBtnTxt: { color: 'white', fontWeight: '700', fontSize: 15 },
-  logoutBtn: { width: '100%', borderWidth: 2, borderColor: 'rgba(186,26,26,0.2)', borderRadius: 50, paddingVertical: 15, alignItems: 'center' },
-  logoutTxt: { color: '#ba1a1a', fontWeight: '700', fontSize: 15 },
+  root: { flex: 1, backgroundColor: '#ffffff' },
+
+  photoSection: { position: 'absolute', top: 0, left: 0, right: 0, height: height * 0.55, backgroundColor: '#f5ead0', overflow: 'hidden' },
+  topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, zIndex: 10 },
+  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  backText: { fontSize: 17, fontWeight: '800', color: '#151515' },
+  settingsBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.8)', justifyContent: 'center', alignItems: 'center' },
+  profilePhoto: { width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 },
+  photoPlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  photoInitial: { fontSize: 80, fontWeight: '900', color: '#D06010' },
+
+  panel: {
+    position: 'absolute', left: 0, right: 0, bottom: 0,
+    minHeight: height * 0.65,
+    backgroundColor: '#F5C500',
+    borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    paddingHorizontal: 24,
+    overflow: 'hidden',
+  },
+  handleArea: { alignItems: 'center', paddingVertical: 12 },
+  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: 'rgba(21,21,21,0.3)' },
+
+  nameRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 20 },
+  displayName: { fontSize: 38, fontWeight: '900', color: '#151515', letterSpacing: -1, lineHeight: 42 },
+  usernameText: { fontSize: 14, fontWeight: '600', color: 'rgba(21,21,21,0.55)' },
+  locationPill: { flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: 'rgba(0,0,0,0.12)', borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3 },
+  locationText: { fontSize: 10, fontWeight: '700', color: '#151515' },
+  editIconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.5)', justifyContent: 'center', alignItems: 'center', marginTop: 4 },
+
+  statsRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, backgroundColor: 'rgba(200,100,20,0.2)', borderRadius: 16, padding: 16 },
+  statItem: { flex: 1, alignItems: 'center' },
+  statNum: { fontSize: 22, fontWeight: '900', color: '#151515' },
+  statLabel: { fontSize: 11, color: 'rgba(21,21,21,0.55)', marginTop: 2, fontWeight: '600' },
+  statDivider: { width: 1, height: 36, backgroundColor: 'rgba(21,21,21,0.2)' },
+
+  editBtn: { backgroundColor: '#1A1A1A', borderRadius: 50, paddingVertical: 15, alignItems: 'center', marginBottom: 24 },
+  editBtnText: { color: '#fff', fontWeight: '800', fontSize: 16 },
+
+  section: { marginBottom: 20 },
+  sectionTitle: { fontSize: 14, fontWeight: '900', color: '#151515', letterSpacing: 1.5, marginBottom: 12 },
+  sectionBody: { fontSize: 14, color: 'rgba(0,0,0,0.65)', lineHeight: 22 },
+  accountRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6 },
+  accountText: { fontSize: 14, color: '#151515', flex: 1, fontWeight: '700' },
+  secureBadge: { backgroundColor: '#27ae60', borderRadius: 50, paddingHorizontal: 10, paddingVertical: 4 },
+  secureBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+
+  logoutBtn: { borderWidth: 1.5, borderColor: '#151515', borderRadius: 50, paddingVertical: 14, alignItems: 'center', marginTop: 24, marginBottom: 40 },
+  logoutText: { color: '#c0392b', fontWeight: '700', fontSize: 15 },
 })
