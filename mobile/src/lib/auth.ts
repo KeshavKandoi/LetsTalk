@@ -18,14 +18,14 @@ export async function signIn(username: string, password: string) {
   return data
 }
 
-export async function signUp(email: string, username: string, password: string) {
+export async function signUp(email: string, username: string, password: string, dob?: string, gender?: string) {
   const res = await fetch(`${BASE_URL}/api/auth/sign-up/email`, {
     method: 'POST',
     headers: { 
       'Content-Type': 'application/json',
       'Origin': BASE_URL,
     },
-    body: JSON.stringify({ email, username, password, name: username }),
+    body: JSON.stringify({ email, username, password, name: username, dob, gender }),
   })
   const data = await res.json()
   if (!res.ok || data.code || data.error) throw new Error(data.message || data.error?.message || 'Signup failed')
