@@ -28,6 +28,8 @@ export default function LandingScreen() {
     player.play()
   }, [player])
 
+
+  
   const openProfile = async () => {
     setProfileVisible(true)
     setProfileLoading(true)
