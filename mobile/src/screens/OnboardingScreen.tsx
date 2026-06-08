@@ -120,7 +120,7 @@ export default function OnboardingScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.navigate('Landing')} style={styles.backBtn}>
-            <Text style={styles.backBtnText}>← Back</Text>
+            <Text style={styles.backBtnText}>‹</Text>
           </TouchableOpacity>
           <Text style={styles.logo}>LetsTalk</Text>
           <View style={{ width: 60 }} />
@@ -229,10 +229,10 @@ export default function OnboardingScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#d4f5d4' },
-  scroll: { padding: 20, paddingBottom: 48 },
+  scroll: { padding: 20, paddingTop: 48, paddingBottom: 48 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  backBtn: { paddingHorizontal: 8, paddingVertical: 4 },
-  backBtnText: { color: '#1a6b3c', fontWeight: '700', fontSize: 15 },
+  backBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(30,15,5,0.75)', justifyContent: 'center', alignItems: 'center' },
+  backBtnText: { color: '#fff', fontWeight: '300', fontSize: 28, lineHeight: 30, marginLeft: -2 },
   logo: { fontSize: 20, fontWeight: '900', color: '#0f3320' },
   title: { fontSize: 32, fontWeight: '900', color: '#0f3320', lineHeight: 40, marginBottom: 8 },
   subtitle: { fontSize: 15, color: '#2d6e3e', lineHeight: 22, marginBottom: 20 },
