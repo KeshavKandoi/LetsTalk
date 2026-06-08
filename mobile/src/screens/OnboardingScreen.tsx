@@ -131,10 +131,8 @@ export default function OnboardingScreen() {
       <VideoBackground style={s.videoBackground} />
       <View style={s.overlay} />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-
-          {/* Header */}
-          <View style={s.header}>
+        {/* Fixed Header */}
+        <View style={s.header}>
             <TouchableOpacity onPress={() => navigation.navigate('Landing')} style={s.backBtn}>
               <Text style={s.backBtnText}>‹</Text>
             </TouchableOpacity>
@@ -142,8 +140,12 @@ export default function OnboardingScreen() {
               Let's Talk{' '}
               <Text style={s.headerTitleHighlight}>Real</Text>
             </Text>
-            <View style={{ width: 44 }} />
+            <View style={{ width: 56 }} />
           </View>
+
+        <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+
+
           <Text style={s.subtitle}>Pick a place that feels active, then add your vibe.</Text>
 
           {error ? <View style={s.errorBox}><Text style={s.errorText}>{error}</Text></View> : null}
