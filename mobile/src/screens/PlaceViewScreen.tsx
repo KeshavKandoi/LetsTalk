@@ -89,7 +89,6 @@ export default function PlaceViewScreen() {
     if (!silent) setLoading(true)
     try {
       const data: PlaceViewState = await apiFetch('/api/places/state', {})
-      console.log('PlaceView: got data', JSON.stringify(data).slice(0,200))
       if (!data.profile?.currentPlaceId) {
         navigation.reset({ index: 0, routes: [{ name: 'Onboarding' }] })
         return
@@ -239,15 +238,11 @@ export default function PlaceViewScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
+          <TouchableOpacity style={styles.leaveBtn} onPress={handleLeave} disabled={leaving}>
+            {leaving ? <ActivityIndicator color="#dc2626" size="small" /> : <Text style={styles.leaveText}>Leave</Text>}
+          </TouchableOpacity>
           <Text style={styles.logo}>LetsTalk</Text>
-          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-            <TouchableOpacity style={styles.profileBtn} onPress={() => navigation.navigate('Profile')}>
-              <Text style={styles.profileBtnTxt}>👤</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.leaveBtn} onPress={handleLeave} disabled={leaving}>
-              {leaving ? <ActivityIndicator color="#dc2626" size="small" /> : <Text style={styles.leaveText}>Leave</Text>}
-            </TouchableOpacity>
-          </View>
+          <View style={{ width: 60 }} />
         </View>
 
         {error ? <View style={styles.errorBox}><Text style={styles.errorText}>{error}</Text></View> : null}
@@ -523,8 +518,10 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#d4f5d4' },
   scroll: { padding: 20, paddingBottom: 48 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  logo: { fontSize: 22, fontWeight: '900', color: '#0f3320' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, paddingTop: 32 },
+  backBtn: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
+  backBtnText: { fontSize: 38, color: '#1a6b3c', fontWeight: '300', lineHeight: 44 },
+  logo: { fontSize: 22, fontWeight: '900', color: '#c084fc' },
   leaveBtn: { backgroundColor: 'rgba(254,226,226,0.8)', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7, borderWidth: 1, borderColor: 'rgba(252,165,165,0.5)' },
   profileBtn: { backgroundColor: 'rgba(255,255,255,0.8)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 7, borderWidth: 1, borderColor: 'rgba(144,212,144,0.5)' },
   profileBtnTxt: { fontSize: 16 },
