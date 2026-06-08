@@ -181,9 +181,7 @@ export default function OnboardingScreen() {
 
           {selectedPlace && (
             <>
-              <TouchableOpacity style={s.backToPlaces} onPress={() => setSelectedPlace(null)}>
-                <Text style={s.backToPlacesText}>← Back to places</Text>
-              </TouchableOpacity>
+
 
               <View style={s.selectedCard}>
                 <Text style={s.selectedName}>{selectedPlace.name}</Text>
@@ -212,18 +210,7 @@ export default function OnboardingScreen() {
               )}
 
               <View style={s.moodCard}>
-                <Text style={s.moodTitle}>Your vibe</Text>
-                <View style={s.moodRow}>
-                  {MOOD_OPTIONS.map((m) => (
-                    <TouchableOpacity
-                      key={m}
-                      style={[s.moodBtn, moodEmoji === m && s.moodBtnActive]}
-                      onPress={() => setMoodEmoji(m)}
-                    >
-                      <Text style={s.moodEmoji}>{m}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+                <Text style={s.moodTitle}>What would you like to talk about?</Text>
                 <TextInput
                   style={s.intentInput}
                   placeholder="What's on your mind? (optional)"
