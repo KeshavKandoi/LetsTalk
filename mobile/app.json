@@ -25,7 +25,8 @@
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION"
       ],
-      "package": "com.letstalk.app"
+      "package": "com.letstalk.app",
+      "googleMapsApiKey": "AIzaSyDS46VSl7BfPncdn9aIIHGKsppZP3ycNF0"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -39,7 +40,13 @@
       ],
       "expo-barcode-scanner",
       "expo-web-browser",
-      "expo-image"
+      "expo-image",
+      [
+        "react-native-maps",
+        {
+          "googleMapsApiKey": "AIzaSyDS46VSl7BfPncdn9aIIHGKsppZP3ycNF0"
+        }
+      ]
     ]
   }
 }
