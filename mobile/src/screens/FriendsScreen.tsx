@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import {
-  Image,
+  Image, Modal,
   View, Text, StyleSheet, TouchableOpacity,
   ActivityIndicator, ScrollView, RefreshControl, Animated,
 } from 'react-native'
@@ -17,24 +17,23 @@ type FriendUser = {
   photoUrl: string | null
   lastMessage?: string | null
 }
-type IncomingRequest = {
-  id: string
-  user: FriendUser
-}
-type OutgoingRequest = {
-  id: string
-  user: FriendUser
-}
+type IncomingRequest = { id: string; user: FriendUser }
+type OutgoingRequest = { id: string; user: FriendUser }
 
 const AMBER = '#e8824a'
 const DARK = '#0a0704'
 const MID = 'rgba(255,180,100,0.6)'
 
-function Avatar({ user }: { user: FriendUser }) {
+function Avatar({ user, onPress }: { user: FriendUser; onPress?: () => void }) {
   const initials = (user.username || '?').slice(0, 2).toUpperCase()
-  return user.photoUrl
-    ? <Image source={{ uri: user.photoUrl }} style={s.avatarImg} />
-    : <View style={s.avatar}><Text style={s.avatarTxt}>{initials}</Text></View>
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={onPress ? 0.7 : 1}>
+      {user.photoUrl
+        ? <Image source={{ uri: user.photoUrl }} style={s.avatarImg} />
+        : <View style={s.avatar}><Text style={s.avatarTxt}>{initials}</Text></View>
+      }
+    </TouchableOpacity>
+  )
 }
 
 export default function FriendsScreen() {
@@ -46,6 +45,7 @@ export default function FriendsScreen() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [photoModal, setPhotoModal] = useState<{ url: string; username: string } | null>(null)
 
   const videoSource = require('../video/animation.mp4')
   const player = useVideoPlayer(videoSource, (player) => {
@@ -56,6 +56,8 @@ export default function FriendsScreen() {
 
   const fadeAnim = useRef(new Animated.Value(0)).current
   const slideAnim = useRef(new Animated.Value(30)).current
+  const modalScale = useRef(new Animated.Value(0.8)).current
+  const modalOpacity = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
     Animated.parallel([
@@ -63,6 +65,23 @@ export default function FriendsScreen() {
       Animated.timing(slideAnim, { toValue: 0, duration: 800, useNativeDriver: true }),
     ]).start()
   }, [])
+
+  const openPhoto = (url: string, username: string) => {
+    setPhotoModal({ url, username })
+    modalScale.setValue(0.8)
+    modalOpacity.setValue(0)
+    Animated.parallel([
+      Animated.spring(modalScale, { toValue: 1, useNativeDriver: true, friction: 6 }),
+      Animated.timing(modalOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+    ]).start()
+  }
+
+  const closePhoto = () => {
+    Animated.parallel([
+      Animated.timing(modalScale, { toValue: 0.8, duration: 150, useNativeDriver: true }),
+      Animated.timing(modalOpacity, { toValue: 0, duration: 150, useNativeDriver: true }),
+    ]).start(() => setPhotoModal(null))
+  }
 
   const load = async () => {
     const [friendsData] = await Promise.all([
@@ -98,7 +117,6 @@ export default function FriendsScreen() {
 
   return (
     <SafeAreaView style={s.root} edges={['top']}>
-      {/* Video Background */}
       <VideoView
         style={s.videoBackground}
         player={player}
@@ -107,87 +125,117 @@ export default function FriendsScreen() {
         contentFit="cover"
       />
       <View style={s.overlay} />
+
       <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
-          <View style={s.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={s.iconBtn}>
-              <Text style={s.iconTxt}>←</Text>
+        <View style={s.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={s.iconBtn}>
+            <Text style={s.iconTxt}>←</Text>
+          </TouchableOpacity>
+          <Text style={s.headerTitle}>Friends</Text>
+          <View style={s.iconBtn} />
+        </View>
+
+        <View style={s.tabs}>
+          {([['friends', 'Friends'], ['requests', 'Requests']] as const).map(([key, label]) => (
+            <TouchableOpacity key={key} style={[s.tab, tab === key && s.tabActive]} onPress={() => setTab(key as any)}>
+              <Text style={[s.tabTxt, tab === key && s.tabTxtActive]}>{label}</Text>
             </TouchableOpacity>
-            <Text style={s.headerTitle}>Friends</Text>
-            <View style={s.iconBtn} />
-          </View>
+          ))}
+        </View>
 
-          <View style={s.tabs}>
-            {([[ 'friends', 'Friends'], ['requests', 'Requests']] as const).map(([key, label]) => (
-              <TouchableOpacity key={key} style={[s.tab, tab === key && s.tabActive]} onPress={() => setTab(key as any)}>
-                <Text style={[s.tabTxt, tab === key && s.tabTxtActive]}>{label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+        {loading ? (
+          <View style={s.centered}><ActivityIndicator color={AMBER} size="large" /></View>
+        ) : (
+          <ScrollView
+            contentContainerStyle={s.scroll}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={AMBER} />}
+          >
+            {tab === 'friends' && (
+              friends.length ? friends.map((friend) => (
+                <TouchableOpacity
+                  key={friend.userId}
+                  style={s.row}
+                  onPress={() => navigation.navigate('Conversation', { friend })}
+                >
+                  <Avatar
+                    user={friend}
+                    onPress={friend.photoUrl ? () => openPhoto(friend.photoUrl!, friend.username) : undefined}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.name}>{friend.username}</Text>
+                    <Text style={s.messagePreview}>{friend.lastMessage || 'Start a conversation'}</Text>
+                  </View>
+                </TouchableOpacity>
+              )) : <Text style={s.empty}>Accepted friends will show up here.</Text>
+            )}
 
-          {loading ? (
-            <View style={s.centered}><ActivityIndicator color={AMBER} size="large" /></View>
-          ) : (
-            <ScrollView
-              contentContainerStyle={s.scroll}
-              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={AMBER} />}
-            >
-              {tab === 'friends' && (
-                friends.length ? friends.map((friend) => (
-                  <TouchableOpacity
-                    key={friend.userId}
-                    style={s.row}
-                    onPress={() => navigation.navigate('Conversation', { friend })}
-                  >
-                    <Avatar user={friend} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.name}>{friend.username}</Text>
-                      <Text style={s.messagePreview}>{friend.lastMessage || 'Start a conversation'}</Text>
+            {tab === 'requests' && (
+              (incoming.length || outgoing.length) ? (
+                <>
+                  {incoming.map((request) => (
+                    <View key={request.id} style={s.requestCard}>
+                      <View style={s.rowInner}>
+                        <Avatar
+                          user={request.user}
+                          onPress={request.user.photoUrl ? () => openPhoto(request.user.photoUrl!, request.user.username) : undefined}
+                        />
+                        <View style={{ flex: 1 }}>
+                          <Text style={s.name}>{request.user.username}</Text>
+                          <Text style={s.mood}>{request.user.moodEmoji || '🙂'} wants to be friends</Text>
+                        </View>
+                      </View>
+                      <View style={s.actions}>
+                        <TouchableOpacity style={s.rejectBtn} disabled={busyId === request.id} onPress={() => respond(request.id, 'reject')}>
+                          <Text style={s.rejectTxt}>Reject</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={s.acceptBtn} disabled={busyId === request.id} onPress={() => respond(request.id, 'accept')}>
+                          {busyId === request.id ? <ActivityIndicator color="white" /> : <Text style={s.acceptTxt}>Accept</Text>}
+                        </TouchableOpacity>
+                      </View>
                     </View>
-                  </TouchableOpacity>
-                )) : <Text style={s.empty}>Accepted friends will show up here.</Text>
-              )}
-              {tab === 'requests' && (
-                (incoming.length || outgoing.length) ? (
-                  <>
-                    {incoming.map((request) => (
-                      <View key={request.id} style={s.requestCard}>
-                        <View style={s.rowInner}>
-                          <Avatar user={request.user} />
-                          <View style={{ flex: 1 }}>
-                            <Text style={s.name}>{request.user.username}</Text>
-                            <Text style={s.mood}>{request.user.moodEmoji || '🙂'} wants to be friends</Text>
-                          </View>
+                  ))}
+                  {outgoing.map((request) => (
+                    <View key={request.id} style={s.pendingCard}>
+                      <View style={s.rowInner}>
+                        <Avatar
+                          user={request.user}
+                          onPress={request.user.photoUrl ? () => openPhoto(request.user.photoUrl!, request.user.username) : undefined}
+                        />
+                        <View style={{ flex: 1 }}>
+                          <Text style={s.name}>{request.user.username}</Text>
+                          <Text style={s.mood}>Pending acceptance</Text>
                         </View>
-                        <View style={s.actions}>
-                          <TouchableOpacity style={s.rejectBtn} disabled={busyId === request.id} onPress={() => respond(request.id, 'reject')}>
-                            <Text style={s.rejectTxt}>Reject</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity style={s.acceptBtn} disabled={busyId === request.id} onPress={() => respond(request.id, 'accept')}>
-                            {busyId === request.id ? <ActivityIndicator color="white" /> : <Text style={s.acceptTxt}>Accept</Text>}
-                          </TouchableOpacity>
+                        <View style={s.pendingBadge}>
+                          <Text style={s.pendingBadgeTxt}>Pending</Text>
                         </View>
                       </View>
-                    ))}
-                    {outgoing.map((request) => (
-                      <View key={request.id} style={s.pendingCard}>
-                        <View style={s.rowInner}>
-                          <Avatar user={request.user} />
-                          <View style={{ flex: 1 }}>
-                            <Text style={s.name}>{request.user.username}</Text>
-                            <Text style={s.mood}>Pending acceptance</Text>
-                          </View>
-                          <View style={s.pendingBadge}>
-                            <Text style={s.pendingBadgeTxt}>Pending</Text>
-                          </View>
-                        </View>
-                      </View>
-                    ))}
-                  </>
-                ) : <Text style={s.empty}>Friend requests will show up here.</Text>
-              )}
-            </ScrollView>
-          )}
+                    </View>
+                  ))}
+                </>
+              ) : <Text style={s.empty}>Friend requests will show up here.</Text>
+            )}
+          </ScrollView>
+        )}
       </Animated.View>
+
+      {/* Photo viewer modal */}
+      <Modal visible={!!photoModal} transparent animationType="none" onRequestClose={closePhoto}>
+        <TouchableOpacity style={s.modalBg} activeOpacity={1} onPress={closePhoto}>
+          <Animated.View style={[s.modalContent, { opacity: modalOpacity, transform: [{ scale: modalScale }] }]}>
+            <Text style={s.modalName}>{photoModal?.username}</Text>
+            {photoModal?.url && (
+              <Image
+                source={{ uri: photoModal.url }}
+                style={s.modalPhoto}
+                resizeMode="cover"
+              />
+            )}
+            <TouchableOpacity style={s.modalClose} onPress={closePhoto}>
+              <Text style={s.modalCloseTxt}>✕ Close</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   )
 }
@@ -225,4 +273,10 @@ const s = StyleSheet.create({
   pendingBadge: { backgroundColor: 'rgba(232,130,74,0.08)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
   pendingBadgeTxt: { color: '#fff', fontWeight: '800', fontSize: 11 },
   empty: { color: MID, fontWeight: '600', textAlign: 'center', marginTop: 28 },
+  modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.88)', justifyContent: 'center', alignItems: 'center' },
+  modalContent: { alignItems: 'center', gap: 16 },
+  modalName: { color: '#fff', fontSize: 20, fontWeight: '800' },
+  modalPhoto: { width: 300, height: 300, borderRadius: 24, borderWidth: 2, borderColor: 'rgba(232,130,74,0.4)' },
+  modalClose: { marginTop: 8, paddingHorizontal: 28, paddingVertical: 12, borderRadius: 50, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  modalCloseTxt: { color: 'rgba(255,255,255,0.7)', fontWeight: '700', fontSize: 15 },
 })
