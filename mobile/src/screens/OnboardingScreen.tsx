@@ -118,7 +118,7 @@ export default function OnboardingScreen() {
         intentText,
         currentPlaceId: selectedPlace.placeId,
       })
-      navigation.reset({ index: 0, routes: [{ name: 'PlaceView' }] })
+      navigation.navigate('PlaceView')
     } catch (e: any) {
       setError(e.message || 'Could not join this place.')
     } finally {
@@ -133,7 +133,7 @@ export default function OnboardingScreen() {
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         {/* Fixed Header */}
         <View style={s.header}>
-            <TouchableOpacity onPress={() => navigation.navigate('Landing')} style={s.backBtn}>
+            <TouchableOpacity onPress={() => { if (selectedPlace) { setSelectedPlace(null); } else if (navigation.canGoBack()) { navigation.goBack(); } else { navigation.navigate('Landing'); } }} style={s.backBtn}>
               <Text style={s.backBtnText}>‹</Text>
             </TouchableOpacity>
             <Text style={s.headerTitle}>
