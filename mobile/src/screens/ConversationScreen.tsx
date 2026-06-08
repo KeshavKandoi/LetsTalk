@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import {
   Alert, ActivityIndicator, StyleSheet, Text, TextInput,
-  TouchableOpacity, View, FlatList, Image, KeyboardAvoidingView, Platform,
+  TouchableOpacity, View, FlatList, Image, KeyboardAvoidingView, Platform, AppState,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRoute, useNavigation } from '@react-navigation/native'
@@ -26,6 +26,10 @@ export default function ConversationScreen() {
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
+  const [friendStatus, setFriendStatus] = useState<{ isOnline: boolean; lastSeenAt: string | null }>({
+    isOnline: friend?.isOnline ?? false,
+    lastSeenAt: friend?.lastSeenAt ?? null,
+  })
   const listRef = useRef<FlatList>(null)
 
   const loadMessages = async () => {
@@ -61,6 +65,34 @@ export default function ConversationScreen() {
     return () => clearInterval(interval)
   }, [friend])
 
+  // Mark self as online, poll friend status
+  useEffect(() => {
+    const markOnline = () => apiFetch('/api/friends/online-status', { isOnline: true }).catch(() => {})
+    const markOffline = () => apiFetch('/api/friends/online-status', { isOnline: false }).catch(() => {})
+    const pollFriendStatus = async () => {
+      if (!friend?.userId) return
+      try {
+        const data = await apiFetch('/api/friends/online-status', { userId: friend.userId })
+        setFriendStatus({ isOnline: data.isOnline ?? false, lastSeenAt: data.lastSeenAt ?? null })
+      } catch {}
+    }
+
+    markOnline()
+    pollFriendStatus()
+    const statusInterval = setInterval(pollFriendStatus, 15000)
+
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') markOnline()
+      else markOffline()
+    })
+
+    return () => {
+      markOffline()
+      clearInterval(statusInterval)
+      sub.remove()
+    }
+  }, [friend?.userId])
+
   if (loading && messages.length === 0) {
     return (
       <View style={{ flex: 1, backgroundColor: '#0a0a0a', justifyContent: 'center', alignItems: 'center' }}>
@@ -82,7 +114,9 @@ export default function ConversationScreen() {
             <Avatar uri={friend?.photoUrl} username={friend?.username} size={40} />
             <View>
               <Text style={s.headerName}>{friend?.username}</Text>
-              <Text style={s.headerOnline}>Online</Text>
+              <Text style={[s.headerOnline, !friendStatus.isOnline && s.headerOffline]}>
+              {friendStatus.isOnline ? 'Online' : friendStatus.lastSeenAt ? `last seen ${formatLastSeen(new Date(friendStatus.lastSeenAt))}` : 'Offline'}
+            </Text>
             </View>
           </View>
           <View style={s.headerBtn} />
@@ -167,6 +201,16 @@ export default function ConversationScreen() {
   )
 }
 
+function formatLastSeen(date: Date): string {
+  const now = new Date()
+  const diff = Math.floor((now.getTime() - date.getTime()) / 1000)
+  if (diff < 60) return 'just now'
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
+  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
 function formatTime(date: Date) {
   const h = date.getHours()
   const m = date.getMinutes().toString().padStart(2, '0')
@@ -182,6 +226,7 @@ const s = StyleSheet.create({
   headerCenter: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   headerName: { fontSize: 18, fontWeight: '700', color: '#ffffff' },
   headerOnline: { fontSize: 12, fontWeight: '500', color: '#4ade80', marginTop: 1 },
+  headerOffline: { color: 'rgba(255,255,255,0.4)' },
   datePill: { alignSelf: 'center', backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 14, paddingVertical: 4, borderRadius: 999, marginBottom: 16, marginTop: 8 },
   datePillTxt: { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.5)', letterSpacing: 0.8 },
   list: { paddingHorizontal: 20, paddingBottom: 12 },
