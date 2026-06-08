@@ -138,11 +138,12 @@ export default function OnboardingScreen() {
             <TouchableOpacity onPress={() => navigation.navigate('Landing')} style={s.backBtn}>
               <Text style={s.backBtnText}>‹</Text>
             </TouchableOpacity>
-            <Text style={s.logo}>LetsTalk</Text>
+            <Text style={s.headerTitle}>
+              Let's Talk{' '}
+              <Text style={s.headerTitleHighlight}>Real</Text>
+            </Text>
             <View style={{ width: 44 }} />
           </View>
-
-          <Text style={s.title}>Find people ready{'\n'}to talk nearby.</Text>
           <Text style={s.subtitle}>Pick a place that feels active, then add your vibe.</Text>
 
           {error ? <View style={s.errorBox}><Text style={s.errorText}>{error}</Text></View> : null}
@@ -249,11 +250,14 @@ const s = StyleSheet.create({
   overlay: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.65)' },
   scroll: { padding: 20, paddingTop: 12, paddingBottom: 60 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 },
+  headerTitle: { fontSize: 26, fontWeight: '900', color: '#c084fc' },
+  headerTitleHighlight: { fontSize: 26, fontWeight: '900', color: '#e9d5ff' },
   backBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(30,15,5,0.75)', justifyContent: 'center', alignItems: 'center' },
   backBtnText: { color: '#fff', fontWeight: '300', fontSize: 28, lineHeight: 30, marginLeft: -2 },
   logo: { fontSize: 20, fontWeight: '900', color: '#fff' },
-  title: { fontSize: 32, fontWeight: '900', color: AMBER, lineHeight: 40, marginBottom: 8 },
-  subtitle: { fontSize: 15, color: AMBER_LIGHT, lineHeight: 22, marginBottom: 20 },
+  title: { fontSize: 32, fontWeight: '900', color: '#c084fc', lineHeight: 40, marginBottom: 20, textAlign: 'center' },
+  titleHighlight: { fontSize: 32, fontWeight: '900', color: '#e9d5ff' },
+  subtitle: { fontSize: 18, color: '#fff', lineHeight: 24, marginBottom: 20, fontWeight: '700' },
   errorBox: { backgroundColor: 'rgba(186,26,26,0.15)', borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(186,26,26,0.3)' },
   errorText: { color: '#ff6b6b', fontSize: 13 },
   primaryBtn: { backgroundColor: AMBER, borderRadius: 50, paddingVertical: 14, alignItems: 'center', marginBottom: 16 },
@@ -263,7 +267,7 @@ const s = StyleSheet.create({
   placeName: { fontSize: 16, fontWeight: '800', color: '#fff', flex: 1 },
   readyBadge: { backgroundColor: 'rgba(232,130,74,0.1)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
   readyBadgeActive: { backgroundColor: 'rgba(232,130,74,0.2)' },
-  readyBadgeText: { fontSize: 12, color: AMBER_LIGHT, fontWeight: '600' },
+  readyBadgeText: { fontSize: 12, color: AMBER_LIGHT, fontWeight: '800' },
   readyBadgeTextActive: { color: AMBER },
   placeAddress: { fontSize: 12, color: 'rgba(255,255,255,0.45)', lineHeight: 16, marginBottom: 8 },
   placeStatus: { flexDirection: 'row', alignItems: 'center', gap: 6 },
