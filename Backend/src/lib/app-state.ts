@@ -681,6 +681,8 @@ export async function listFriends(input?: { viewerUserId?: string }) {
       fallbackName: user.name,
       moodEmoji: userProfile.moodEmoji,
       photoUrl: userProfile.photoUrl,
+      isOnline: userActivity.isOnline,
+      lastSeenAt: userActivity.lastSeenAt,
     })
     .from(friendRequest)
     .innerJoin(
@@ -691,6 +693,7 @@ export async function listFriends(input?: { viewerUserId?: string }) {
       ),
     )
     .leftJoin(userProfile, eq(userProfile.userId, user.id))
+    .leftJoin(userActivity, eq(userActivity.userId, user.id))
     .where(
       or(
         eq(friendRequest.requesterUserId, session.user.id),
@@ -724,6 +727,8 @@ export async function listFriends(input?: { viewerUserId?: string }) {
       id: row.id,
       ...mapFriendUser(row),
       lastMessage: latestMessageByRequestId.get(row.id)?.body ?? null,
+      isOnline: row.isOnline ?? false,
+      lastSeenAt: row.lastSeenAt ?? null,
     })),
     incoming: rows
       .filter((row) => {
