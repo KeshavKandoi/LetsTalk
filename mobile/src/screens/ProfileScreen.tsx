@@ -121,7 +121,7 @@ export default function ProfileScreen() {
           </View>
 
           <View style={s.section}>
-            <Text style={s.sectionTitle}>MY VIBE</Text>
+            <Text style={s.sectionTitle}>ABOUT</Text>
             <Text style={s.sectionBody}>{intentText}</Text>
           </View>
 
