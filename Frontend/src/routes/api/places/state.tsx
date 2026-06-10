@@ -4,6 +4,7 @@ import { db } from '@backend/lib/db'
 import { userProfile } from '@backend/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { place, handoffCode } from '@backend/lib/db/schema'
+import { getActiveConnectionForUser } from '@backend/lib/app-state'
 
 export const Route = createFileRoute('/api/places/state')({
   server: {
@@ -65,7 +66,7 @@ export const Route = createFileRoute('/api/places/state')({
               const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.29.59:3000'
               return { url: BASE_URL + '/?scan=' + token, isActive: profileRecord.status === 'ready' }
             })(),
-            activeConnection: null,
+            activeConnection: await getActiveConnectionForUser(session.user.id),
           }), { headers: { 'Content-Type': 'application/json' } })
         } catch (e: any) {
           return new Response(JSON.stringify({ session: null, profile: null }), { headers: { 'Content-Type': 'application/json' } })
