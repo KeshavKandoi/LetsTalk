@@ -689,17 +689,37 @@ export default function PlaceViewScreen() {
             <View style={s.personHandle} />
             {selectedPerson ? (
               <>
-                <View style={s.personTop}>
-                  {renderAvatar(selectedPerson, 74)}
-                  <View style={{ flex: 1, marginLeft: 14 }}>
-                    <Text style={s.personModalName}>{selectedPerson.username}</Text>
-                    <View style={s.personTags}>
-                      {selectedPerson.age ? <Text style={s.personTag}>{selectedPerson.age} yrs</Text> : null}
-                      {selectedPerson.gender ? <Text style={s.personTag}>{selectedPerson.gender}</Text> : null}
-                    </View>
+                {/* Avatar centered with orange ring */}
+                <View style={{ alignItems: 'center', marginBottom: 14 }}>
+                  <View style={s.personAvatarRing}>
+                    {selectedPerson.photoUrl
+                      ? <Image source={{ uri: selectedPerson.photoUrl }} style={s.personAvatarLarge} />
+                      : <View style={[s.personAvatarLarge, { backgroundColor: 'rgba(232,130,74,0.15)', justifyContent: 'center', alignItems: 'center' }]}>
+                          <Text style={{ fontSize: 36, fontWeight: '800', color: '#fff' }}>{(selectedPerson.username || '?').slice(0,2).toUpperCase()}</Text>
+                        </View>
+                    }
+                  </View>
+                  <Text style={s.personModalName}>{selectedPerson.username}</Text>
+                  {/* Badges row */}
+                  <View style={s.personTags}>
+                    {selectedPerson.gender ? <Text style={s.personTag}>{selectedPerson.gender}</Text> : null}
+                    {selectedPerson.age ? <Text style={s.personTag}>{selectedPerson.age}</Text> : null}
+
                   </View>
                 </View>
-                <Text style={s.personModalMood}>{selectedPerson.intentText || selectedPerson.intentSummary || ''}</Text>
+                {/* Current Status card */}
+                {(selectedPerson.intentText || selectedPerson.intentSummary) ? (
+                  <View style={s.personStatusCard}>
+                    <View style={s.personStatusCardIcon}>
+                      <Text style={{ fontSize: 18 }}>💬</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.personStatusCardLabel}>MY VIBE</Text>
+                      <Text style={s.personStatusCardText}>{selectedPerson.intentText || selectedPerson.intentSummary}</Text>
+                    </View>
+                  </View>
+                ) : null}
+                {/* Hint */}
                 {state.session?.user.id !== selectedPerson.userId && (
                   <Text style={s.personHint}>Scan their QR code to send a friend request.</Text>
                 )}
@@ -814,12 +834,12 @@ const s = StyleSheet.create({
   avatarPlaceholder: { backgroundColor: 'rgba(0,107,44,0.12)', justifyContent: 'center', alignItems: 'center' },
   avatarInitials: { color: '#ffffff', fontWeight: '800', fontSize: 18 },
   personNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4, flexWrap: 'wrap' },
-  personName: { fontSize: 16, fontWeight: '700', color: '#ffffff' },
+  personName: { fontSize: 17, fontWeight: '900', color: '#ffffff' },
   youBadge: { backgroundColor: 'rgba(37,99,235,0.6)', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 },
   youBadgeText: { fontSize: 10, color: 'white', fontWeight: '700' },
   statusBadge: { backgroundColor: AMBER, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
   statusBadgeActive: { backgroundColor: AMBER },
-  statusBadgeText: { fontSize: 11, color: '#0a0704', fontWeight: '700', textTransform: 'uppercase' },
+  statusBadgeText: { fontSize: 11, color: '#0a0704', fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5 },
   statusBadgeTextActive: { color: '#0a0704' },
   personMood: { fontSize: 13, color: '#ffffff', lineHeight: 18 },
   locationHint: { fontSize: 12, color: 'rgba(255,255,255,0.7)', fontWeight: '600', marginTop: 3 },
@@ -877,12 +897,21 @@ const s = StyleSheet.create({
   qrModalCode: { padding: 16, backgroundColor: 'rgba(26,16,8,0.75)', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)', marginBottom: 16 },
   qrModalHint: { fontSize: 13, color: 'rgba(255,255,255,0.6)', marginBottom: 20, textAlign: 'center' },
   personOverlay: { flex: 1, backgroundColor: 'rgba(15,51,32,0.45)', justifyContent: 'flex-end' },
+  personAvatarRing: { width: 120, height: 120, borderRadius: 60, padding: 3, backgroundColor: '#e8824a', marginBottom: 14, shadowColor: '#e8824a', shadowOpacity: 0.5, shadowRadius: 12, shadowOffset: { width: 0, height: 0 } },
+  personAvatarLarge: { width: '100%', height: '100%', borderRadius: 60, borderWidth: 3, borderColor: '#0a0704' },
+  personStatusPill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, backgroundColor: 'rgba(232,130,74,0.15)', borderWidth: 1, borderColor: 'rgba(232,130,74,0.4)' },
+  personStatusDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#e8824a' },
+  personStatusPillText: { fontSize: 12, fontWeight: '700', color: '#e8824a' },
+  personStatusCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 16, padding: 14, marginBottom: 16, borderLeftWidth: 3, borderLeftColor: '#e8824a', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+  personStatusCardIcon: { width: 36, height: 36, borderRadius: 8, backgroundColor: 'rgba(232,130,74,0.12)', justifyContent: 'center', alignItems: 'center' },
+  personStatusCardLabel: { fontSize: 10, fontWeight: '700', color: 'rgba(232,130,74,0.8)', letterSpacing: 1.5, marginBottom: 4 },
+  personStatusCardText: { fontSize: 16, fontWeight: '500', color: '#ffffff', lineHeight: 22 },
   personSheet: { minHeight: '48%', backgroundColor: BG, borderTopLeftRadius: 26, borderTopRightRadius: 26, padding: 22, paddingBottom: 40 },
   personHandle: { width: 42, height: 4, borderRadius: 2, backgroundColor: 'rgba(0,107,44,0.25)', alignSelf: 'center', marginBottom: 18 },
   personTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   personModalName: { fontSize: 22, fontWeight: '900', color: '#ffffff', marginBottom: 8 },
   personTags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  personTag: { backgroundColor: 'rgba(0,107,44,0.1)', color: '#ffffff', fontWeight: '700', fontSize: 12, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, overflow: 'hidden' },
+  personTag: { backgroundColor: '#FFD700', color: '#000000', fontWeight: '800', fontSize: 14, paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20, overflow: 'hidden' },
   personModalMood: { fontSize: 15, color: 'rgba(255,255,255,0.7)', lineHeight: 22, marginBottom: 18 },
   personHint: { fontSize: 14, color: 'rgba(255,255,255,0.7)', fontWeight: '600' },
 })
