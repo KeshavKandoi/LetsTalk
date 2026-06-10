@@ -79,6 +79,9 @@ export type NearbyPlacePreviewState = {
   checkedInCount: number
   activeConversationCount: number
   participants: PlaceAgentParticipantState[]
+  pendingConnectionRequests?: PendingConnectionRequestState[]
+  activeConnection?: ActiveConnectionState | null
+  connectionEvents?: ConnectionEventState[]
 }
 
 export type PlaceAgentState = {
@@ -143,5 +146,35 @@ export type ActiveConnectionState = {
     username: string
     moodEmoji: string | null
     intentSummary: string | null
+    photoUrl?: string | null
+  }
+}
+
+export type PendingConnectionRequestState = {
+  id: string
+  requesterUserId: string
+  recipientUserId: string
+  placeId: string
+  status: string
+  direction: 'incoming' | 'outgoing'
+  createdAt: string | Date
+  updatedAt: string | Date
+  user: {
+    userId: string
+    username: string
+    moodEmoji: string | null
+    intentSummary: string | null
+    photoUrl: string | null
+  }
+}
+
+export type ConnectionEventState = {
+  id: string
+  status: string
+  direction: 'incoming' | 'outgoing'
+  updatedAt: string | Date
+  user: {
+    userId: string
+    username: string
   }
 }
