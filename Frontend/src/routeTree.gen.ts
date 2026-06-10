@@ -27,6 +27,7 @@ import { Route as ApiPlacesJoinRouteImport } from './routes/api/places/join'
 import { Route as ApiPlacesFinderRouteImport } from './routes/api/places/finder'
 import { Route as ApiPlacesEndConnectionRouteImport } from './routes/api/places/end-connection'
 import { Route as ApiPlacesDeleteAccountRouteImport } from './routes/api/places/delete-account'
+import { Route as ApiPlacesConnectRequestRouteImport } from './routes/api/places/connect-request'
 import { Route as ApiPlacesChangePasswordRouteImport } from './routes/api/places/change-password'
 import { Route as ApiFriendsRespondRouteImport } from './routes/api/friends/respond'
 import { Route as ApiFriendsRequestRouteImport } from './routes/api/friends/request'
@@ -129,6 +130,11 @@ const ApiPlacesDeleteAccountRoute = ApiPlacesDeleteAccountRouteImport.update({
   path: '/api/places/delete-account',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPlacesConnectRequestRoute = ApiPlacesConnectRequestRouteImport.update({
+  id: '/api/places/connect-request',
+  path: '/api/places/connect-request',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPlacesChangePasswordRoute = ApiPlacesChangePasswordRouteImport.update({
   id: '/api/places/change-password',
   path: '/api/places/change-password',
@@ -194,6 +200,7 @@ export interface FileRoutesByFullPath {
   '/api/friends/request': typeof ApiFriendsRequestRoute
   '/api/friends/respond': typeof ApiFriendsRespondRoute
   '/api/places/change-password': typeof ApiPlacesChangePasswordRoute
+  '/api/places/connect-request': typeof ApiPlacesConnectRequestRoute
   '/api/places/delete-account': typeof ApiPlacesDeleteAccountRoute
   '/api/places/end-connection': typeof ApiPlacesEndConnectionRoute
   '/api/places/finder': typeof ApiPlacesFinderRoute
@@ -224,6 +231,7 @@ export interface FileRoutesByTo {
   '/api/friends/request': typeof ApiFriendsRequestRoute
   '/api/friends/respond': typeof ApiFriendsRespondRoute
   '/api/places/change-password': typeof ApiPlacesChangePasswordRoute
+  '/api/places/connect-request': typeof ApiPlacesConnectRequestRoute
   '/api/places/delete-account': typeof ApiPlacesDeleteAccountRoute
   '/api/places/end-connection': typeof ApiPlacesEndConnectionRoute
   '/api/places/finder': typeof ApiPlacesFinderRoute
@@ -255,6 +263,7 @@ export interface FileRoutesById {
   '/api/friends/request': typeof ApiFriendsRequestRoute
   '/api/friends/respond': typeof ApiFriendsRespondRoute
   '/api/places/change-password': typeof ApiPlacesChangePasswordRoute
+  '/api/places/connect-request': typeof ApiPlacesConnectRequestRoute
   '/api/places/delete-account': typeof ApiPlacesDeleteAccountRoute
   '/api/places/end-connection': typeof ApiPlacesEndConnectionRoute
   '/api/places/finder': typeof ApiPlacesFinderRoute
@@ -287,6 +296,7 @@ export interface FileRouteTypes {
     | '/api/friends/request'
     | '/api/friends/respond'
     | '/api/places/change-password'
+    | '/api/places/connect-request'
     | '/api/places/delete-account'
     | '/api/places/end-connection'
     | '/api/places/finder'
@@ -317,6 +327,7 @@ export interface FileRouteTypes {
     | '/api/friends/request'
     | '/api/friends/respond'
     | '/api/places/change-password'
+    | '/api/places/connect-request'
     | '/api/places/delete-account'
     | '/api/places/end-connection'
     | '/api/places/finder'
@@ -347,6 +358,7 @@ export interface FileRouteTypes {
     | '/api/friends/request'
     | '/api/friends/respond'
     | '/api/places/change-password'
+    | '/api/places/connect-request'
     | '/api/places/delete-account'
     | '/api/places/end-connection'
     | '/api/places/finder'
@@ -378,6 +390,7 @@ export interface RootRouteChildren {
   ApiFriendsRequestRoute: typeof ApiFriendsRequestRoute
   ApiFriendsRespondRoute: typeof ApiFriendsRespondRoute
   ApiPlacesChangePasswordRoute: typeof ApiPlacesChangePasswordRoute
+  ApiPlacesConnectRequestRoute: typeof ApiPlacesConnectRequestRoute
   ApiPlacesDeleteAccountRoute: typeof ApiPlacesDeleteAccountRoute
   ApiPlacesEndConnectionRoute: typeof ApiPlacesEndConnectionRoute
   ApiPlacesFinderRoute: typeof ApiPlacesFinderRoute
@@ -523,6 +536,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPlacesDeleteAccountRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/places/connect-request': {
+      id: '/api/places/connect-request'
+      path: '/api/places/connect-request'
+      fullPath: '/api/places/connect-request'
+      preLoaderRoute: typeof ApiPlacesConnectRequestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/places/change-password': {
       id: '/api/places/change-password'
       path: '/api/places/change-password'
@@ -610,6 +630,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiFriendsRequestRoute: ApiFriendsRequestRoute,
   ApiFriendsRespondRoute: ApiFriendsRespondRoute,
   ApiPlacesChangePasswordRoute: ApiPlacesChangePasswordRoute,
+  ApiPlacesConnectRequestRoute: ApiPlacesConnectRequestRoute,
   ApiPlacesDeleteAccountRoute: ApiPlacesDeleteAccountRoute,
   ApiPlacesEndConnectionRoute: ApiPlacesEndConnectionRoute,
   ApiPlacesFinderRoute: ApiPlacesFinderRoute,
