@@ -210,7 +210,7 @@ async function getOrCreateQrHandoff(
   }
 }
 
-async function getActiveConnectionForUser(
+export async function getActiveConnectionForUser(
   userId: string,
 ): Promise<ActiveConnectionState | null> {
   const [connectionRecord] = await db
@@ -261,8 +261,130 @@ async function getActiveConnectionForUser(
       username: getDisplayUsername(counterpartUser),
       moodEmoji: counterpartProfile.moodEmoji,
       intentSummary: counterpartProfile.intentSummary,
+      photoUrl: counterpartProfile.photoUrl,
     },
   }
+}
+
+async function getPendingConnectionRequestsForUser(userId: string) {
+  const rows = await db
+    .select({
+      id: handoffConnection.id,
+      requesterUserId: handoffConnection.requesterUserId,
+      recipientUserId: handoffConnection.recipientUserId,
+      placeId: handoffConnection.placeId,
+      status: handoffConnection.status,
+      createdAt: handoffConnection.createdAt,
+      updatedAt: handoffConnection.updatedAt,
+      otherUserId: user.id,
+      username: user.displayUsername,
+      fallbackUsername: user.username,
+      fallbackName: user.name,
+      moodEmoji: userProfile.moodEmoji,
+      intentSummary: userProfile.intentSummary,
+      photoUrl: userProfile.photoUrl,
+    })
+    .from(handoffConnection)
+    .innerJoin(
+      user,
+      or(
+        and(eq(handoffConnection.requesterUserId, userId), eq(user.id, handoffConnection.recipientUserId)),
+        and(eq(handoffConnection.recipientUserId, userId), eq(user.id, handoffConnection.requesterUserId)),
+      ),
+    )
+    .leftJoin(userProfile, eq(userProfile.userId, user.id))
+    .where(
+      and(
+        eq(handoffConnection.status, 'pending'),
+        or(
+          eq(handoffConnection.requesterUserId, userId),
+          eq(handoffConnection.recipientUserId, userId),
+        ),
+      ),
+    )
+    .orderBy(desc(handoffConnection.createdAt))
+
+  return rows.map((row) => ({
+    id: row.id,
+    requesterUserId: row.requesterUserId,
+    recipientUserId: row.recipientUserId,
+    placeId: row.placeId,
+    status: row.status,
+    direction: row.requesterUserId === userId ? 'outgoing' as const : 'incoming' as const,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    user: {
+      userId: row.otherUserId,
+      username: row.username || row.fallbackUsername || row.fallbackName,
+      moodEmoji: row.moodEmoji,
+      intentSummary: row.intentSummary,
+      photoUrl: row.photoUrl,
+    },
+  }))
+}
+
+async function getRecentConnectionEventsForUser(userId: string) {
+  const since = new Date(Date.now() - 60_000)
+  const rows = await db
+    .select({
+      id: handoffConnection.id,
+      requesterUserId: handoffConnection.requesterUserId,
+      recipientUserId: handoffConnection.recipientUserId,
+      status: handoffConnection.status,
+      updatedAt: handoffConnection.updatedAt,
+    })
+    .from(handoffConnection)
+    .where(
+      and(
+        or(
+          and(
+            eq(handoffConnection.status, 'accepted'),
+            or(
+              eq(handoffConnection.requesterUserId, userId),
+              eq(handoffConnection.recipientUserId, userId),
+            ),
+          ),
+          and(
+            eq(handoffConnection.status, 'declined'),
+            eq(handoffConnection.requesterUserId, userId),
+          ),
+        ),
+      ),
+    )
+    .orderBy(desc(handoffConnection.updatedAt))
+    .limit(20)
+
+  const recentRows = rows.filter((row) => new Date(row.updatedAt).getTime() > since.getTime())
+  const otherUserIds = recentRows.map((row) =>
+    row.requesterUserId === userId ? row.recipientUserId : row.requesterUserId,
+  )
+  const otherUsers = otherUserIds.length > 0
+    ? await db
+        .select({
+          id: user.id,
+          username: user.displayUsername,
+          fallbackUsername: user.username,
+          fallbackName: user.name,
+        })
+        .from(user)
+        .where(inArray(user.id, otherUserIds))
+    : []
+  const userById = new Map(otherUsers.map((otherUser) => [otherUser.id, otherUser]))
+
+  return recentRows.map((row) => ({
+    id: row.id,
+    status: row.status,
+    direction: row.requesterUserId === userId ? 'outgoing' as const : 'incoming' as const,
+    updatedAt: row.updatedAt,
+    user: (() => {
+      const otherUserId = row.requesterUserId === userId ? row.recipientUserId : row.requesterUserId
+      const otherUser = userById.get(otherUserId)
+      return {
+        userId: otherUserId,
+        username: otherUser?.username || otherUser?.fallbackUsername || otherUser?.fallbackName || 'Someone nearby',
+      }
+    })(),
+  }))
 }
 
 async function resolveScannedHandoff(
@@ -576,6 +698,211 @@ export async function connectFromScan(input: { token: string }) {
     success: result.success,
     connectionId: result.connectionId,
   }
+}
+
+export async function sendConnectRequest(input: {
+  targetUserId: string
+  viewerUserId?: string
+}) {
+  const session = input.viewerUserId
+    ? { user: { id: input.viewerUserId } }
+    : await requireCurrentSession()
+  const targetUserId = input.targetUserId.trim()
+
+  if (!targetUserId) throw new Error('Choose someone nearby first.')
+  if (targetUserId === session.user.id) {
+    throw new Error('You cannot send a connection request to yourself.')
+  }
+
+  const [viewerProfile] = await db
+    .select()
+    .from(userProfile)
+    .where(eq(userProfile.userId, session.user.id))
+    .limit(1)
+  const [targetProfile] = await db
+    .select()
+    .from(userProfile)
+    .where(eq(userProfile.userId, targetUserId))
+    .limit(1)
+
+  if (!viewerProfile?.currentPlaceId || !targetProfile?.currentPlaceId) {
+    throw new Error('Both people need to be checked into a place.')
+  }
+  if (viewerProfile.currentPlaceId !== targetProfile.currentPlaceId) {
+    throw new Error('You need to be in the same place to connect.')
+  }
+  if (viewerProfile.status === 'in_conversation') {
+    throw new Error('You are already connected with someone nearby.')
+  }
+  if (targetProfile.status === 'in_conversation') {
+    throw new Error('They are already connected with someone nearby.')
+  }
+  if (targetProfile.status !== 'ready') {
+    throw new Error('They are not marked ready right now.')
+  }
+
+  const existingViewerConnection = await getActiveConnectionForUser(session.user.id)
+  const existingTargetConnection = await getActiveConnectionForUser(targetUserId)
+  if (existingViewerConnection) {
+    throw new Error('You are already connected with someone nearby.')
+  }
+  if (existingTargetConnection) {
+    throw new Error('They are already connected with someone nearby.')
+  }
+
+  const now = new Date()
+  const [existingRequest] = await db
+    .select()
+    .from(handoffConnection)
+    .where(
+      and(
+        eq(handoffConnection.status, 'pending'),
+        or(
+          and(
+            eq(handoffConnection.requesterUserId, session.user.id),
+            eq(handoffConnection.recipientUserId, targetUserId),
+          ),
+          and(
+            eq(handoffConnection.requesterUserId, targetUserId),
+            eq(handoffConnection.recipientUserId, session.user.id),
+          ),
+        ),
+      ),
+    )
+    .limit(1)
+
+  if (existingRequest) {
+    return { success: true, requestId: existingRequest.id, alreadyPending: true }
+  }
+
+  const requestId = crypto.randomUUID()
+  await db.insert(handoffConnection).values({
+    id: requestId,
+    requesterUserId: session.user.id,
+    recipientUserId: targetUserId,
+    placeId: viewerProfile.currentPlaceId,
+    status: 'pending',
+    createdAt: now,
+    updatedAt: now,
+  })
+
+  return { success: true, requestId }
+}
+
+export async function respondToConnectRequest(input: {
+  requestId: string
+  action: 'accept' | 'decline' | 'cancel'
+  viewerUserId?: string
+}) {
+  const session = input.viewerUserId
+    ? { user: { id: input.viewerUserId } }
+    : await requireCurrentSession()
+  const requestId = input.requestId.trim()
+  if (!requestId) throw new Error('Connection request not found.')
+
+  const [requestRecord] = await db
+    .select()
+    .from(handoffConnection)
+    .where(eq(handoffConnection.id, requestId))
+    .limit(1)
+
+  if (
+    !requestRecord ||
+    requestRecord.status !== 'pending' ||
+    (requestRecord.requesterUserId !== session.user.id &&
+      requestRecord.recipientUserId !== session.user.id)
+  ) {
+    throw new Error('Connection request not found.')
+  }
+
+  const now = new Date()
+
+  if (input.action === 'cancel') {
+    if (requestRecord.requesterUserId !== session.user.id) {
+      throw new Error('Only the sender can cancel this request.')
+    }
+    await db
+      .update(handoffConnection)
+      .set({ status: 'canceled', updatedAt: now })
+      .where(eq(handoffConnection.id, requestRecord.id))
+    return { success: true }
+  }
+
+  if (requestRecord.recipientUserId !== session.user.id) {
+    throw new Error('Only the recipient can respond to this request.')
+  }
+
+  if (input.action === 'decline') {
+    await db
+      .update(handoffConnection)
+      .set({ status: 'declined', updatedAt: now })
+      .where(eq(handoffConnection.id, requestRecord.id))
+    return { success: true }
+  }
+
+  const [requesterProfile] = await db
+    .select()
+    .from(userProfile)
+    .where(eq(userProfile.userId, requestRecord.requesterUserId))
+    .limit(1)
+  const [recipientProfile] = await db
+    .select()
+    .from(userProfile)
+    .where(eq(userProfile.userId, requestRecord.recipientUserId))
+    .limit(1)
+
+  if (!requesterProfile?.currentPlaceId || !recipientProfile?.currentPlaceId) {
+    throw new Error('Both people need to be checked into a place.')
+  }
+  if (
+    requesterProfile.currentPlaceId !== requestRecord.placeId ||
+    recipientProfile.currentPlaceId !== requestRecord.placeId
+  ) {
+    throw new Error('Both people need to still be in this place.')
+  }
+  if (requesterProfile.status === 'in_conversation' || recipientProfile.status === 'in_conversation') {
+    throw new Error('One of you is already connected.')
+  }
+
+  await db
+    .update(handoffConnection)
+    .set({ status: 'accepted', updatedAt: now })
+    .where(eq(handoffConnection.id, requestRecord.id))
+
+  await db
+    .update(handoffConnection)
+    .set({ status: 'canceled', updatedAt: now })
+    .where(
+      and(
+        eq(handoffConnection.status, 'pending'),
+        or(
+          eq(handoffConnection.requesterUserId, requestRecord.requesterUserId),
+          eq(handoffConnection.recipientUserId, requestRecord.requesterUserId),
+          eq(handoffConnection.requesterUserId, requestRecord.recipientUserId),
+          eq(handoffConnection.recipientUserId, requestRecord.recipientUserId),
+        ),
+      ),
+    )
+
+  await db
+    .update(userProfile)
+    .set({
+      status: 'in_conversation',
+      isFindable: false,
+      locationHint: null,
+      pingRequestedAt: null,
+      pingRequestedByUserId: null,
+      pingRequestedByUsername: null,
+      updatedAt: now,
+    })
+    .where(
+      or(
+        eq(userProfile.userId, requestRecord.requesterUserId),
+        eq(userProfile.userId, requestRecord.recipientUserId),
+      ),
+    )
+
+  return { success: true, connectionId: requestRecord.id }
 }
 
 export async function createFriendRequest(input: { token?: string }) {
@@ -966,8 +1293,10 @@ export async function joinPlaceAndConnectFromScan(input: { token: string; viewer
   }
 }
 
-export async function endCurrentConnection() {
-  const session = await requireCurrentSession()
+export async function endCurrentConnection(input?: { viewerUserId?: string }) {
+  const session = input?.viewerUserId
+    ? { user: { id: input.viewerUserId } }
+    : await requireCurrentSession()
   const agent = await getUserAgent(session.user.id)
   const result = await agent.endCurrentConnection()
 
@@ -1103,8 +1432,13 @@ export async function searchNearbyPlacesForLocation(input: {
   }))
 }
 
-export async function getNearbyPlacePreview(input: { placeId: string }) {
-  await requireCurrentSession()
+export async function getNearbyPlacePreview(input: {
+  placeId: string
+  viewerUserId?: string
+}) {
+  if (!input.viewerUserId) {
+    await requireCurrentSession()
+  }
 
   const placeId = input.placeId.trim()
 
@@ -1178,6 +1512,16 @@ export async function getNearbyPlacePreview(input: { placeId: string }) {
       ),
     )
 
+  const pendingConnectionRequests = input.viewerUserId
+    ? await getPendingConnectionRequestsForUser(input.viewerUserId)
+    : []
+  const activeConnection = input.viewerUserId
+    ? await getActiveConnectionForUser(input.viewerUserId)
+    : null
+  const connectionEvents = input.viewerUserId
+    ? await getRecentConnectionEventsForUser(input.viewerUserId)
+    : []
+
   return {
     placeId,
     readyCount,
@@ -1200,6 +1544,9 @@ export async function getNearbyPlacePreview(input: { placeId: string }) {
         pingRequestedByUserId: record.pingRequestedByUserId ?? null,
         pingRequestedByUsername: record.pingRequestedByUsername ?? null,
       })),
+      pendingConnectionRequests,
+      activeConnection,
+      connectionEvents,
   } satisfies NearbyPlacePreviewState
 }
 
@@ -1339,4 +1686,3 @@ export async function getConversationMessagesWithStatus(input: { friendUserId: s
   
   return messages
 }
-
