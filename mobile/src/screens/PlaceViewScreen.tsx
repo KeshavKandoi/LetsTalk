@@ -41,12 +41,36 @@ interface Participant {
 }
 interface ActiveConnection {
   id: string
+  placeId: string
   createdAt: string
   counterpart: {
     userId: string
     username: string
     moodEmoji: string
     intentSummary: string | null
+    photoUrl?: string | null
+  }
+}
+interface PendingConnectionRequest {
+  id: string
+  requesterUserId: string
+  recipientUserId: string
+  direction: 'incoming' | 'outgoing'
+  user: {
+    userId: string
+    username: string
+    moodEmoji: string | null
+    intentSummary: string | null
+    photoUrl: string | null
+  }
+}
+interface ConnectionEvent {
+  id: string
+  status: 'accepted' | 'declined'
+  direction: 'incoming' | 'outgoing'
+  user: {
+    userId: string
+    username: string
   }
 }
 interface QrHandoff {
@@ -77,13 +101,15 @@ export default function PlaceViewScreen() {
   const [qrVisible, setQrVisible] = useState(false)
   const [scannerVisible, setScannerVisible] = useState(false)
   const [finderLoading, setFinderLoading] = useState(false)
-  const [pingingUserId, setPingingUserId] = useState<string | null>(null)
+  const [pendingRequests, setPendingRequests] = useState<PendingConnectionRequest[]>([])
+  const [connectionActionId, setConnectionActionId] = useState<string | null>(null)
   const [selectedPerson, setSelectedPerson] = useState<Participant | null>(null)
   const [notice, setNotice] = useState('')
   const [myPhotoUrl, setMyPhotoUrl] = useState<string | null>(null)
   const [myUsername, setMyUsername] = useState<string>('')
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const photoLoadedRef = useRef(false)
+  const seenConnectionEventIdsRef = useRef<Set<string>>(new Set())
 
   const loadState = async (silent = false) => {
     if (!silent) setLoading(true)
@@ -102,7 +128,21 @@ export default function PlaceViewScreen() {
       if (data.currentPlace?.place?.placeId) {
         const preview = await apiFetch('/api/places/preview', { placeId: data.currentPlace.place.placeId })
         const allParticipants = preview.participants ?? []
+        const nextActiveConnection = data.activeConnection ?? preview.activeConnection ?? null
         setParticipants(allParticipants)
+        setPendingRequests(nextActiveConnection ? [] : preview.pendingConnectionRequests ?? [])
+        if (nextActiveConnection && !data.activeConnection) {
+          setState({ ...data, activeConnection: nextActiveConnection })
+        }
+        for (const event of (preview.connectionEvents ?? []) as ConnectionEvent[]) {
+          if (seenConnectionEventIdsRef.current.has(event.id)) continue
+          seenConnectionEventIdsRef.current.add(event.id)
+          if (event.status === 'declined') {
+            setNotice(`${event.user.username} declined your connection request.`)
+          } else if (event.status === 'accepted') {
+            setNotice(`You and ${event.user.username} are now connected. QR verification is unlocked.`)
+          }
+        }
         if (!photoLoadedRef.current) {
           const me = allParticipants.find((p: any) => p.userId === data.session?.user?.id)
           if (me?.photoUrl) {
@@ -130,7 +170,7 @@ export default function PlaceViewScreen() {
 
   useEffect(() => {
     loadState()
-    pollRef.current = setInterval(() => loadState(true), 8000)
+    pollRef.current = setInterval(() => loadState(true), 3000)
     const subscription = AppState.addEventListener('change', (nextState) => {
       if (nextState === 'active') void loadState(true)
     })
@@ -203,19 +243,55 @@ export default function PlaceViewScreen() {
     finally { setFinderLoading(false) }
   }
 
-  const handlePing = async (participant: Participant) => {
-    setPingingUserId(participant.userId)
+  const handleSendConnectRequest = async (participant: Participant) => {
+    setConnectionActionId(participant.userId)
+    setError('')
     try {
-      await apiFetch('/api/places/finder', { action: 'ping', userId: participant.userId })
-      setNotice(`👋 Ping sent to ${participant.username}!`)
-    } catch (e: any) { setError(e.message) }
-    finally { setPingingUserId(null) }
+      await apiFetch('/api/places/connect-request', {
+        action: 'send',
+        targetUserId: participant.userId,
+      })
+      setNotice(`Connection request sent to ${participant.username}.`)
+      await loadState(true)
+    } catch (e: any) { setError(e.message || 'Could not send request.') }
+    finally { setConnectionActionId(null) }
+  }
+
+  const handleRespondToRequest = async (
+    request: PendingConnectionRequest,
+    action: 'accept' | 'decline' | 'cancel',
+  ) => {
+    setConnectionActionId(request.id)
+    setError('')
+    try {
+      await apiFetch('/api/places/connect-request', {
+        action,
+        requestId: request.id,
+      })
+      if (action === 'accept') setNotice(`You and ${request.user.username} are now connected. QR verification is unlocked.`)
+      else if (action === 'decline') setNotice(`Request from ${request.user.username} declined.`)
+      else setNotice(`Request to ${request.user.username} canceled.`)
+      await loadState(true)
+    } catch (e: any) { setError(e.message || 'Could not update request.') }
+    finally { setConnectionActionId(null) }
   }
 
   const renderAvatar = (p: Participant, size = 52) => {
     const initials = (p.username || '?').slice(0, 2).toUpperCase()
     return p.photoUrl
       ? <Image source={{ uri: p.photoUrl }} style={{ width: size, height: size, borderRadius: size / 2 }} />
+      : <View style={[s.avatarPlaceholder, { width: size, height: size, borderRadius: size / 2 }]}>
+          <Text style={s.avatarInitials}>{initials}</Text>
+        </View>
+  }
+
+  const renderConnectionAvatar = (
+    person: { username: string; photoUrl?: string | null },
+    size = 52,
+  ) => {
+    const initials = (person.username || '?').slice(0, 2).toUpperCase()
+    return person.photoUrl
+      ? <Image source={{ uri: person.photoUrl }} style={{ width: size, height: size, borderRadius: size / 2 }} />
       : <View style={[s.avatarPlaceholder, { width: size, height: size, borderRadius: size / 2 }]}>
           <Text style={s.avatarInitials}>{initials}</Text>
         </View>
@@ -239,6 +315,12 @@ export default function PlaceViewScreen() {
   const { profile, currentPlace, activeConnection, qrHandoff } = state
   const isReady = profile.status === 'ready'
   const isInConversation = profile.status === 'in_conversation'
+  const myUserId = state.session?.user.id
+  const myDisplayName = myUsername || state.session?.user.username || state.session?.user.name || 'You'
+  const availableParticipants = participants.filter((p) => p.status !== 'in_conversation')
+  const incomingRequests = pendingRequests.filter((request) => request.direction === 'incoming')
+  const requestByUserId = new Map(pendingRequests.map((request) => [request.user.userId, request]))
+  const currentParticipant = participants.find((p) => p.userId === myUserId)
 
   return (
     <SafeAreaView style={s.container}>
@@ -263,17 +345,30 @@ export default function PlaceViewScreen() {
           </TouchableOpacity>
         ) : null}
 
-        {/* Active conversation banner */}
+        {/* Connected User */}
         {activeConnection && (
           <View style={s.connectionBanner}>
-            <View style={s.connectionHeader}>
-              <Text style={s.connectionEmoji}>🤝</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={s.connectionTitle}>Talking with {activeConnection.counterpart.username}</Text>
-                <Text style={s.connectionMood}>{activeConnection.counterpart.moodEmoji} {activeConnection.counterpart.intentSummary || 'Open to a conversation.'}</Text>
+            <Text style={s.connectedSectionTitle}>Connected User</Text>
+            <View style={s.connectedPeopleRow}>
+              <View style={s.connectedPerson}>
+                {renderConnectionAvatar({
+                  username: myDisplayName,
+                  photoUrl: myPhotoUrl || currentParticipant?.photoUrl,
+                }, 58)}
+                <Text style={s.connectedName} numberOfLines={1}>{myDisplayName}</Text>
+                <Text style={s.connectedMood} numberOfLines={2}>{profile.moodEmoji} {profile.intentSummary || 'Open to a conversation.'}</Text>
+              </View>
+              <Text style={s.connectedLink}>↔</Text>
+              <View style={s.connectedPerson}>
+                {renderConnectionAvatar(activeConnection.counterpart, 58)}
+                <Text style={s.connectedName} numberOfLines={1}>{activeConnection.counterpart.username}</Text>
+                <Text style={s.connectedMood} numberOfLines={2}>{activeConnection.counterpart.moodEmoji} {activeConnection.counterpart.intentSummary || 'Open to a conversation.'}</Text>
               </View>
             </View>
-            <Text style={s.connectionHint}>Take your time. Either person can end it.</Text>
+            <TouchableOpacity style={s.unlockQrBtn} onPress={() => setQrVisible(true)}>
+              <Text style={s.unlockQrBtnText}>Unlock QR Verification</Text>
+            </TouchableOpacity>
+            <Text style={s.connectionHint}>You are connected. New requests are paused until this conversation ends.</Text>
             <TouchableOpacity style={s.endBtn} onPress={handleEndConversation} disabled={endingConversation}>
               {endingConversation ? <ActivityIndicator color="white" /> : <Text style={s.endBtnText}>I'm free again</Text>}
             </TouchableOpacity>
@@ -335,15 +430,49 @@ export default function PlaceViewScreen() {
         {/* People Nearby */}
         <View style={s.section}>
           <Text style={s.sectionTitle}>People Nearby</Text>
-          {participants.length > 0
-            ? participants.map((p) => (
+          {incomingRequests.length > 0 && !activeConnection ? (
+            <View style={s.requestsBox}>
+              <Text style={s.requestsTitle}>Incoming Requests</Text>
+              {incomingRequests.map((request) => (
+                <View key={request.id} style={s.requestRow}>
+                  {renderConnectionAvatar(request.user, 44)}
+                  <View style={{ flex: 1, marginLeft: 10 }}>
+                    <Text style={s.requestName}>{request.user.username}</Text>
+                    <Text style={s.requestMood} numberOfLines={1}>{request.user.moodEmoji} {request.user.intentSummary || 'Open to a conversation.'}</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={s.acceptBtn}
+                    onPress={() => handleRespondToRequest(request, 'accept')}
+                    disabled={connectionActionId === request.id}
+                  >
+                    <Text style={s.acceptBtnText}>Accept</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={s.declineBtn}
+                    onPress={() => handleRespondToRequest(request, 'decline')}
+                    disabled={connectionActionId === request.id}
+                  >
+                    <Text style={s.declineBtnText}>Decline</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          ) : null}
+          {availableParticipants.length > 0
+            ? availableParticipants.map((p) => {
+                const request = requestByUserId.get(p.userId)
+                const isMe = myUserId === p.userId
+                const isConnectedPerson = activeConnection?.counterpart.userId === p.userId
+                const actionLoading = connectionActionId === p.userId || (request && connectionActionId === request.id)
+                const canSendConnectRequest = isReady && !activeConnection && p.status === 'ready'
+                return (
                 <View key={p.userId} style={s.personCard}>
                   <View style={s.personCardTop}>
                     {renderAvatar(p, 56)}
                     <View style={{ flex: 1, marginLeft: 12 }}>
                       <View style={s.personNameRow}>
                         <Text style={s.personName}>{p.username}</Text>
-                        {state.session?.user.id === p.userId && (
+                        {isMe && (
                           <View style={s.youBadge}><Text style={s.youBadgeText}>You</Text></View>
                         )}
                         <View style={[s.statusBadge, p.status === 'ready' && s.statusBadgeActive]}>
@@ -358,30 +487,61 @@ export default function PlaceViewScreen() {
                       ) : null}
                     </View>
                   </View>
-                  {state.session?.user.id !== p.userId && (
+                  {!isMe && (
                     <View style={s.personBtns}>
                       <TouchableOpacity style={s.viewProfileBtn} onPress={() => setSelectedPerson(p)}>
                         <Text style={s.viewProfileBtnText}>View Profile</Text>
                       </TouchableOpacity>
-                      {p.isFindable ? (
-                        <TouchableOpacity
-                          style={s.connectBtn}
-                          onPress={() => handlePing(p)}
-                          disabled={pingingUserId === p.userId}
-                        >
-                          {pingingUserId === p.userId
-                            ? <ActivityIndicator size="small" color="white" />
-                            : <Text style={s.connectBtnText}>Ping</Text>}
-                        </TouchableOpacity>
-                      ) : (
-                        <View style={[s.connectBtn, s.connectBtnDisabled]}>
-                          <Text style={s.connectBtnTextDisabled}>Connect</Text>
-                        </View>
-                      )}
+                      <View style={s.personActionColumn}>
+                        {isConnectedPerson ? (
+                          <View style={[s.connectBtn, s.personActionButton, s.connectedBtn]}>
+                            <Text style={s.connectBtnText}>✓ Connected</Text>
+                          </View>
+                        ) : request?.direction === 'outgoing' ? (
+                          <TouchableOpacity
+                            style={[s.connectBtn, s.personActionButton, s.cancelRequestBtn]}
+                            onPress={() => handleRespondToRequest(request, 'cancel')}
+                            disabled={Boolean(actionLoading)}
+                          >
+                            {actionLoading
+                              ? <ActivityIndicator size="small" color={GREEN} />
+                              : <Text style={s.cancelRequestBtnText}>Cancel Request</Text>}
+                          </TouchableOpacity>
+                        ) : request?.direction === 'incoming' ? (
+                          <TouchableOpacity
+                            style={[s.connectBtn, s.personActionButton]}
+                            onPress={() => handleRespondToRequest(request, 'accept')}
+                            disabled={Boolean(actionLoading)}
+                          >
+                            {actionLoading
+                              ? <ActivityIndicator size="small" color="white" />
+                              : <Text style={s.connectBtnText}>Accept</Text>}
+                          </TouchableOpacity>
+                        ) : canSendConnectRequest ? (
+                          <TouchableOpacity
+                            style={[s.connectBtn, s.personActionButton]}
+                            onPress={() => handleSendConnectRequest(p)}
+                            disabled={Boolean(actionLoading)}
+                          >
+                            {actionLoading
+                              ? <ActivityIndicator size="small" color="white" />
+                              : <Text style={s.connectBtnText}>Connect</Text>}
+                          </TouchableOpacity>
+                        ) : (
+                          <>
+                            <View style={[s.connectBtn, s.personActionButton, s.connectBtnDisabled]}>
+                              <Text style={s.connectBtnTextDisabled}>Connect</Text>
+                            </View>
+                            {!isReady && !activeConnection ? (
+                              <Text style={s.connectDisabledHint}>Set yourself ready to connect</Text>
+                            ) : null}
+                          </>
+                        )}
+                      </View>
                     </View>
                   )}
                 </View>
-              ))
+              )})
             : (
               <View style={s.emptyPeople}>
                 <Text style={s.emptyEmoji}>👀</Text>
@@ -423,21 +583,26 @@ export default function PlaceViewScreen() {
         {/* QR Code */}
         <View style={s.card}>
           <Text style={s.cardTitle}>Your QR Code</Text>
-          <Text style={s.cardHint}>Let nearby people scan your QR code to send a friend request instantly.</Text>
-          {qrHandoff ? (
+          <Text style={s.cardHint}>
+            {activeConnection
+              ? `Verify your connection with ${activeConnection.counterpart.username}.`
+              : 'Accept a connection request to unlock QR'}
+          </Text>
+          {activeConnection && qrHandoff ? (
             <TouchableOpacity style={s.qrContainer} onPress={() => setQrVisible(true)}>
-              <View style={[s.qrWrapper, !qrHandoff.isActive && s.qrInactive]}>
+              <View style={s.qrWrapper}>
                 <QRCode value={qrHandoff.url} size={160} backgroundColor="white" color="#0f3320" />
               </View>
-              <View style={[s.qrStatus, qrHandoff.isActive && s.qrStatusActive]}>
-                <Text style={[s.qrStatusText, qrHandoff.isActive && s.qrStatusTextActive]}>
-                  {qrHandoff.isActive ? '✓ Live while you\'re ready' : 'Set yourself ready to make this live'}
-                </Text>
+              <View style={[s.qrStatus, s.qrStatusActive]}>
+                <Text style={[s.qrStatusText, s.qrStatusTextActive]}>✓ QR verification unlocked</Text>
               </View>
               <Text style={s.qrTap}>Tap to enlarge</Text>
             </TouchableOpacity>
           ) : (
-            <View style={s.qrPlaceholder}><Text style={s.qrPlaceholderText}>Building QR...</Text></View>
+            <View style={s.qrLocked}>
+              <Text style={s.qrLockIcon}>🔒</Text>
+              <Text style={s.qrLockedTitle}>Accept a connection request to unlock QR</Text>
+            </View>
           )}
         </View>
 
@@ -458,7 +623,13 @@ export default function PlaceViewScreen() {
           <View style={s.qrModal}>
             <Text style={s.qrModalTitle}>Your QR Code</Text>
             {qrHandoff && <View style={s.qrModalCode}><QRCode value={qrHandoff.url} size={240} backgroundColor="white" color="#0f3320" /></View>}
-            <Text style={s.qrModalHint}>{isReady ? 'Live — people can scan this' : 'Set yourself ready to activate'}</Text>
+            <Text style={s.qrModalHint}>
+              {activeConnection
+                ? `Show this to ${activeConnection.counterpart.username} to verify your connection.`
+                : isReady
+                ? 'Live - people can scan this'
+                : 'Set yourself ready to activate'}
+            </Text>
             <TouchableOpacity style={s.primaryBtn} onPress={() => setQrVisible(false)}>
               <Text style={s.primaryBtnText}>Close</Text>
             </TouchableOpacity>
@@ -538,6 +709,14 @@ const s = StyleSheet.create({
   connectionTitle: { fontSize: 15, fontWeight: '700', color: GREEN_DARK, marginBottom: 3 },
   connectionMood: { fontSize: 13, color: GREEN_MID, lineHeight: 18 },
   connectionHint: { fontSize: 12, color: GREEN_MID, marginBottom: 12 },
+  connectedSectionTitle: { fontSize: 17, fontWeight: '800', color: GREEN_DARK, marginBottom: 12 },
+  connectedPeopleRow: { flexDirection: 'row', alignItems: 'stretch', marginBottom: 14 },
+  connectedPerson: { flex: 1, backgroundColor: 'white', borderRadius: 16, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(0,107,44,0.12)' },
+  connectedLink: { width: 34, textAlign: 'center', alignSelf: 'center', color: GREEN, fontSize: 20, fontWeight: '800' },
+  connectedName: { marginTop: 8, fontSize: 14, fontWeight: '800', color: GREEN_DARK, maxWidth: '100%' },
+  connectedMood: { marginTop: 4, fontSize: 12, color: GREEN_MID, lineHeight: 16, textAlign: 'center' },
+  unlockQrBtn: { backgroundColor: '#0f3320', borderRadius: 16, paddingVertical: 13, alignItems: 'center', marginBottom: 10 },
+  unlockQrBtnText: { color: 'white', fontWeight: '800', fontSize: 15 },
   endBtn: { backgroundColor: GREEN, borderRadius: 50, paddingVertical: 12, alignItems: 'center' },
   endBtnText: { color: 'white', fontWeight: '700', fontSize: 15 },
 
@@ -579,6 +758,15 @@ const s = StyleSheet.create({
   // People Section
   section: { marginBottom: 12 },
   sectionTitle: { fontSize: 18, fontWeight: '700', color: GREEN_DARK, marginBottom: 12, paddingHorizontal: 2 },
+  requestsBox: { backgroundColor: 'rgba(0,107,44,0.08)', borderRadius: 20, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(0,107,44,0.16)' },
+  requestsTitle: { fontSize: 14, fontWeight: '800', color: GREEN_DARK, marginBottom: 10 },
+  requestRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderRadius: 16, padding: 10, marginBottom: 8 },
+  requestName: { fontSize: 14, fontWeight: '800', color: GREEN_DARK },
+  requestMood: { fontSize: 12, color: GREEN_MID, marginTop: 2 },
+  acceptBtn: { backgroundColor: GREEN, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8, marginLeft: 6 },
+  acceptBtnText: { color: 'white', fontSize: 12, fontWeight: '800' },
+  declineBtn: { backgroundColor: 'rgba(220,38,38,0.08)', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8, marginLeft: 6 },
+  declineBtnText: { color: '#dc2626', fontSize: 12, fontWeight: '800' },
   personCard: { backgroundColor: 'white', borderRadius: 24, padding: 16, marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 1 }, elevation: 1, borderWidth: 1, borderColor: 'rgba(0,107,44,0.06)' },
   personCardTop: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
   avatarPlaceholder: { backgroundColor: 'rgba(0,107,44,0.12)', justifyContent: 'center', alignItems: 'center' },
@@ -596,8 +784,14 @@ const s = StyleSheet.create({
   personBtns: { flexDirection: 'row', gap: 8 },
   viewProfileBtn: { flex: 1, paddingVertical: 10, borderRadius: 14, backgroundColor: 'rgba(0,107,44,0.07)', alignItems: 'center' },
   viewProfileBtnText: { fontSize: 14, fontWeight: '600', color: GREEN_DARK },
+  personActionColumn: { flex: 1, alignItems: 'stretch' },
+  personActionButton: { flex: 0, width: '100%' },
   connectBtn: { flex: 1, paddingVertical: 10, borderRadius: 14, backgroundColor: GREEN, alignItems: 'center', shadowColor: GREEN, shadowOpacity: 0.25, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
-  connectBtnDisabled: { backgroundColor: 'rgba(0,107,44,0.08)', shadowOpacity: 0 },
+  connectBtnDisabled: { backgroundColor: 'rgba(148,163,184,0.18)', shadowOpacity: 0 },
+  connectDisabledHint: { marginTop: 5, color: '#64748b', fontSize: 11, fontWeight: '600', textAlign: 'center', lineHeight: 14 },
+  cancelRequestBtn: { backgroundColor: 'white', borderWidth: 1, borderColor: GREEN, shadowOpacity: 0 },
+  cancelRequestBtnText: { fontSize: 14, fontWeight: '700', color: GREEN },
+  connectedBtn: { backgroundColor: '#0f3320', shadowOpacity: 0 },
   connectBtnText: { fontSize: 14, fontWeight: '700', color: 'white' },
   connectBtnTextDisabled: { fontSize: 14, fontWeight: '600', color: '#6e7b6c' },
   emptyPeople: { backgroundColor: 'white', borderRadius: 24, padding: 28, alignItems: 'center', gap: 6 },
@@ -624,6 +818,9 @@ const s = StyleSheet.create({
   qrTap: { fontSize: 11, color: GREEN_MID },
   qrPlaceholder: { height: 100, justifyContent: 'center', alignItems: 'center' },
   qrPlaceholderText: { color: GREEN_MID, fontSize: 13 },
+  qrLocked: { minHeight: 132, borderRadius: 20, backgroundColor: 'rgba(148,163,184,0.12)', borderWidth: 1, borderColor: 'rgba(100,116,139,0.2)', justifyContent: 'center', alignItems: 'center', padding: 18 },
+  qrLockIcon: { fontSize: 28, marginBottom: 8 },
+  qrLockedTitle: { color: '#64748b', fontSize: 14, fontWeight: '800', textAlign: 'center', lineHeight: 20 },
 
   // Scan
   scanBtn: { backgroundColor: GREEN, borderRadius: 50, paddingVertical: 16, alignItems: 'center', marginBottom: 8, shadowColor: GREEN, shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } },
