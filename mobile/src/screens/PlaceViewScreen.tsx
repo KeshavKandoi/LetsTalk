@@ -7,6 +7,7 @@ import { useNavigation } from '@react-navigation/native'
 import QRCode from 'react-native-qrcode-svg'
 import ScannerModal from './ScannerModal'
 import { apiFetch } from '../lib/api'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 const FINDER_HINTS = ['By the window', 'Near the counter', 'At the bar', 'Corner table', 'Outside area', 'Near entrance']
 
@@ -21,12 +22,10 @@ interface Profile {
   pingRequestedAt: string | null
   pingRequestedByUsername: string | null
 }
-
 interface CurrentPlace {
   place: { placeId: string; name: string; address: string; readyCount: number }
   readyCount: number
 }
-
 interface Participant {
   userId: string
   username: string
@@ -40,7 +39,6 @@ interface Participant {
   gender: string | null
   photoUrl: string | null
 }
-
 interface ActiveConnection {
   id: string
   createdAt: string
@@ -51,19 +49,17 @@ interface ActiveConnection {
     intentSummary: string | null
   }
 }
-
 interface QrHandoff {
   token: string
   url: string
   isActive: boolean
 }
-
 interface PlaceViewState {
   profile: Profile | null
   currentPlace: CurrentPlace | null
   activeConnection: ActiveConnection | null
   qrHandoff: QrHandoff | null
-  session: { user: { id: string } } | null
+  session: { user: { id: string; name?: string; username?: string } } | null
 }
 
 export default function PlaceViewScreen() {
@@ -84,7 +80,11 @@ export default function PlaceViewScreen() {
   const [pingingUserId, setPingingUserId] = useState<string | null>(null)
   const [selectedPerson, setSelectedPerson] = useState<Participant | null>(null)
   const [notice, setNotice] = useState('')
+  const [myPhotoUrl, setMyPhotoUrl] = useState<string | null>(null)
+  const [myUsername, setMyUsername] = useState<string>('')
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const photoLoadedRef = useRef(false)
+
   const loadState = async (silent = false) => {
     if (!silent) setLoading(true)
     try {
@@ -94,13 +94,26 @@ export default function PlaceViewScreen() {
         return
       }
       setState(data)
+      // Photo will be set from participants list (more accurate)
+      if (!myUsername) {
+        if (data.session?.user?.username) setMyUsername(data.session.user.username)
+        else if (data.session?.user?.name) setMyUsername(data.session.user.name)
+      }
       if (data.currentPlace?.place?.placeId) {
         const preview = await apiFetch('/api/places/preview', { placeId: data.currentPlace.place.placeId })
-        setParticipants(preview.participants ?? [])
+        const allParticipants = preview.participants ?? []
+        setParticipants(allParticipants)
+        if (!photoLoadedRef.current) {
+          const me = allParticipants.find((p: any) => p.userId === data.session?.user?.id)
+          if (me?.photoUrl) {
+            photoLoadedRef.current = true
+            const photoTs = await AsyncStorage.getItem('photo_ts').catch(() => '1') || '1'
+            setMyPhotoUrl(me.photoUrl + '?t=' + photoTs)
+          }
+        }
         setCheckedInCount(preview.checkedInCount ?? 0)
         setActiveConversationCount(preview.activeConversationCount ?? 0)
       }
-      // Check for incoming ping
       if (data.profile?.pingRequestedAt && data.profile?.pingRequestedByUsername) {
         const pingTime = new Date(data.profile.pingRequestedAt).getTime()
         if (Date.now() - pingTime < 30000) {
@@ -108,7 +121,6 @@ export default function PlaceViewScreen() {
         }
       }
     } catch (e: any) {
-      console.log('PlaceView loadState error:', JSON.stringify(e))
       setError(e.message || 'Could not load place.')
     } finally {
       setLoading(false)
@@ -120,9 +132,7 @@ export default function PlaceViewScreen() {
     loadState()
     pollRef.current = setInterval(() => loadState(true), 8000)
     const subscription = AppState.addEventListener('change', (nextState) => {
-      if (nextState === 'active') {
-        void loadState(true)
-      }
+      if (nextState === 'active') void loadState(true)
     })
     return () => {
       if (pollRef.current) clearInterval(pollRef.current)
@@ -160,7 +170,7 @@ export default function PlaceViewScreen() {
     setError('')
     try {
       await apiFetch('/api/places/end-connection', {})
-      setNotice('Conversation ended. You\'re back in the ready pool.')
+      setNotice("Conversation ended. You're back in the ready pool.")
       await loadState(true)
     } catch (e: any) { setError(e.message) }
     finally { setEndingConversation(false) }
@@ -202,26 +212,26 @@ export default function PlaceViewScreen() {
     finally { setPingingUserId(null) }
   }
 
-  const renderPersonAvatar = (person: Participant) => {
-    const initials = (person.username || '?').slice(0, 2).toUpperCase()
-    return person.photoUrl
-      ? <Image source={{ uri: person.photoUrl }} style={styles.personAvatarImg} />
-      : <View style={styles.personAvatar}><Text style={styles.personAvatarText}>{initials}</Text></View>
+  const renderAvatar = (p: Participant, size = 52) => {
+    const initials = (p.username || '?').slice(0, 2).toUpperCase()
+    return p.photoUrl
+      ? <Image source={{ uri: p.photoUrl }} style={{ width: size, height: size, borderRadius: size / 2 }} />
+      : <View style={[s.avatarPlaceholder, { width: size, height: size, borderRadius: size / 2 }]}>
+          <Text style={s.avatarInitials}>{initials}</Text>
+        </View>
   }
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.centered}><ActivityIndicator size="large" color="#1a6b3c" /></View>
-      </SafeAreaView>
-    )
-  }
+  if (loading) return (
+    <SafeAreaView style={s.container}>
+      <View style={s.centered}><ActivityIndicator size="large" color="#006b2c" /></View>
+    </SafeAreaView>
+  )
 
   if (!state?.profile || !state.currentPlace) return (
-    <SafeAreaView style={styles.container}>
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#1a6b3c" />
-        <Text style={{ color: '#1a6b3c', marginTop: 12, fontSize: 14 }}>Loading place...</Text>
+    <SafeAreaView style={s.container}>
+      <View style={s.centered}>
+        <ActivityIndicator size="large" color="#006b2c" />
+        <Text style={{ color: '#006b2c', marginTop: 12, fontSize: 14 }}>Loading place...</Text>
       </View>
     </SafeAreaView>
   )
@@ -231,241 +241,226 @@ export default function PlaceViewScreen() {
   const isInConversation = profile.status === 'in_conversation'
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={s.container}>
       <ScrollView
-        contentContainerStyle={styles.scroll}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadState() }} tintColor="#1a6b3c" />}
+        contentContainerStyle={s.scroll}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadState() }} tintColor="#006b2c" />}
       >
         {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.leaveBtn} onPress={handleLeave} disabled={leaving}>
-            {leaving ? <ActivityIndicator color="#dc2626" size="small" /> : <Text style={styles.leaveText}>Leave</Text>}
+        <View style={s.header}>
+          <TouchableOpacity style={s.leaveBtn} onPress={handleLeave} disabled={leaving}>
+            {leaving ? <ActivityIndicator color="#dc2626" size="small" /> : <Text style={s.leaveText}>Leave Place</Text>}
           </TouchableOpacity>
-          <Text style={styles.logo}>LetsTalk</Text>
-          <View style={{ width: 60 }} />
+          <Text style={s.logo}>Let's Talk</Text>
+          <View style={{ width: 90 }} />
         </View>
 
-        {error ? <View style={styles.errorBox}><Text style={styles.errorText}>{error}</Text></View> : null}
+        {error ? <View style={s.errorBox}><Text style={s.errorText}>{error}</Text></View> : null}
         {notice ? (
-          <TouchableOpacity style={styles.noticeBox} onPress={() => setNotice('')}>
-            <Text style={styles.noticeText}>{notice}</Text>
-            <Text style={styles.noticeDismiss}>Tap to dismiss</Text>
+          <TouchableOpacity style={s.noticeBox} onPress={() => setNotice('')}>
+            <Text style={s.noticeText}>{notice}</Text>
+            <Text style={s.noticeDismiss}>Tap to dismiss</Text>
           </TouchableOpacity>
         ) : null}
 
         {/* Active conversation banner */}
         {activeConnection && (
-          <View style={styles.connectionBanner}>
-            <View style={styles.connectionHeader}>
-              <Text style={styles.connectionEmoji}>🤝</Text>
+          <View style={s.connectionBanner}>
+            <View style={s.connectionHeader}>
+              <Text style={s.connectionEmoji}>🤝</Text>
               <View style={{ flex: 1 }}>
-                <Text style={styles.connectionTitle}>Talking with {activeConnection.counterpart.username}</Text>
-                <Text style={styles.connectionMood}>
-                  {activeConnection.counterpart.moodEmoji} {activeConnection.counterpart.intentSummary || 'Open to a conversation.'}
-                </Text>
+                <Text style={s.connectionTitle}>Talking with {activeConnection.counterpart.username}</Text>
+                <Text style={s.connectionMood}>{activeConnection.counterpart.moodEmoji} {activeConnection.counterpart.intentSummary || 'Open to a conversation.'}</Text>
               </View>
             </View>
-            <Text style={styles.connectionHint}>Take your time. Either person can end it.</Text>
-            <TouchableOpacity style={styles.endBtn} onPress={handleEndConversation} disabled={endingConversation}>
-              {endingConversation ? <ActivityIndicator color="white" /> : <Text style={styles.endBtnText}>I'm free again</Text>}
+            <Text style={s.connectionHint}>Take your time. Either person can end it.</Text>
+            <TouchableOpacity style={s.endBtn} onPress={handleEndConversation} disabled={endingConversation}>
+              {endingConversation ? <ActivityIndicator color="white" /> : <Text style={s.endBtnText}>I'm free again</Text>}
             </TouchableOpacity>
           </View>
         )}
 
-        {/* Place info */}
-        <View style={styles.placeCard}>
-          <View style={styles.placeHeader}>
-            <View style={{ flex: 1 }}>
-              <View style={styles.livePill}>
-                <View style={styles.liveDot} />
-                <Text style={styles.liveText}>Live place</Text>
-              </View>
-              <Text style={styles.placeName}>{currentPlace.place.name}</Text>
-              <Text style={styles.placeAddress} numberOfLines={2}>{currentPlace.place.address}</Text>
-            </View>
+        {/* Place Card */}
+        <View style={s.placeCard}>
+          <View style={s.livePill}>
+            <View style={s.liveDot} />
+            <Text style={s.liveText}>Live Place</Text>
           </View>
-          <View style={styles.statsRow}>
-            <View style={styles.statBox}>
-              <Text style={styles.statValue}>{currentPlace.readyCount}</Text>
-              <Text style={styles.statLabel}>Ready</Text>
+          <Text style={s.placeName}>{currentPlace.place.name}</Text>
+          <Text style={s.placeAddress}>{currentPlace.place.address}</Text>
+          <View style={s.divider} />
+          <View style={s.statsRow}>
+            <View style={s.statBox}>
+              <Text style={s.statValueGreen}>{currentPlace.readyCount}</Text>
+              <Text style={s.statLabel}>Available</Text>
             </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statValue}>{checkedInCount}</Text>
-              <Text style={styles.statLabel}>Here now</Text>
+            <View style={[s.statBox, s.statBorderX]}>
+              <Text style={s.statValueDark}>{checkedInCount}</Text>
+              <Text style={s.statLabel}>Here Now</Text>
             </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statValue}>{activeConversationCount}</Text>
-              <Text style={styles.statLabel}>Talking</Text>
+            <View style={s.statBox}>
+              <Text style={s.statValueSecondary}>{activeConversationCount}</Text>
+              <Text style={s.statLabel}>Talking</Text>
             </View>
-          </View>
-          <View style={styles.introCard}>
-            <Text style={styles.introLabel}>YOUR INTRO</Text>
-            <Text style={styles.introText}>{profile.moodEmoji} {profile.intentSummary || profile.intentText || 'Open to a nearby conversation.'}</Text>
           </View>
         </View>
 
-        {/* Ready / Status control */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Your status</Text>
-          <Text style={styles.cardHint}>
+        {/* Your Status */}
+        <View style={s.card}>
+          <Text style={s.cardTitle}>Your Status</Text>
+          <Text style={s.cardHint}>
             {isInConversation
-              ? `You're talking with ${activeConnection?.counterpart.username ?? 'someone'} — your QR is paused.`
+              ? `You're talking with ${activeConnection?.counterpart.username ?? 'someone'}.`
               : isReady
-              ? 'You\'re visible in the ready count for this place.'
-              : 'You\'re present but not yet in the ready count.'}
+              ? "You're visible in the ready count for this place."
+              : "When you're ready people nearby can discover and connect with you."}
           </Text>
           {!isInConversation && (
             <TouchableOpacity
-              style={[styles.readyBtn, isReady && styles.readyBtnActive]}
+              style={[s.primaryBtn, isReady && s.primaryBtnOutline]}
               onPress={toggleReady}
               disabled={togglingReady}
             >
               {togglingReady
-                ? <ActivityIndicator color={isReady ? '#1a6b3c' : 'white'} />
-                : <Text style={[styles.readyBtnText, isReady && styles.readyBtnTextActive]}>
+                ? <ActivityIndicator color={isReady ? '#006b2c' : 'white'} />
+                : <Text style={[s.primaryBtnText, isReady && s.primaryBtnTextOutline]}>
                     {isReady ? '✓ Leave ready pool' : '👋 Set me ready'}
                   </Text>}
             </TouchableOpacity>
           )}
         </View>
 
-        {/* People ready here */}
-        <View style={styles.card}>
-          <View style={styles.cardRow}>
-            <Text style={styles.cardTitle}>People here now</Text>
-            <View style={styles.readyBadge}>
-              <Text style={styles.readyBadgeText}>{checkedInCount} here</Text>
-            </View>
-          </View>
-          <Text style={styles.cardHint}>Tap someone to see their profile, mood, and bio.</Text>
+
+
+        {/* People Nearby */}
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>People Nearby</Text>
           {participants.length > 0
             ? participants.map((p) => (
-                <TouchableOpacity key={p.userId} style={styles.participantCard} onPress={() => setSelectedPerson(p)}>
-                  {p.photoUrl
-                    ? <Image source={{ uri: p.photoUrl }} style={styles.participantAvatar} />
-                    : <View style={styles.participantAvatarPlaceholder}>
-                        <Text style={styles.participantEmoji}>{p.moodEmoji}</Text>
+                <View key={p.userId} style={s.personCard}>
+                  <View style={s.personCardTop}>
+                    {renderAvatar(p, 56)}
+                    <View style={{ flex: 1, marginLeft: 12 }}>
+                      <View style={s.personNameRow}>
+                        <Text style={s.personName}>{p.username}</Text>
+                        {state.session?.user.id === p.userId && (
+                          <View style={s.youBadge}><Text style={s.youBadgeText}>You</Text></View>
+                        )}
+                        <View style={[s.statusBadge, p.status === 'ready' && s.statusBadgeActive]}>
+                          <Text style={[s.statusBadgeText, p.status === 'ready' && s.statusBadgeTextActive]}>
+                            {p.status === 'ready' ? 'Open to Talk' : 'Browsing'}
+                          </Text>
+                        </View>
                       </View>
-                  }
-                  <View style={{ flex: 1 }}>
-                    <View style={styles.participantNameRow}>
-                      <Text style={styles.participantName}>{p.username}</Text>
-                      {state.session?.user.id === p.userId && (
-                        <View style={styles.youBadge}><Text style={styles.youBadgeText}>You</Text></View>
-                      )}
-                      <View style={[styles.findableBadge, p.isFindable && styles.findableBadgeActive]}>
-                        <Text style={[styles.findableBadgeText, p.isFindable && styles.findableBadgeTextActive]}>
-                          {p.isFindable ? 'Findable' : 'Ready'}
-                        </Text>
-                      </View>
+                      <Text style={s.personMood} numberOfLines={2}>{p.intentSummary || 'Open to a nearby conversation.'}</Text>
+                      {p.isFindable && p.locationHint ? (
+                        <Text style={s.locationHint}>📍 Near {p.locationHint.toLowerCase()}</Text>
+                      ) : null}
                     </View>
-                    <Text style={styles.participantMood} numberOfLines={2}>
-                      {p.intentSummary || 'Open to a nearby conversation.'}
-                    </Text>
-                    {p.isFindable && p.locationHint ? (
-                      <Text style={styles.locationHint}>📍 Near {p.locationHint.toLowerCase()}</Text>
-                    ) : null}
                   </View>
-                  {state.session?.user.id !== p.userId && p.isFindable && (
-                    <TouchableOpacity
-                      style={styles.pingBtn}
-                      onPress={() => handlePing(p)}
-                      disabled={pingingUserId === p.userId}
-                    >
-                      {pingingUserId === p.userId
-                        ? <ActivityIndicator size="small" color="#1a6b3c" />
-                        : <Text style={styles.pingBtnText}>🔔 Ping</Text>}
-                    </TouchableOpacity>
+                  {state.session?.user.id !== p.userId && (
+                    <View style={s.personBtns}>
+                      <TouchableOpacity style={s.viewProfileBtn} onPress={() => setSelectedPerson(p)}>
+                        <Text style={s.viewProfileBtnText}>View Profile</Text>
+                      </TouchableOpacity>
+                      {p.isFindable ? (
+                        <TouchableOpacity
+                          style={s.connectBtn}
+                          onPress={() => handlePing(p)}
+                          disabled={pingingUserId === p.userId}
+                        >
+                          {pingingUserId === p.userId
+                            ? <ActivityIndicator size="small" color="white" />
+                            : <Text style={s.connectBtnText}>Ping</Text>}
+                        </TouchableOpacity>
+                      ) : (
+                        <View style={[s.connectBtn, s.connectBtnDisabled]}>
+                          <Text style={s.connectBtnTextDisabled}>Connect</Text>
+                        </View>
+                      )}
+                    </View>
                   )}
-                </TouchableOpacity>
+                </View>
               ))
             : (
-              <View style={styles.emptyPeople}>
-                <Text style={styles.emptyEmoji}>👀</Text>
-                <Text style={styles.emptyTitle}>No one ready yet</Text>
-                <Text style={styles.emptyText}>Mark yourself ready and wait for others.</Text>
+              <View style={s.emptyPeople}>
+                <Text style={s.emptyEmoji}>👀</Text>
+                <Text style={s.emptyTitle}>No one ready yet</Text>
+                <Text style={s.emptyText}>Mark yourself ready and wait for others.</Text>
               </View>
             )}
         </View>
 
-        {/* Help someone find you */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>📍 Help someone find you</Text>
-          <Text style={styles.cardHint}>Share your spot in this place, so someone can ping you before scanning.</Text>
-          <View style={styles.hintRow}>
+        {/* Help Someone Find You */}
+        <View style={s.finderCard}>
+          <Text style={s.cardTitle}>Help Someone Find You</Text>
+          <Text style={s.cardHint}>Sharing your spot makes it easier for people to walk up and say hi!</Text>
+          <View style={s.hintRow}>
             {FINDER_HINTS.map((hint) => (
               <TouchableOpacity
                 key={hint}
-                style={[styles.hintChip, profile.locationHint === hint && styles.hintChipActive]}
+                style={[s.hintChip, profile.locationHint === hint && s.hintChipActive]}
                 onPress={() => handleSelectHint(hint)}
                 disabled={finderLoading || (!isReady && !profile.isFindable) || isInConversation}
               >
-                <Text style={[styles.hintChipText, profile.locationHint === hint && styles.hintChipTextActive]}>{hint}</Text>
+                <Text style={[s.hintChipText, profile.locationHint === hint && s.hintChipTextActive]}>{hint}</Text>
               </TouchableOpacity>
             ))}
           </View>
           <TouchableOpacity
-            style={[styles.finderBtn, profile.isFindable && styles.finderBtnActive]}
+            style={[s.primaryBtn, profile.isFindable && s.primaryBtnOutline]}
             onPress={handleFinderToggle}
             disabled={finderLoading || !isReady || isInConversation}
           >
             {finderLoading
               ? <ActivityIndicator color="white" />
-              : <Text style={styles.finderBtnText}>
-                  {profile.isFindable ? 'Stop sharing my spot' : 'Help someone find me'}
+              : <Text style={[s.primaryBtnText, profile.isFindable && s.primaryBtnTextOutline]}>
+                  {profile.isFindable ? 'Stop sharing my spot' : 'Share My Spot'}
                 </Text>}
           </TouchableOpacity>
-          {profile.isFindable && profile.locationHint ? (
-            <Text style={styles.finderStatus}>Currently sharing: {profile.locationHint}</Text>
-          ) : null}
         </View>
 
-        {/* QR code */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>🔲 Your QR code</Text>
-          <Text style={styles.cardHint}>Nearby people can scan this to send a friend request.</Text>
+        {/* QR Code */}
+        <View style={s.card}>
+          <Text style={s.cardTitle}>Your QR Code</Text>
+          <Text style={s.cardHint}>Let nearby people scan your QR code to send a friend request instantly.</Text>
           {qrHandoff ? (
-            <TouchableOpacity style={styles.qrContainer} onPress={() => setQrVisible(true)}>
-              <View style={[styles.qrWrapper, !qrHandoff.isActive && styles.qrInactive]}>
+            <TouchableOpacity style={s.qrContainer} onPress={() => setQrVisible(true)}>
+              <View style={[s.qrWrapper, !qrHandoff.isActive && s.qrInactive]}>
                 <QRCode value={qrHandoff.url} size={160} backgroundColor="white" color="#0f3320" />
               </View>
-              <View style={[styles.qrStatus, qrHandoff.isActive && styles.qrStatusActive]}>
-                <Text style={[styles.qrStatusText, qrHandoff.isActive && styles.qrStatusTextActive]}>
+              <View style={[s.qrStatus, qrHandoff.isActive && s.qrStatusActive]}>
+                <Text style={[s.qrStatusText, qrHandoff.isActive && s.qrStatusTextActive]}>
                   {qrHandoff.isActive ? '✓ Live while you\'re ready' : 'Set yourself ready to make this live'}
                 </Text>
               </View>
-              <Text style={styles.qrTap}>Tap to enlarge</Text>
+              <Text style={s.qrTap}>Tap to enlarge</Text>
             </TouchableOpacity>
           ) : (
-            <View style={styles.qrPlaceholder}><Text style={styles.qrPlaceholderText}>Building QR...</Text></View>
+            <View style={s.qrPlaceholder}><Text style={s.qrPlaceholderText}>Building QR...</Text></View>
           )}
         </View>
 
-        {/* Action buttons */}
-        <View style={styles.actionRow}>
-          <TouchableOpacity
-            style={[styles.scanBtn, isInConversation && styles.scanBtnDisabled]}
-            onPress={() => { if (!isInConversation) setScannerVisible(true) }}
-            disabled={isInConversation}
-          >
-            <Text style={styles.scanBtnText}>📷 Scan someone nearby</Text>
-          </TouchableOpacity>
-        </View>
+        {/* Scan Button */}
+        <TouchableOpacity
+          style={[s.scanBtn, isInConversation && s.scanBtnDisabled]}
+          onPress={() => { if (!isInConversation) setScannerVisible(true) }}
+          disabled={isInConversation}
+        >
+          <Text style={s.scanBtnText}>📷 Scan someone nearby</Text>
+        </TouchableOpacity>
+
       </ScrollView>
 
       {/* QR Fullscreen Modal */}
       <Modal visible={qrVisible} transparent animationType="fade" onRequestClose={() => setQrVisible(false)}>
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setQrVisible(false)}>
-          <View style={styles.qrModal}>
-            <Text style={styles.qrModalTitle}>Your QR Code</Text>
-            {qrHandoff && (
-              <View style={styles.qrModalCode}>
-                <QRCode value={qrHandoff.url} size={240} backgroundColor="white" color="#0f3320" />
-              </View>
-            )}
-            <Text style={styles.qrModalHint}>{isReady ? 'Live — people can scan this' : 'Set yourself ready to activate'}</Text>
-            <TouchableOpacity style={styles.qrModalClose} onPress={() => setQrVisible(false)}>
-              <Text style={styles.qrModalCloseText}>Close</Text>
+        <TouchableOpacity style={s.modalOverlay} activeOpacity={1} onPress={() => setQrVisible(false)}>
+          <View style={s.qrModal}>
+            <Text style={s.qrModalTitle}>Your QR Code</Text>
+            {qrHandoff && <View style={s.qrModalCode}><QRCode value={qrHandoff.url} size={240} backgroundColor="white" color="#0f3320" /></View>}
+            <Text style={s.qrModalHint}>{isReady ? 'Live — people can scan this' : 'Set yourself ready to activate'}</Text>
+            <TouchableOpacity style={s.primaryBtn} onPress={() => setQrVisible(false)}>
+              <Text style={s.primaryBtnText}>Close</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -483,28 +478,27 @@ export default function PlaceViewScreen() {
         />
       )}
 
+      {/* Person Profile Modal */}
       <Modal visible={!!selectedPerson} transparent animationType="slide" onRequestClose={() => setSelectedPerson(null)}>
-        <TouchableOpacity style={styles.personOverlay} activeOpacity={1} onPress={() => setSelectedPerson(null)}>
-          <TouchableOpacity activeOpacity={1} style={styles.personSheet}>
-            <View style={styles.personHandle} />
+        <TouchableOpacity style={s.personOverlay} activeOpacity={1} onPress={() => setSelectedPerson(null)}>
+          <TouchableOpacity activeOpacity={1} style={s.personSheet}>
+            <View style={s.personHandle} />
             {selectedPerson ? (
               <>
-                <View style={styles.personTop}>
-                  {renderPersonAvatar(selectedPerson)}
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.personName}>{selectedPerson.username}</Text>
-                    <View style={styles.personTags}>
-                      {selectedPerson.age ? <Text style={styles.personTag}>{selectedPerson.age} yrs</Text> : null}
-                      {selectedPerson.gender ? <Text style={styles.personTag}>{selectedPerson.gender}</Text> : null}
+                <View style={s.personTop}>
+                  {renderAvatar(selectedPerson, 74)}
+                  <View style={{ flex: 1, marginLeft: 14 }}>
+                    <Text style={s.personModalName}>{selectedPerson.username}</Text>
+                    <View style={s.personTags}>
+                      {selectedPerson.age ? <Text style={s.personTag}>{selectedPerson.age} yrs</Text> : null}
+                      {selectedPerson.gender ? <Text style={s.personTag}>{selectedPerson.gender}</Text> : null}
                     </View>
                   </View>
                 </View>
-                <Text style={styles.personMood}>{selectedPerson.moodEmoji} {selectedPerson.intentText || selectedPerson.intentSummary || 'Open to a nearby conversation.'}</Text>
-                {state.session?.user.id !== selectedPerson.userId ? (
-                  <Text style={styles.personHint}>
-                    Scan their QR code to send a friend request.
-                  </Text>
-                ) : null}
+                <Text style={s.personModalMood}>{selectedPerson.moodEmoji} {selectedPerson.intentText || selectedPerson.intentSummary || 'Open to a nearby conversation.'}</Text>
+                {state.session?.user.id !== selectedPerson.userId && (
+                  <Text style={s.personHint}>Scan their QR code to send a friend request.</Text>
+                )}
               </>
             ) : null}
           </TouchableOpacity>
@@ -514,128 +508,141 @@ export default function PlaceViewScreen() {
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#d4f5d4' },
+const GREEN = '#006b2c'
+const GREEN_DARK = '#0f3320'
+const GREEN_MID = '#2d6e3e'
+const BG = '#f4fcf0'
+
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: BG },
   scroll: { padding: 20, paddingBottom: 48 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, paddingTop: 32 },
-  backBtn: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
-  backBtnText: { fontSize: 38, color: '#1a6b3c', fontWeight: '300', lineHeight: 44 },
-  logo: { fontSize: 22, fontWeight: '900', color: '#c084fc' },
-  leaveBtn: { backgroundColor: 'rgba(254,226,226,0.8)', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7, borderWidth: 1, borderColor: 'rgba(252,165,165,0.5)' },
-  profileBtn: { backgroundColor: 'rgba(255,255,255,0.8)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 7, borderWidth: 1, borderColor: 'rgba(144,212,144,0.5)' },
-  profileBtnTxt: { fontSize: 16 },
+
+  // Header
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingTop: 36 },
+  logo: { fontSize: 24, fontWeight: '900', color: '#c084fc', letterSpacing: -0.5, textAlign: 'center' },
+  leaveBtn: { backgroundColor: 'rgba(254,226,226,0.9)', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: 'rgba(252,165,165,0.5)' },
   leaveText: { color: '#dc2626', fontWeight: '600', fontSize: 13 },
+
+  // Alerts
   errorBox: { backgroundColor: '#fee2e2', borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: '#fca5a5' },
   errorText: { color: '#dc2626', fontSize: 13 },
-  noticeBox: { backgroundColor: 'rgba(26,107,60,0.12)', borderRadius: 16, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(26,107,60,0.25)' },
-  noticeText: { color: '#0f3320', fontSize: 14, fontWeight: '600' },
-  noticeDismiss: { color: '#2d6e3e', fontSize: 11, marginTop: 4 },
-  connectionBanner: { backgroundColor: 'rgba(26,107,60,0.12)', borderRadius: 20, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(26,107,60,0.25)' },
+  noticeBox: { backgroundColor: 'rgba(0,107,44,0.1)', borderRadius: 16, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(0,107,44,0.2)' },
+  noticeText: { color: GREEN_DARK, fontSize: 14, fontWeight: '600' },
+  noticeDismiss: { color: GREEN_MID, fontSize: 11, marginTop: 4 },
+
+  // Connection Banner
+  connectionBanner: { backgroundColor: 'rgba(0,107,44,0.1)', borderRadius: 20, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(0,107,44,0.2)' },
   connectionHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 8 },
   connectionEmoji: { fontSize: 28 },
-  connectionTitle: { fontSize: 15, fontWeight: '700', color: '#0f3320', marginBottom: 3 },
-  connectionMood: { fontSize: 13, color: '#2d6e3e', lineHeight: 18 },
-  connectionHint: { fontSize: 12, color: '#2d6e3e', marginBottom: 12 },
-  endBtn: { backgroundColor: '#1a6b3c', borderRadius: 50, paddingVertical: 12, alignItems: 'center' },
+  connectionTitle: { fontSize: 15, fontWeight: '700', color: GREEN_DARK, marginBottom: 3 },
+  connectionMood: { fontSize: 13, color: GREEN_MID, lineHeight: 18 },
+  connectionHint: { fontSize: 12, color: GREEN_MID, marginBottom: 12 },
+  endBtn: { backgroundColor: GREEN, borderRadius: 50, paddingVertical: 12, alignItems: 'center' },
   endBtnText: { color: 'white', fontWeight: '700', fontSize: 15 },
-  placeCard: { backgroundColor: 'rgba(255,255,255,0.82)', borderRadius: 20, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(144,212,144,0.5)' },
-  placeHeader: { marginBottom: 14 },
-  livePill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(22,163,74,0.1)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start', marginBottom: 8 },
-  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#16a34a' },
-  liveText: { fontSize: 11, color: '#16a34a', fontWeight: '700' },
-  placeName: { fontSize: 20, fontWeight: '800', color: '#0f3320', marginBottom: 4 },
-  placeAddress: { fontSize: 12, color: '#2d6e3e', lineHeight: 16 },
-  statsRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
-  statBox: { flex: 1, backgroundColor: 'rgba(26,107,60,0.07)', borderRadius: 12, padding: 10, alignItems: 'center' },
-  statValue: { fontSize: 22, fontWeight: '900', color: '#0f3320' },
-  statLabel: { fontSize: 11, color: '#2d6e3e', fontWeight: '600', marginTop: 2 },
-  introCard: { backgroundColor: 'rgba(26,107,60,0.07)', borderRadius: 14, padding: 12 },
-  introLabel: { fontSize: 10, fontWeight: '700', color: '#2d6e3e', letterSpacing: 1.5, marginBottom: 6 },
-  introText: { fontSize: 16, fontWeight: '600', color: '#0f3320' },
-  card: { backgroundColor: 'rgba(255,255,255,0.82)', borderRadius: 20, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(144,212,144,0.5)' },
-  cardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  cardTitle: { fontSize: 15, fontWeight: '700', color: '#0f3320', marginBottom: 4 },
-  cardHint: { fontSize: 12, color: '#2d6e3e', lineHeight: 18, marginBottom: 12 },
-  readyBtn: { backgroundColor: '#1a6b3c', borderRadius: 50, paddingVertical: 13, alignItems: 'center' },
-  readyBtnActive: { backgroundColor: 'white', borderWidth: 2, borderColor: '#1a6b3c' },
-  readyBtnText: { color: 'white', fontWeight: '700', fontSize: 15 },
-  readyBtnTextActive: { color: '#1a6b3c' },
-  readyBadge: { backgroundColor: 'rgba(26,107,60,0.1)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
-  readyBadgeText: { fontSize: 12, color: '#1a6b3c', fontWeight: '600' },
-  participantCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: 'rgba(26,107,60,0.06)', borderRadius: 14, padding: 12, marginTop: 8 },
-  participantAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    marginRight: 12,
-  },
-  participantAvatarPlaceholder: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#e0f2e9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  participantEmoji: { fontSize: 26, marginTop: 2 },
-  participantNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4, flexWrap: 'wrap' },
-  participantName: { fontSize: 14, fontWeight: '700', color: '#0f3320' },
-  youBadge: { backgroundColor: '#1a6b3c', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 },
+
+  // Place Card
+  placeCard: { backgroundColor: 'white', borderRadius: 24, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  livePill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(0,135,58,0.12)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start', marginBottom: 10 },
+  liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#00873a' },
+  liveText: { fontSize: 11, color: '#00873a', fontWeight: '700', letterSpacing: 0.5 },
+  placeName: { fontSize: 20, fontWeight: '800', color: GREEN_DARK, marginBottom: 4 },
+  placeAddress: { fontSize: 12, color: GREEN_MID, lineHeight: 17, marginBottom: 14 },
+  divider: { height: 1, backgroundColor: 'rgba(0,107,44,0.1)', marginBottom: 14 },
+  statsRow: { flexDirection: 'row' },
+  statBox: { flex: 1, alignItems: 'center', paddingVertical: 4 },
+  statBorderX: { borderLeftWidth: 1, borderRightWidth: 1, borderColor: 'rgba(0,107,44,0.1)' },
+  statValueGreen: { fontSize: 22, fontWeight: '900', color: GREEN },
+  statValueDark: { fontSize: 22, fontWeight: '900', color: GREEN_DARK },
+  statValueSecondary: { fontSize: 22, fontWeight: '900', color: '#006c4a' },
+  statLabel: { fontSize: 11, color: '#6e7b6c', fontWeight: '500', marginTop: 2 },
+
+  // Cards
+  card: { backgroundColor: 'white', borderRadius: 24, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
+  cardTitle: { fontSize: 16, fontWeight: '700', color: GREEN_DARK, marginBottom: 6 },
+  cardHint: { fontSize: 13, color: '#6e7b6c', lineHeight: 19, marginBottom: 14 },
+  cardLabelSmall: { fontSize: 11, fontWeight: '700', color: '#6e7b6c', letterSpacing: 1.2, marginBottom: 12 },
+
+  // Profile Preview
+  profilePreviewRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  profileAvatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(0,107,44,0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: GREEN },
+  profileAvatarEmoji: { fontSize: 26 },
+  profilePreviewName: { fontSize: 18, fontWeight: '800', color: GREEN_DARK, marginBottom: 4 },
+  profilePreviewMood: { fontSize: 13, color: GREEN_MID, lineHeight: 18 },
+
+  // Buttons
+  primaryBtn: { backgroundColor: GREEN, borderRadius: 50, paddingVertical: 14, alignItems: 'center', marginTop: 4 },
+  primaryBtnOutline: { backgroundColor: 'white', borderWidth: 2, borderColor: GREEN },
+  primaryBtnText: { color: 'white', fontWeight: '700', fontSize: 15 },
+  primaryBtnTextOutline: { color: GREEN },
+
+  // People Section
+  section: { marginBottom: 12 },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: GREEN_DARK, marginBottom: 12, paddingHorizontal: 2 },
+  personCard: { backgroundColor: 'white', borderRadius: 24, padding: 16, marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 1 }, elevation: 1, borderWidth: 1, borderColor: 'rgba(0,107,44,0.06)' },
+  personCardTop: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
+  avatarPlaceholder: { backgroundColor: 'rgba(0,107,44,0.12)', justifyContent: 'center', alignItems: 'center' },
+  avatarInitials: { color: GREEN, fontWeight: '800', fontSize: 18 },
+  personNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4, flexWrap: 'wrap' },
+  personName: { fontSize: 16, fontWeight: '700', color: GREEN_DARK },
+  youBadge: { backgroundColor: GREEN, borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 },
   youBadgeText: { fontSize: 10, color: 'white', fontWeight: '700' },
-  findableBadge: { backgroundColor: 'rgba(144,212,144,0.3)', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 },
-  findableBadgeActive: { backgroundColor: 'rgba(26,107,60,0.12)' },
-  findableBadgeText: { fontSize: 10, color: '#2d6e3e', fontWeight: '600' },
-  findableBadgeTextActive: { color: '#1a6b3c' },
-  participantMood: { fontSize: 12, color: '#2d6e3e', lineHeight: 17 },
-  locationHint: { fontSize: 12, color: '#1a6b3c', fontWeight: '600', marginTop: 3 },
-  pingBtn: { backgroundColor: 'white', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: 'rgba(144,212,144,0.6)', alignSelf: 'flex-start' },
-  personOverlay: { flex: 1, backgroundColor: 'rgba(15,51,32,0.45)', justifyContent: 'flex-end' },
-  personSheet: { minHeight: '48%', backgroundColor: '#f0faf0', borderTopLeftRadius: 26, borderTopRightRadius: 26, padding: 22, paddingBottom: 40 },
-  personHandle: { width: 42, height: 4, borderRadius: 2, backgroundColor: 'rgba(45,110,62,0.35)', alignSelf: 'center', marginBottom: 18 },
-  personTop: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 16 },
-  personAvatar: { width: 74, height: 74, borderRadius: 37, backgroundColor: '#1a6b3c', justifyContent: 'center', alignItems: 'center' },
-  personAvatarImg: { width: 74, height: 74, borderRadius: 37, backgroundColor: '#1a6b3c' },
-  personAvatarText: { color: 'white', fontWeight: '900', fontSize: 24 },
-  personName: { fontSize: 22, fontWeight: '900', color: '#0f3320', marginBottom: 8 },
-  personTags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  personTag: { backgroundColor: 'rgba(26,107,60,0.1)', color: '#1a6b3c', fontWeight: '700', fontSize: 12, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, overflow: 'hidden' },
-  personMood: { fontSize: 15, color: '#2d6e3e', lineHeight: 22, marginBottom: 18 },
-  personHint: { fontSize: 14, color: '#1a6b3c', fontWeight: '600' },
-  pingBtnText: { fontSize: 11, fontWeight: '600', color: '#1a6b3c' },
-  emptyPeople: { alignItems: 'center', padding: 20, gap: 6 },
+  statusBadge: { backgroundColor: 'rgba(148,163,184,0.25)', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
+  statusBadgeActive: { backgroundColor: 'rgba(130,245,193,0.4)' },
+  statusBadgeText: { fontSize: 11, color: '#3e4a3d', fontWeight: '700', textTransform: 'uppercase' },
+  statusBadgeTextActive: { color: '#005137' },
+  personMood: { fontSize: 13, color: '#6e7b6c', lineHeight: 18 },
+  locationHint: { fontSize: 12, color: GREEN, fontWeight: '600', marginTop: 3 },
+  personBtns: { flexDirection: 'row', gap: 8 },
+  viewProfileBtn: { flex: 1, paddingVertical: 10, borderRadius: 14, backgroundColor: 'rgba(0,107,44,0.07)', alignItems: 'center' },
+  viewProfileBtnText: { fontSize: 14, fontWeight: '600', color: GREEN_DARK },
+  connectBtn: { flex: 1, paddingVertical: 10, borderRadius: 14, backgroundColor: GREEN, alignItems: 'center', shadowColor: GREEN, shadowOpacity: 0.25, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
+  connectBtnDisabled: { backgroundColor: 'rgba(0,107,44,0.08)', shadowOpacity: 0 },
+  connectBtnText: { fontSize: 14, fontWeight: '700', color: 'white' },
+  connectBtnTextDisabled: { fontSize: 14, fontWeight: '600', color: '#6e7b6c' },
+  emptyPeople: { backgroundColor: 'white', borderRadius: 24, padding: 28, alignItems: 'center', gap: 6 },
   emptyEmoji: { fontSize: 32 },
-  emptyTitle: { fontSize: 15, fontWeight: '700', color: '#0f3320' },
-  emptyText: { fontSize: 12, color: '#2d6e3e', textAlign: 'center' },
-  hintRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
-  hintChip: { borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1, borderColor: 'rgba(144,212,144,0.6)', backgroundColor: 'white' },
-  hintChipActive: { backgroundColor: '#1a6b3c', borderColor: '#1a6b3c' },
-  hintChipText: { fontSize: 13, color: '#2d6e3e', fontWeight: '500' },
+  emptyTitle: { fontSize: 15, fontWeight: '700', color: GREEN_DARK },
+  emptyText: { fontSize: 13, color: '#6e7b6c', textAlign: 'center' },
+
+  // Finder
+  finderCard: { backgroundColor: 'rgba(130,245,193,0.15)', borderRadius: 24, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(130,245,193,0.5)' },
+  hintRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
+  hintChip: { borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: 'rgba(0,107,44,0.2)', backgroundColor: 'white' },
+  hintChipActive: { backgroundColor: GREEN, borderColor: GREEN },
+  hintChipText: { fontSize: 13, color: GREEN_MID, fontWeight: '500' },
   hintChipTextActive: { color: 'white' },
-  finderBtn: { backgroundColor: '#1a6b3c', borderRadius: 50, paddingVertical: 13, alignItems: 'center', marginBottom: 8 },
-  finderBtnActive: { backgroundColor: 'white', borderWidth: 2, borderColor: '#1a6b3c' },
-  finderBtnText: { color: 'white', fontWeight: '700', fontSize: 15 },
-  finderStatus: { fontSize: 12, color: '#1a6b3c', fontWeight: '600', textAlign: 'center' },
+
+  // QR
   qrContainer: { alignItems: 'center', paddingVertical: 12 },
-  qrWrapper: { padding: 12, backgroundColor: 'white', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(144,212,144,0.5)', marginBottom: 10 },
+  qrWrapper: { padding: 14, backgroundColor: 'white', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(0,107,44,0.15)', marginBottom: 10 },
   qrInactive: { opacity: 0.4 },
-  qrStatus: { backgroundColor: 'rgba(148,163,184,0.15)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5, marginBottom: 6 },
-  qrStatusActive: { backgroundColor: 'rgba(26,107,60,0.1)' },
+  qrStatus: { backgroundColor: 'rgba(148,163,184,0.15)', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6, marginBottom: 6 },
+  qrStatusActive: { backgroundColor: 'rgba(0,107,44,0.1)' },
   qrStatusText: { fontSize: 12, color: '#64748b', fontWeight: '600' },
-  qrStatusTextActive: { color: '#1a6b3c' },
-  qrTap: { fontSize: 11, color: '#2d6e3e' },
+  qrStatusTextActive: { color: GREEN },
+  qrTap: { fontSize: 11, color: GREEN_MID },
   qrPlaceholder: { height: 100, justifyContent: 'center', alignItems: 'center' },
-  qrPlaceholderText: { color: '#2d6e3e', fontSize: 13 },
-  actionRow: { gap: 10 },
-  scanBtn: { backgroundColor: '#1a6b3c', borderRadius: 50, paddingVertical: 14, alignItems: 'center' },
+  qrPlaceholderText: { color: GREEN_MID, fontSize: 13 },
+
+  // Scan
+  scanBtn: { backgroundColor: GREEN, borderRadius: 50, paddingVertical: 16, alignItems: 'center', marginBottom: 8, shadowColor: GREEN, shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } },
   scanBtnDisabled: { opacity: 0.5 },
   scanBtnText: { color: 'white', fontWeight: '700', fontSize: 16 },
+
+  // Modals
   modalOverlay: { flex: 1, backgroundColor: 'rgba(15,51,32,0.6)', justifyContent: 'center', alignItems: 'center' },
   qrModal: { backgroundColor: 'white', borderRadius: 28, padding: 28, alignItems: 'center', width: '85%' },
-  qrModalTitle: { fontSize: 18, fontWeight: '800', color: '#0f3320', marginBottom: 20 },
-  qrModalCode: { padding: 16, backgroundColor: 'white', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(144,212,144,0.5)', marginBottom: 16 },
-  qrModalHint: { fontSize: 13, color: '#2d6e3e', marginBottom: 20, textAlign: 'center' },
-  qrModalClose: { backgroundColor: '#1a6b3c', borderRadius: 50, paddingVertical: 12, paddingHorizontal: 32 },
-  qrModalCloseText: { color: 'white', fontWeight: '700', fontSize: 15 },
+  qrModalTitle: { fontSize: 18, fontWeight: '800', color: GREEN_DARK, marginBottom: 20 },
+  qrModalCode: { padding: 16, backgroundColor: 'white', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(0,107,44,0.15)', marginBottom: 16 },
+  qrModalHint: { fontSize: 13, color: GREEN_MID, marginBottom: 20, textAlign: 'center' },
+  personOverlay: { flex: 1, backgroundColor: 'rgba(15,51,32,0.45)', justifyContent: 'flex-end' },
+  personSheet: { minHeight: '48%', backgroundColor: BG, borderTopLeftRadius: 26, borderTopRightRadius: 26, padding: 22, paddingBottom: 40 },
+  personHandle: { width: 42, height: 4, borderRadius: 2, backgroundColor: 'rgba(0,107,44,0.25)', alignSelf: 'center', marginBottom: 18 },
+  personTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  personModalName: { fontSize: 22, fontWeight: '900', color: GREEN_DARK, marginBottom: 8 },
+  personTags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  personTag: { backgroundColor: 'rgba(0,107,44,0.1)', color: GREEN, fontWeight: '700', fontSize: 12, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, overflow: 'hidden' },
+  personModalMood: { fontSize: 15, color: GREEN_MID, lineHeight: 22, marginBottom: 18 },
+  personHint: { fontSize: 14, color: GREEN, fontWeight: '600' },
 })
