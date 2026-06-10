@@ -3,7 +3,9 @@ import {
   View, Text, StyleSheet, SafeAreaView, TouchableOpacity,
   ScrollView, ActivityIndicator, RefreshControl, Alert, Modal, Image, AppState,
 } from 'react-native'
-import { useNavigation } from '@react-navigation/native'
+import { useNavigation, useFocusEffect } from '@react-navigation/native'
+import { VideoView, useVideoPlayer } from 'expo-video'
+import { useCallback } from 'react'
 import QRCode from 'react-native-qrcode-svg'
 import ScannerModal from './ScannerModal'
 import { apiFetch } from '../lib/api'
@@ -84,6 +86,29 @@ interface PlaceViewState {
   activeConnection: ActiveConnection | null
   qrHandoff: QrHandoff | null
   session: { user: { id: string; name?: string; username?: string } } | null
+}
+
+
+function VideoBackground({ style }: { style: any }) {
+  const player = useVideoPlayer(require('../video/animation.mp4'), (p) => {
+    p.loop = true
+    p.muted = true
+    p.play()
+  })
+  useFocusEffect(
+    useCallback(() => {
+      try { player.replay() } catch { try { player.play() } catch {} }
+    }, [player])
+  )
+  return (
+    <VideoView
+      style={style}
+      player={player}
+      allowsFullscreen={false}
+      nativeControls={false}
+      contentFit="cover"
+    />
+  )
 }
 
 export default function PlaceViewScreen() {
@@ -299,12 +324,16 @@ export default function PlaceViewScreen() {
 
   if (loading) return (
     <SafeAreaView style={s.container}>
+      <VideoBackground style={s.videoBackground} />
+      <View style={s.overlay} />
       <View style={s.centered}><ActivityIndicator size="large" color="#006b2c" /></View>
     </SafeAreaView>
   )
 
   if (!state?.profile || !state.currentPlace) return (
     <SafeAreaView style={s.container}>
+      
+      <View style={s.overlay} />
       <View style={s.centered}>
         <ActivityIndicator size="large" color="#006b2c" />
         <Text style={{ color: '#006b2c', marginTop: 12, fontSize: 14 }}>Loading place...</Text>
@@ -324,18 +353,19 @@ export default function PlaceViewScreen() {
 
   return (
     <SafeAreaView style={s.container}>
+      
+      <View style={s.overlay} />
+      <View style={s.header}>
+        <TouchableOpacity style={s.leaveBtn} onPress={handleLeave} disabled={leaving}>
+          {leaving ? <ActivityIndicator color="#dc2626" size="small" /> : <Text style={s.leaveText}>Leave Place</Text>}
+        </TouchableOpacity>
+        <Text style={s.logo}>Let's Talk</Text>
+        <View style={{ width: 90 }} />
+      </View>
       <ScrollView
         contentContainerStyle={s.scroll}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadState() }} tintColor="#006b2c" />}
       >
-        {/* Header */}
-        <View style={s.header}>
-          <TouchableOpacity style={s.leaveBtn} onPress={handleLeave} disabled={leaving}>
-            {leaving ? <ActivityIndicator color="#dc2626" size="small" /> : <Text style={s.leaveText}>Leave Place</Text>}
-          </TouchableOpacity>
-          <Text style={s.logo}>Let's Talk</Text>
-          <View style={{ width: 90 }} />
-        </View>
 
         {error ? <View style={s.errorBox}><Text style={s.errorText}>{error}</Text></View> : null}
         {notice ? (
@@ -588,21 +618,42 @@ export default function PlaceViewScreen() {
               ? `Verify your connection with ${activeConnection.counterpart.username}.`
               : 'Accept a connection request to unlock QR'}
           </Text>
-          {activeConnection && qrHandoff ? (
-            <TouchableOpacity style={s.qrContainer} onPress={() => setQrVisible(true)}>
-              <View style={s.qrWrapper}>
-                <QRCode value={qrHandoff.url} size={160} backgroundColor="white" color="#0f3320" />
+          {qrHandoff ? (
+            <TouchableOpacity style={s.qrContainer} onPress={() => { if (activeConnection) setQrVisible(true) }}>
+              <View style={[s.qrWrapper, !activeConnection && s.qrWrapperDim]}>
+                <QRCode value={qrHandoff.url} size={160} backgroundColor="white" color={activeConnection ? "#0f3320" : "#aaaaaa"} />
               </View>
-              <View style={[s.qrStatus, s.qrStatusActive]}>
-                <Text style={[s.qrStatusText, s.qrStatusTextActive]}>✓ QR verification unlocked</Text>
-              </View>
-              <Text style={s.qrTap}>Tap to enlarge</Text>
+              {activeConnection ? (
+                <>
+                  <View style={[s.qrStatus, s.qrStatusActive]}>
+                    <Text style={[s.qrStatusText, s.qrStatusTextActive]}>✓ QR verification unlocked</Text>
+                  </View>
+                  <Text style={s.qrTap}>Tap to enlarge</Text>
+                </>
+              ) : (
+                <View style={s.qrStatus}>
+                  <Text style={s.qrStatusText}>🔒 Connect with someone to activate</Text>
+                </View>
+              )}
             </TouchableOpacity>
           ) : (
-            <View style={s.qrLocked}>
-              <Text style={s.qrLockIcon}>🔒</Text>
-              <Text style={s.qrLockedTitle}>Accept a connection request to unlock QR</Text>
-            </View>
+            <TouchableOpacity style={s.qrContainer} onPress={() => setQrVisible(true)}>
+              <View style={[s.qrWrapper, !activeConnection && s.qrWrapperDim]}>
+                <QRCode value={`letstalk://user/${state?.session?.user?.id || 'me'}`} size={160} backgroundColor="white" color={activeConnection ? "#0f3320" : "#aaaaaa"} />
+              </View>
+              {activeConnection ? (
+                <>
+                  <View style={[s.qrStatus, s.qrStatusActive]}>
+                    <Text style={[s.qrStatusText, s.qrStatusTextActive]}>✓ QR verification unlocked</Text>
+                  </View>
+                  <Text style={s.qrTap}>Tap to enlarge</Text>
+                </>
+              ) : (
+                <View style={s.qrStatus}>
+                  <Text style={s.qrStatusText}>🔒 Connect with someone to activate</Text>
+                </View>
+              )}
+            </TouchableOpacity>
           )}
         </View>
 
@@ -680,38 +731,42 @@ export default function PlaceViewScreen() {
 }
 
 const GREEN = '#006b2c'
+const AMBER = '#e8824a'
+const AMBER_LIGHT = 'rgba(232,130,74,0.7)'
 const GREEN_DARK = '#0f3320'
 const GREEN_MID = '#2d6e3e'
-const BG = '#f4fcf0'
+const BG = '#0a0704'
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BG },
+  container: { flex: 1, backgroundColor: '#0a0704' },
+  videoBackground: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' },
+  overlay: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.65)' },
   scroll: { padding: 20, paddingBottom: 48 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
   // Header
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingTop: 36 },
-  logo: { fontSize: 24, fontWeight: '900', color: '#c084fc', letterSpacing: -0.5, textAlign: 'center' },
-  leaveBtn: { backgroundColor: 'rgba(254,226,226,0.9)', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: 'rgba(252,165,165,0.5)' },
+  logo: { fontSize: 24, fontWeight: '900', color: '#fff', letterSpacing: -0.5, textAlign: 'center' },
+  leaveBtn: { backgroundColor: 'rgba(220,38,38,0.12)', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: 'rgba(220,38,38,0.3)' },
   leaveText: { color: '#dc2626', fontWeight: '600', fontSize: 13 },
 
   // Alerts
-  errorBox: { backgroundColor: '#fee2e2', borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: '#fca5a5' },
-  errorText: { color: '#dc2626', fontSize: 13 },
-  noticeBox: { backgroundColor: 'rgba(0,107,44,0.1)', borderRadius: 16, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(0,107,44,0.2)' },
+  errorBox: { backgroundColor: 'rgba(186,26,26,0.15)', borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(186,26,26,0.3)' },
+  errorText: { color: '#ff6b6b', fontSize: 13 },
+  noticeBox: { backgroundColor: 'rgba(232,130,74,0.1)', borderRadius: 16, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)' },
   noticeText: { color: GREEN_DARK, fontSize: 14, fontWeight: '600' },
   noticeDismiss: { color: GREEN_MID, fontSize: 11, marginTop: 4 },
 
   // Connection Banner
-  connectionBanner: { backgroundColor: 'rgba(0,107,44,0.1)', borderRadius: 20, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(0,107,44,0.2)' },
+  connectionBanner: { backgroundColor: 'rgba(0,107,44,0.1)', borderRadius: 20, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)' },
   connectionHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 8 },
   connectionEmoji: { fontSize: 28 },
   connectionTitle: { fontSize: 15, fontWeight: '700', color: GREEN_DARK, marginBottom: 3 },
   connectionMood: { fontSize: 13, color: GREEN_MID, lineHeight: 18 },
   connectionHint: { fontSize: 12, color: GREEN_MID, marginBottom: 12 },
-  connectedSectionTitle: { fontSize: 17, fontWeight: '800', color: GREEN_DARK, marginBottom: 12 },
+  connectedSectionTitle: { fontSize: 17, fontWeight: '800', color: '#fff', marginBottom: 12 },
   connectedPeopleRow: { flexDirection: 'row', alignItems: 'stretch', marginBottom: 14 },
-  connectedPerson: { flex: 1, backgroundColor: 'white', borderRadius: 16, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(0,107,44,0.12)' },
+  connectedPerson: { flex: 1, backgroundColor: 'rgba(26,16,8,0.75)', borderRadius: 16, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)' },
   connectedLink: { width: 34, textAlign: 'center', alignSelf: 'center', color: GREEN, fontSize: 20, fontWeight: '800' },
   connectedName: { marginTop: 8, fontSize: 14, fontWeight: '800', color: GREEN_DARK, maxWidth: '100%' },
   connectedMood: { marginTop: 4, fontSize: 12, color: GREEN_MID, lineHeight: 16, textAlign: 'center' },
@@ -721,53 +776,53 @@ const s = StyleSheet.create({
   endBtnText: { color: 'white', fontWeight: '700', fontSize: 15 },
 
   // Place Card
-  placeCard: { backgroundColor: 'white', borderRadius: 24, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  placeCard: { backgroundColor: 'rgba(26,16,8,0.75)', borderRadius: 24, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
   livePill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(0,135,58,0.12)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start', marginBottom: 10 },
   liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#00873a' },
   liveText: { fontSize: 11, color: '#00873a', fontWeight: '700', letterSpacing: 0.5 },
-  placeName: { fontSize: 20, fontWeight: '800', color: GREEN_DARK, marginBottom: 4 },
-  placeAddress: { fontSize: 12, color: GREEN_MID, lineHeight: 17, marginBottom: 14 },
+  placeName: { fontSize: 20, fontWeight: '800', color: '#fff', marginBottom: 4 },
+  placeAddress: { fontSize: 12, color: 'rgba(255,255,255,0.45)', lineHeight: 17, marginBottom: 14 },
   divider: { height: 1, backgroundColor: 'rgba(0,107,44,0.1)', marginBottom: 14 },
   statsRow: { flexDirection: 'row' },
   statBox: { flex: 1, alignItems: 'center', paddingVertical: 4 },
-  statBorderX: { borderLeftWidth: 1, borderRightWidth: 1, borderColor: 'rgba(0,107,44,0.1)' },
-  statValueGreen: { fontSize: 22, fontWeight: '900', color: GREEN },
+  statBorderX: { borderLeftWidth: 1, borderRightWidth: 1, borderColor: 'rgba(232,130,74,0.15)' },
+  statValueGreen: { fontSize: 22, fontWeight: '900', color: AMBER },
   statValueDark: { fontSize: 22, fontWeight: '900', color: GREEN_DARK },
   statValueSecondary: { fontSize: 22, fontWeight: '900', color: '#006c4a' },
-  statLabel: { fontSize: 11, color: '#6e7b6c', fontWeight: '500', marginTop: 2 },
+  statLabel: { fontSize: 11, color: AMBER_LIGHT, fontWeight: '600', marginTop: 2 },
 
   // Cards
-  card: { backgroundColor: 'white', borderRadius: 24, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: GREEN_DARK, marginBottom: 6 },
-  cardHint: { fontSize: 13, color: '#6e7b6c', lineHeight: 19, marginBottom: 14 },
+  card: { backgroundColor: 'rgba(26,16,8,0.75)', borderRadius: 24, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
+  cardTitle: { fontSize: 16, fontWeight: '700', color: '#fff', marginBottom: 6 },
+  cardHint: { fontSize: 13, color: 'rgba(255,255,255,0.5)', lineHeight: 19, marginBottom: 14 },
   cardLabelSmall: { fontSize: 11, fontWeight: '700', color: '#6e7b6c', letterSpacing: 1.2, marginBottom: 12 },
 
   // Profile Preview
   profilePreviewRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   profileAvatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(0,107,44,0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: GREEN },
   profileAvatarEmoji: { fontSize: 26 },
-  profilePreviewName: { fontSize: 18, fontWeight: '800', color: GREEN_DARK, marginBottom: 4 },
+  profilePreviewName: { fontSize: 18, fontWeight: '800', color: '#fff', marginBottom: 4 },
   profilePreviewMood: { fontSize: 13, color: GREEN_MID, lineHeight: 18 },
 
   // Buttons
-  primaryBtn: { backgroundColor: GREEN, borderRadius: 50, paddingVertical: 14, alignItems: 'center', marginTop: 4 },
+  primaryBtn: { backgroundColor: AMBER, borderRadius: 50, paddingVertical: 14, alignItems: 'center', marginTop: 4 },
   primaryBtnOutline: { backgroundColor: 'white', borderWidth: 2, borderColor: GREEN },
-  primaryBtnText: { color: 'white', fontWeight: '700', fontSize: 15 },
+  primaryBtnText: { color: '#0a0704', fontWeight: '800', fontSize: 15 },
   primaryBtnTextOutline: { color: GREEN },
 
   // People Section
   section: { marginBottom: 12 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: GREEN_DARK, marginBottom: 12, paddingHorizontal: 2 },
-  requestsBox: { backgroundColor: 'rgba(0,107,44,0.08)', borderRadius: 20, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(0,107,44,0.16)' },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#fff', marginBottom: 12, paddingHorizontal: 2 },
+  requestsBox: { backgroundColor: 'rgba(0,107,44,0.08)', borderRadius: 20, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)' },
   requestsTitle: { fontSize: 14, fontWeight: '800', color: GREEN_DARK, marginBottom: 10 },
-  requestRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderRadius: 16, padding: 10, marginBottom: 8 },
+  requestRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(26,16,8,0.75)', borderRadius: 16, padding: 10, marginBottom: 8 },
   requestName: { fontSize: 14, fontWeight: '800', color: GREEN_DARK },
   requestMood: { fontSize: 12, color: GREEN_MID, marginTop: 2 },
   acceptBtn: { backgroundColor: GREEN, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8, marginLeft: 6 },
   acceptBtnText: { color: 'white', fontSize: 12, fontWeight: '800' },
   declineBtn: { backgroundColor: 'rgba(220,38,38,0.08)', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8, marginLeft: 6 },
   declineBtnText: { color: '#dc2626', fontSize: 12, fontWeight: '800' },
-  personCard: { backgroundColor: 'white', borderRadius: 24, padding: 16, marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 1 }, elevation: 1, borderWidth: 1, borderColor: 'rgba(0,107,44,0.06)' },
+  personCard: { backgroundColor: 'rgba(26,16,8,0.75)', borderRadius: 24, padding: 16, marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 1 }, elevation: 1, borderWidth: 1, borderColor: 'rgba(232,130,74,0.12)' },
   personCardTop: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
   avatarPlaceholder: { backgroundColor: 'rgba(0,107,44,0.12)', justifyContent: 'center', alignItems: 'center' },
   avatarInitials: { color: GREEN, fontWeight: '800', fontSize: 18 },
@@ -794,7 +849,7 @@ const s = StyleSheet.create({
   connectedBtn: { backgroundColor: '#0f3320', shadowOpacity: 0 },
   connectBtnText: { fontSize: 14, fontWeight: '700', color: 'white' },
   connectBtnTextDisabled: { fontSize: 14, fontWeight: '600', color: '#6e7b6c' },
-  emptyPeople: { backgroundColor: 'white', borderRadius: 24, padding: 28, alignItems: 'center', gap: 6 },
+  emptyPeople: { backgroundColor: 'rgba(26,16,8,0.75)', borderRadius: 24, padding: 28, alignItems: 'center', gap: 6 },
   emptyEmoji: { fontSize: 32 },
   emptyTitle: { fontSize: 15, fontWeight: '700', color: GREEN_DARK },
   emptyText: { fontSize: 13, color: '#6e7b6c', textAlign: 'center' },
@@ -802,14 +857,15 @@ const s = StyleSheet.create({
   // Finder
   finderCard: { backgroundColor: 'rgba(130,245,193,0.15)', borderRadius: 24, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(130,245,193,0.5)' },
   hintRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
-  hintChip: { borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: 'rgba(0,107,44,0.2)', backgroundColor: 'white' },
+  hintChip: { borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)', backgroundColor: 'white' },
   hintChipActive: { backgroundColor: GREEN, borderColor: GREEN },
   hintChipText: { fontSize: 13, color: GREEN_MID, fontWeight: '500' },
   hintChipTextActive: { color: 'white' },
 
   // QR
   qrContainer: { alignItems: 'center', paddingVertical: 12 },
-  qrWrapper: { padding: 14, backgroundColor: 'white', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(0,107,44,0.15)', marginBottom: 10 },
+  qrWrapper: { padding: 14, backgroundColor: 'rgba(26,16,8,0.75)', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)', marginBottom: 10 },
+  qrWrapperDim: { opacity: 0.35 },
   qrInactive: { opacity: 0.4 },
   qrStatus: { backgroundColor: 'rgba(148,163,184,0.15)', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6, marginBottom: 6 },
   qrStatusActive: { backgroundColor: 'rgba(0,107,44,0.1)' },
@@ -831,7 +887,7 @@ const s = StyleSheet.create({
   modalOverlay: { flex: 1, backgroundColor: 'rgba(15,51,32,0.6)', justifyContent: 'center', alignItems: 'center' },
   qrModal: { backgroundColor: 'white', borderRadius: 28, padding: 28, alignItems: 'center', width: '85%' },
   qrModalTitle: { fontSize: 18, fontWeight: '800', color: GREEN_DARK, marginBottom: 20 },
-  qrModalCode: { padding: 16, backgroundColor: 'white', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(0,107,44,0.15)', marginBottom: 16 },
+  qrModalCode: { padding: 16, backgroundColor: 'rgba(26,16,8,0.75)', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)', marginBottom: 16 },
   qrModalHint: { fontSize: 13, color: GREEN_MID, marginBottom: 20, textAlign: 'center' },
   personOverlay: { flex: 1, backgroundColor: 'rgba(15,51,32,0.45)', justifyContent: 'flex-end' },
   personSheet: { minHeight: '48%', backgroundColor: BG, borderTopLeftRadius: 26, borderTopRightRadius: 26, padding: 22, paddingBottom: 40 },
