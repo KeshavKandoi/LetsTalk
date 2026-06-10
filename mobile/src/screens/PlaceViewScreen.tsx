@@ -547,7 +547,7 @@ export default function PlaceViewScreen() {
                           </Text>
                         </View>
                       </View>
-                      <Text style={s.personMood} numberOfLines={2}>{p.intentSummary || 'Open to a nearby conversation.'}</Text>
+                      
                       {p.isFindable && p.locationHint ? (
                         <Text style={s.locationHint}>📍 Near {p.locationHint.toLowerCase()}</Text>
                       ) : null}
@@ -699,7 +699,7 @@ export default function PlaceViewScreen() {
                     </View>
                   </View>
                 </View>
-                <Text style={s.personModalMood}>{selectedPerson.moodEmoji} {selectedPerson.intentText || selectedPerson.intentSummary || 'Open to a nearby conversation.'}</Text>
+                <Text style={s.personModalMood}>{selectedPerson.intentText || selectedPerson.intentSummary || ''}</Text>
                 {state.session?.user.id !== selectedPerson.userId && (
                   <Text style={s.personHint}>Scan their QR code to send a friend request.</Text>
                 )}
@@ -817,10 +817,10 @@ const s = StyleSheet.create({
   personName: { fontSize: 16, fontWeight: '700', color: '#ffffff' },
   youBadge: { backgroundColor: 'rgba(37,99,235,0.6)', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 },
   youBadgeText: { fontSize: 10, color: 'white', fontWeight: '700' },
-  statusBadge: { backgroundColor: 'rgba(0,0,0,0.7)', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
-  statusBadgeActive: { backgroundColor: 'rgba(37,99,235,0.5)' },
-  statusBadgeText: { fontSize: 11, color: '#ffffff', fontWeight: '700', textTransform: 'uppercase' },
-  statusBadgeTextActive: { color: '#ffffff' },
+  statusBadge: { backgroundColor: AMBER, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
+  statusBadgeActive: { backgroundColor: AMBER },
+  statusBadgeText: { fontSize: 11, color: '#0a0704', fontWeight: '700', textTransform: 'uppercase' },
+  statusBadgeTextActive: { color: '#0a0704' },
   personMood: { fontSize: 13, color: '#ffffff', lineHeight: 18 },
   locationHint: { fontSize: 12, color: 'rgba(255,255,255,0.7)', fontWeight: '600', marginTop: 3 },
   personBtns: { flexDirection: 'row', gap: 8 },
