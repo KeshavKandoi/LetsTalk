@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   View, Text, StyleSheet, SafeAreaView, TouchableOpacity,
-  ScrollView, ActivityIndicator, RefreshControl, Alert, Modal, Image, AppState,
+  ScrollView, ActivityIndicator, RefreshControl, Alert, Modal, Image, AppState, BackHandler,
 } from 'react-native'
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
 import { VideoView, useVideoPlayer } from 'expo-video'
@@ -194,6 +194,7 @@ export default function PlaceViewScreen() {
   }
 
   useEffect(() => {
+    navigation.setOptions({ gestureEnabled: false })
     loadState()
     pollRef.current = setInterval(() => loadState(true), 3000)
     const subscription = AppState.addEventListener('change', (nextState) => {
@@ -203,6 +204,28 @@ export default function PlaceViewScreen() {
       if (pollRef.current) clearInterval(pollRef.current)
       subscription.remove()
     }
+  }, [])
+
+
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      Alert.alert(
+        'Leave Place?',
+        'You must leave the place before going back.',
+        [
+          { text: 'Stay', style: 'cancel' },
+          { text: 'Leave', style: 'destructive', onPress: async () => {
+            setLeaving(true)
+            try {
+              await apiFetch('/api/places/leave', {})
+              navigation.reset({ index: 0, routes: [{ name: 'Onboarding' }] })
+            } catch (e: any) { setError(e.message); setLeaving(false) }
+          }},
+        ]
+      )
+      return true
+    })
+    return () => backHandler.remove()
   }, [])
 
   const toggleReady = async () => {
@@ -326,7 +349,7 @@ export default function PlaceViewScreen() {
     <SafeAreaView style={s.container}>
       <VideoBackground style={s.videoBackground} />
       <View style={s.overlay} />
-      <View style={s.centered}><ActivityIndicator size="large" color="#006b2c" /></View>
+      <View style={s.centered}><ActivityIndicator size="large" color="#ffffff" /></View>
     </SafeAreaView>
   )
 
@@ -335,8 +358,8 @@ export default function PlaceViewScreen() {
       
       <View style={s.overlay} />
       <View style={s.centered}>
-        <ActivityIndicator size="large" color="#006b2c" />
-        <Text style={{ color: '#006b2c', marginTop: 12, fontSize: 14 }}>Loading place...</Text>
+        <ActivityIndicator size="large" color="#ffffff" />
+        <Text style={{ color: '#ffffff', marginTop: 12, fontSize: 14 }}>Loading place...</Text>
       </View>
     </SafeAreaView>
   )
@@ -353,7 +376,7 @@ export default function PlaceViewScreen() {
 
   return (
     <SafeAreaView style={s.container}>
-      
+      <VideoBackground style={s.videoBackground} />
       <View style={s.overlay} />
       <View style={s.header}>
         <TouchableOpacity style={s.leaveBtn} onPress={handleLeave} disabled={leaving}>
@@ -364,7 +387,7 @@ export default function PlaceViewScreen() {
       </View>
       <ScrollView
         contentContainerStyle={s.scroll}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadState() }} tintColor="#006b2c" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadState() }} tintColor="#ffffff" />}
       >
 
         {error ? <View style={s.errorBox}><Text style={s.errorText}>{error}</Text></View> : null}
@@ -447,7 +470,7 @@ export default function PlaceViewScreen() {
               disabled={togglingReady}
             >
               {togglingReady
-                ? <ActivityIndicator color={isReady ? '#006b2c' : 'white'} />
+                ? <ActivityIndicator color={isReady ? '#ffffff' : 'white'} />
                 : <Text style={[s.primaryBtnText, isReady && s.primaryBtnTextOutline]}>
                     {isReady ? '✓ Leave ready pool' : '👋 Set me ready'}
                   </Text>}
@@ -621,7 +644,7 @@ export default function PlaceViewScreen() {
           {qrHandoff ? (
             <TouchableOpacity style={s.qrContainer} onPress={() => { if (activeConnection) setQrVisible(true) }}>
               <View style={[s.qrWrapper, !activeConnection && s.qrWrapperDim]}>
-                <QRCode value={qrHandoff.url} size={160} backgroundColor="white" color={activeConnection ? "#0f3320" : "#aaaaaa"} />
+                <QRCode value={qrHandoff.url} size={160} backgroundColor="white" color={activeConnection ? "#ffffff" : "#aaaaaa"} />
               </View>
               {activeConnection ? (
                 <>
@@ -639,7 +662,7 @@ export default function PlaceViewScreen() {
           ) : (
             <TouchableOpacity style={s.qrContainer} onPress={() => setQrVisible(true)}>
               <View style={[s.qrWrapper, !activeConnection && s.qrWrapperDim]}>
-                <QRCode value={`letstalk://user/${state?.session?.user?.id || 'me'}`} size={160} backgroundColor="white" color={activeConnection ? "#0f3320" : "#aaaaaa"} />
+                <QRCode value={`letstalk://user/${state?.session?.user?.id || 'me'}`} size={160} backgroundColor="white" color={activeConnection ? "#ffffff" : "#aaaaaa"} />
               </View>
               {activeConnection ? (
                 <>
@@ -673,7 +696,7 @@ export default function PlaceViewScreen() {
         <TouchableOpacity style={s.modalOverlay} activeOpacity={1} onPress={() => setQrVisible(false)}>
           <View style={s.qrModal}>
             <Text style={s.qrModalTitle}>Your QR Code</Text>
-            {qrHandoff && <View style={s.qrModalCode}><QRCode value={qrHandoff.url} size={240} backgroundColor="white" color="#0f3320" /></View>}
+            {qrHandoff && <View style={s.qrModalCode}><QRCode value={qrHandoff.url} size={240} backgroundColor="white" color="#ffffff" /></View>}
             <Text style={s.qrModalHint}>
               {activeConnection
                 ? `Show this to ${activeConnection.counterpart.username} to verify your connection.`
@@ -730,10 +753,10 @@ export default function PlaceViewScreen() {
   )
 }
 
-const GREEN = '#006b2c'
+const GREEN = '#ffffff'
 const AMBER = '#e8824a'
 const AMBER_LIGHT = 'rgba(232,130,74,0.7)'
-const GREEN_DARK = '#0f3320'
+const GREEN_DARK = '#1a1a1a'
 const GREEN_MID = '#2d6e3e'
 const BG = '#0a0704'
 
@@ -841,14 +864,14 @@ const s = StyleSheet.create({
   viewProfileBtnText: { fontSize: 14, fontWeight: '600', color: GREEN_DARK },
   personActionColumn: { flex: 1, alignItems: 'stretch' },
   personActionButton: { flex: 0, width: '100%' },
-  connectBtn: { flex: 1, paddingVertical: 10, borderRadius: 14, backgroundColor: GREEN, alignItems: 'center', shadowColor: GREEN, shadowOpacity: 0.25, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
-  connectBtnDisabled: { backgroundColor: 'rgba(148,163,184,0.18)', shadowOpacity: 0 },
+  connectBtn: { flex: 1, paddingVertical: 10, borderRadius: 14, backgroundColor: '#2563eb', alignItems: 'center', shadowColor: '#2563eb', shadowOpacity: 0.25, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
+  connectBtnDisabled: { backgroundColor: 'rgba(37,99,235,0.35)', shadowOpacity: 0 },
   connectDisabledHint: { marginTop: 5, color: '#64748b', fontSize: 11, fontWeight: '600', textAlign: 'center', lineHeight: 14 },
   cancelRequestBtn: { backgroundColor: 'white', borderWidth: 1, borderColor: GREEN, shadowOpacity: 0 },
   cancelRequestBtnText: { fontSize: 14, fontWeight: '700', color: GREEN },
   connectedBtn: { backgroundColor: '#0f3320', shadowOpacity: 0 },
   connectBtnText: { fontSize: 14, fontWeight: '700', color: 'white' },
-  connectBtnTextDisabled: { fontSize: 14, fontWeight: '600', color: '#6e7b6c' },
+  connectBtnTextDisabled: { fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.6)' },
   emptyPeople: { backgroundColor: 'rgba(26,16,8,0.75)', borderRadius: 24, padding: 28, alignItems: 'center', gap: 6 },
   emptyEmoji: { fontSize: 32 },
   emptyTitle: { fontSize: 15, fontWeight: '700', color: GREEN_DARK },
@@ -895,7 +918,7 @@ const s = StyleSheet.create({
   personTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   personModalName: { fontSize: 22, fontWeight: '900', color: GREEN_DARK, marginBottom: 8 },
   personTags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  personTag: { backgroundColor: 'rgba(0,107,44,0.1)', color: GREEN, fontWeight: '700', fontSize: 12, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, overflow: 'hidden' },
+  personTag: { backgroundColor: 'rgba(0,107,44,0.1)', color: '#ffffff', fontWeight: '700', fontSize: 12, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, overflow: 'hidden' },
   personModalMood: { fontSize: 15, color: GREEN_MID, lineHeight: 22, marginBottom: 18 },
   personHint: { fontSize: 14, color: GREEN, fontWeight: '600' },
 })
