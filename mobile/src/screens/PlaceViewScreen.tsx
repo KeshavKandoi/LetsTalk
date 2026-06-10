@@ -125,6 +125,7 @@ export default function PlaceViewScreen() {
   const [error, setError] = useState('')
   const [qrVisible, setQrVisible] = useState(false)
   const [scannerVisible, setScannerVisible] = useState(false)
+  const [qrVerified, setQrVerified] = useState(false)
   const [finderLoading, setFinderLoading] = useState(false)
   const [pendingRequests, setPendingRequests] = useState<PendingConnectionRequest[]>([])
   const [connectionActionId, setConnectionActionId] = useState<string | null>(null)
@@ -258,6 +259,7 @@ export default function PlaceViewScreen() {
     setError('')
     try {
       await apiFetch('/api/places/end-connection', {})
+      setQrVerified(false)
       setNotice("Conversation ended. You're back in the ready pool.")
       await loadState(true)
     } catch (e: any) { setError(e.message) }
@@ -349,7 +351,7 @@ export default function PlaceViewScreen() {
     <SafeAreaView style={s.container}>
       <VideoBackground style={s.videoBackground} />
       <View style={s.overlay} />
-      <View style={s.centered}><ActivityIndicator size="large" color="#ffffff" /></View>
+      <View style={s.centered}><ActivityIndicator size="large" color="#000000" /></View>
     </SafeAreaView>
   )
 
@@ -358,7 +360,7 @@ export default function PlaceViewScreen() {
       
       <View style={s.overlay} />
       <View style={s.centered}>
-        <ActivityIndicator size="large" color="#ffffff" />
+        <ActivityIndicator size="large" color="#000000" />
         <Text style={{ color: '#ffffff', marginTop: 12, fontSize: 14 }}>Loading place...</Text>
       </View>
     </SafeAreaView>
@@ -406,21 +408,32 @@ export default function PlaceViewScreen() {
               <View style={s.connectedPerson}>
                 {renderConnectionAvatar({
                   username: myDisplayName,
-                  photoUrl: myPhotoUrl || currentParticipant?.photoUrl,
+                  photoUrl: myPhotoUrl || state?.profile?.photoUrl || currentParticipant?.photoUrl,
                 }, 58)}
                 <Text style={s.connectedName} numberOfLines={1}>{myDisplayName}</Text>
-                <Text style={s.connectedMood} numberOfLines={2}>{profile.moodEmoji} {profile.intentSummary || 'Open to a conversation.'}</Text>
+                <Text style={s.connectedMood} numberOfLines={2}></Text>
               </View>
               <Text style={s.connectedLink}>↔</Text>
               <View style={s.connectedPerson}>
                 {renderConnectionAvatar(activeConnection.counterpart, 58)}
                 <Text style={s.connectedName} numberOfLines={1}>{activeConnection.counterpart.username}</Text>
-                <Text style={s.connectedMood} numberOfLines={2}>{activeConnection.counterpart.moodEmoji} {activeConnection.counterpart.intentSummary || 'Open to a conversation.'}</Text>
+                <Text style={s.connectedMood} numberOfLines={2}></Text>
               </View>
             </View>
-            <TouchableOpacity style={s.unlockQrBtn} onPress={() => setQrVisible(true)}>
-              <Text style={s.unlockQrBtnText}>Unlock QR Verification</Text>
-            </TouchableOpacity>
+            {qrVerified ? (
+              <View style={s.qrVerifiedBox}>
+                <Text style={s.qrVerifiedText}>✓ Connected & Verified</Text>
+              </View>
+            ) : (
+              <View style={s.qrBtnRow}>
+                <TouchableOpacity style={[s.unlockQrBtn, { flex: 1, marginRight: 8 }]} onPress={() => setQrVisible(true)}>
+                  <Text style={s.unlockQrBtnText}>Show My QR</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[s.scanQrBtn, { flex: 1 }]} onPress={() => setScannerVisible(true)}>
+                  <Text style={s.scanQrBtnText}>Scan QR</Text>
+                </TouchableOpacity>
+              </View>
+            )}
             <Text style={s.connectionHint}>You are connected. New requests are paused until this conversation ends.</Text>
             <TouchableOpacity style={s.endBtn} onPress={handleEndConversation} disabled={endingConversation}>
               {endingConversation ? <ActivityIndicator color="white" /> : <Text style={s.endBtnText}>I'm free again</Text>}
@@ -491,7 +504,7 @@ export default function PlaceViewScreen() {
                   {renderConnectionAvatar(request.user, 44)}
                   <View style={{ flex: 1, marginLeft: 10 }}>
                     <Text style={s.requestName}>{request.user.username}</Text>
-                    <Text style={s.requestMood} numberOfLines={1}>{request.user.moodEmoji} {request.user.intentSummary || 'Open to a conversation.'}</Text>
+                    <Text style={s.requestMood} numberOfLines={1}>{request.user.intentSummary || ''}</Text>
                   </View>
                   <TouchableOpacity
                     style={s.acceptBtn}
@@ -557,7 +570,7 @@ export default function PlaceViewScreen() {
                             disabled={Boolean(actionLoading)}
                           >
                             {actionLoading
-                              ? <ActivityIndicator size="small" color={GREEN} />
+                              ? <ActivityIndicator size="small" color={'#ffffff'} />
                               : <Text style={s.cancelRequestBtnText}>Cancel Request</Text>}
                           </TouchableOpacity>
                         ) : request?.direction === 'incoming' ? (
@@ -644,7 +657,7 @@ export default function PlaceViewScreen() {
           {qrHandoff ? (
             <TouchableOpacity style={s.qrContainer} onPress={() => { if (activeConnection) setQrVisible(true) }}>
               <View style={[s.qrWrapper, !activeConnection && s.qrWrapperDim]}>
-                <QRCode value={qrHandoff.url} size={160} backgroundColor="white" color={activeConnection ? "#ffffff" : "#aaaaaa"} />
+                <QRCode value={qrHandoff.url} size={160} backgroundColor="white" color={activeConnection ? "#000000" : "#aaaaaa"} />
               </View>
               {activeConnection ? (
                 <>
@@ -662,7 +675,7 @@ export default function PlaceViewScreen() {
           ) : (
             <TouchableOpacity style={s.qrContainer} onPress={() => setQrVisible(true)}>
               <View style={[s.qrWrapper, !activeConnection && s.qrWrapperDim]}>
-                <QRCode value={`letstalk://user/${state?.session?.user?.id || 'me'}`} size={160} backgroundColor="white" color={activeConnection ? "#ffffff" : "#aaaaaa"} />
+                <QRCode value={`letstalk://user/${state?.session?.user?.id || 'me'}`} size={160} backgroundColor="white" color={activeConnection ? "#000000" : "#aaaaaa"} />
               </View>
               {activeConnection ? (
                 <>
@@ -683,7 +696,7 @@ export default function PlaceViewScreen() {
         {/* Scan Button */}
         <TouchableOpacity
           style={[s.scanBtn, isInConversation && s.scanBtnDisabled]}
-          onPress={() => { if (!isInConversation) setScannerVisible(true) }}
+          onPress={() => setScannerVisible(true)}
           disabled={isInConversation}
         >
           <Text style={s.scanBtnText}>📷 Scan someone nearby</Text>
@@ -696,7 +709,7 @@ export default function PlaceViewScreen() {
         <TouchableOpacity style={s.modalOverlay} activeOpacity={1} onPress={() => setQrVisible(false)}>
           <View style={s.qrModal}>
             <Text style={s.qrModalTitle}>Your QR Code</Text>
-            {qrHandoff && <View style={s.qrModalCode}><QRCode value={qrHandoff.url} size={240} backgroundColor="white" color="#ffffff" /></View>}
+            {qrHandoff && <View style={s.qrModalCode}><QRCode value={qrHandoff.url} size={240} backgroundColor="white" color="#000000" /></View>}
             <Text style={s.qrModalHint}>
               {activeConnection
                 ? `Show this to ${activeConnection.counterpart.username} to verify your connection.`
@@ -704,8 +717,8 @@ export default function PlaceViewScreen() {
                 ? 'Live - people can scan this'
                 : 'Set yourself ready to activate'}
             </Text>
-            <TouchableOpacity style={s.primaryBtn} onPress={() => setQrVisible(false)}>
-              <Text style={s.primaryBtnText}>Close</Text>
+            <TouchableOpacity style={[s.primaryBtn, { backgroundColor: "#000000", borderWidth: 1, borderColor: "rgba(255,255,255,0.2)", width: "100%", paddingVertical: 16 }]} onPress={() => setQrVisible(false)}>
+              <Text style={[s.primaryBtnText, { color: "#ffffff", fontSize: 16 }]}>Close</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -717,6 +730,7 @@ export default function PlaceViewScreen() {
           onClose={() => setScannerVisible(false)}
           onConnected={async (message) => {
             setScannerVisible(false)
+            setQrVerified(true)
             setNotice(message)
             await loadState(true)
           }}
@@ -769,33 +783,38 @@ const s = StyleSheet.create({
 
   // Header
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingTop: 36 },
-  logo: { fontSize: 24, fontWeight: '900', color: '#fff', letterSpacing: -0.5, textAlign: 'center' },
-  leaveBtn: { backgroundColor: 'rgba(220,38,38,0.12)', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: 'rgba(220,38,38,0.3)' },
-  leaveText: { color: '#dc2626', fontWeight: '600', fontSize: 13 },
+  logo: { fontSize: 24, fontWeight: '900', color: '#c084fc', letterSpacing: -0.5, textAlign: 'center' },
+  leaveBtn: { backgroundColor: 'rgba(220,38,38,0.12)', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: 'rgba(220,38,38,0.3)', marginLeft: 16 },
+  leaveText: { color: '#ffffff', fontWeight: '600', fontSize: 13 },
 
   // Alerts
   errorBox: { backgroundColor: 'rgba(186,26,26,0.15)', borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(186,26,26,0.3)' },
   errorText: { color: '#ff6b6b', fontSize: 13 },
   noticeBox: { backgroundColor: 'rgba(232,130,74,0.1)', borderRadius: 16, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)' },
-  noticeText: { color: GREEN_DARK, fontSize: 14, fontWeight: '600' },
-  noticeDismiss: { color: GREEN_MID, fontSize: 11, marginTop: 4 },
+  noticeText: { color: '#FFD700', fontSize: 14, fontWeight: '600' },
+  noticeDismiss: { color: 'rgba(255,215,0,0.7)', fontSize: 11, marginTop: 4 },
 
   // Connection Banner
   connectionBanner: { backgroundColor: 'rgba(0,107,44,0.1)', borderRadius: 20, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)' },
   connectionHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 8 },
   connectionEmoji: { fontSize: 28 },
-  connectionTitle: { fontSize: 15, fontWeight: '700', color: GREEN_DARK, marginBottom: 3 },
-  connectionMood: { fontSize: 13, color: GREEN_MID, lineHeight: 18 },
-  connectionHint: { fontSize: 12, color: GREEN_MID, marginBottom: 12 },
+  connectionTitle: { fontSize: 15, fontWeight: '700', color: '#ffffff', marginBottom: 3 },
+  connectionMood: { fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 18 },
+  connectionHint: { fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 12 },
   connectedSectionTitle: { fontSize: 17, fontWeight: '800', color: '#fff', marginBottom: 12 },
   connectedPeopleRow: { flexDirection: 'row', alignItems: 'stretch', marginBottom: 14 },
   connectedPerson: { flex: 1, backgroundColor: 'rgba(26,16,8,0.75)', borderRadius: 16, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)' },
-  connectedLink: { width: 34, textAlign: 'center', alignSelf: 'center', color: GREEN, fontSize: 20, fontWeight: '800' },
-  connectedName: { marginTop: 8, fontSize: 14, fontWeight: '800', color: GREEN_DARK, maxWidth: '100%' },
-  connectedMood: { marginTop: 4, fontSize: 12, color: GREEN_MID, lineHeight: 16, textAlign: 'center' },
-  unlockQrBtn: { backgroundColor: '#0f3320', borderRadius: 16, paddingVertical: 13, alignItems: 'center', marginBottom: 10 },
+  connectedLink: { width: 34, textAlign: 'center', alignSelf: 'center', color: '#ffffff', fontSize: 20, fontWeight: '800' },
+  connectedName: { marginTop: 8, fontSize: 14, fontWeight: '800', color: '#ffffff', maxWidth: '100%' },
+  connectedMood: { marginTop: 4, fontSize: 12, color: 'rgba(255,255,255,0.7)', lineHeight: 16, textAlign: 'center' },
+  qrVerifiedBox: { backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 12, paddingVertical: 12, alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: 'rgba(255,200,0,0.4)' },
+  qrVerifiedText: { color: '#FFD700', fontWeight: '800', fontSize: 16 },
+  qrBtnRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
+  scanQrBtn: { backgroundColor: '#000000', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 16, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  scanQrBtnText: { color: '#ffffff', fontWeight: '800', fontSize: 14 },
+  unlockQrBtn: { backgroundColor: '#000000', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 16, alignItems: 'center', marginBottom: 0, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' },
   unlockQrBtnText: { color: 'white', fontWeight: '800', fontSize: 15 },
-  endBtn: { backgroundColor: GREEN, borderRadius: 50, paddingVertical: 12, alignItems: 'center' },
+  endBtn: { backgroundColor: '#000000', borderRadius: 50, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
   endBtnText: { color: 'white', fontWeight: '700', fontSize: 15 },
 
   // Place Card
@@ -810,8 +829,8 @@ const s = StyleSheet.create({
   statBox: { flex: 1, alignItems: 'center', paddingVertical: 4 },
   statBorderX: { borderLeftWidth: 1, borderRightWidth: 1, borderColor: 'rgba(232,130,74,0.15)' },
   statValueGreen: { fontSize: 22, fontWeight: '900', color: AMBER },
-  statValueDark: { fontSize: 22, fontWeight: '900', color: GREEN_DARK },
-  statValueSecondary: { fontSize: 22, fontWeight: '900', color: '#006c4a' },
+  statValueDark: { fontSize: 22, fontWeight: '900', color: AMBER },
+  statValueSecondary: { fontSize: 22, fontWeight: '900', color: AMBER },
   statLabel: { fontSize: 11, color: AMBER_LIGHT, fontWeight: '600', marginTop: 2 },
 
   // Cards
@@ -825,64 +844,64 @@ const s = StyleSheet.create({
   profileAvatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(0,107,44,0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: GREEN },
   profileAvatarEmoji: { fontSize: 26 },
   profilePreviewName: { fontSize: 18, fontWeight: '800', color: '#fff', marginBottom: 4 },
-  profilePreviewMood: { fontSize: 13, color: GREEN_MID, lineHeight: 18 },
+  profilePreviewMood: { fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 18 },
 
   // Buttons
   primaryBtn: { backgroundColor: AMBER, borderRadius: 50, paddingVertical: 14, alignItems: 'center', marginTop: 4 },
-  primaryBtnOutline: { backgroundColor: 'white', borderWidth: 2, borderColor: GREEN },
+  primaryBtnOutline: { backgroundColor: '#1a1a1a', borderWidth: 2, borderColor: AMBER },
   primaryBtnText: { color: '#0a0704', fontWeight: '800', fontSize: 15 },
-  primaryBtnTextOutline: { color: GREEN },
+  primaryBtnTextOutline: { color: '#ffffff' },
 
   // People Section
   section: { marginBottom: 12 },
   sectionTitle: { fontSize: 18, fontWeight: '700', color: '#fff', marginBottom: 12, paddingHorizontal: 2 },
   requestsBox: { backgroundColor: 'rgba(0,107,44,0.08)', borderRadius: 20, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)' },
-  requestsTitle: { fontSize: 14, fontWeight: '800', color: GREEN_DARK, marginBottom: 10 },
+  requestsTitle: { fontSize: 14, fontWeight: '800', color: '#ffffff', marginBottom: 10 },
   requestRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(26,16,8,0.75)', borderRadius: 16, padding: 10, marginBottom: 8 },
-  requestName: { fontSize: 14, fontWeight: '800', color: GREEN_DARK },
-  requestMood: { fontSize: 12, color: GREEN_MID, marginTop: 2 },
-  acceptBtn: { backgroundColor: GREEN, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8, marginLeft: 6 },
-  acceptBtnText: { color: 'white', fontSize: 12, fontWeight: '800' },
-  declineBtn: { backgroundColor: 'rgba(220,38,38,0.08)', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8, marginLeft: 6 },
-  declineBtnText: { color: '#dc2626', fontSize: 12, fontWeight: '800' },
+  requestName: { fontSize: 14, fontWeight: '800', color: '#ffffff' },
+  requestMood: { fontSize: 12, color: '#ffffff', marginTop: 2 },
+  acceptBtn: { backgroundColor: '#1a1a1a', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8, marginLeft: 6, borderWidth: 1, borderColor: AMBER },
+  acceptBtnText: { color: '#ffffff', fontSize: 12, fontWeight: '800' },
+  declineBtn: { backgroundColor: '#1a1a1a', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8, marginLeft: 6, borderWidth: 1, borderColor: 'rgba(220,38,38,0.5)' },
+  declineBtnText: { color: '#ffffff', fontSize: 12, fontWeight: '800' },
   personCard: { backgroundColor: 'rgba(26,16,8,0.75)', borderRadius: 24, padding: 16, marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 1 }, elevation: 1, borderWidth: 1, borderColor: 'rgba(232,130,74,0.12)' },
   personCardTop: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
   avatarPlaceholder: { backgroundColor: 'rgba(0,107,44,0.12)', justifyContent: 'center', alignItems: 'center' },
-  avatarInitials: { color: GREEN, fontWeight: '800', fontSize: 18 },
+  avatarInitials: { color: '#ffffff', fontWeight: '800', fontSize: 18 },
   personNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4, flexWrap: 'wrap' },
-  personName: { fontSize: 16, fontWeight: '700', color: GREEN_DARK },
-  youBadge: { backgroundColor: GREEN, borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 },
+  personName: { fontSize: 16, fontWeight: '700', color: '#ffffff' },
+  youBadge: { backgroundColor: 'rgba(37,99,235,0.6)', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 },
   youBadgeText: { fontSize: 10, color: 'white', fontWeight: '700' },
-  statusBadge: { backgroundColor: 'rgba(148,163,184,0.25)', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
-  statusBadgeActive: { backgroundColor: 'rgba(130,245,193,0.4)' },
-  statusBadgeText: { fontSize: 11, color: '#3e4a3d', fontWeight: '700', textTransform: 'uppercase' },
-  statusBadgeTextActive: { color: '#005137' },
-  personMood: { fontSize: 13, color: '#6e7b6c', lineHeight: 18 },
-  locationHint: { fontSize: 12, color: GREEN, fontWeight: '600', marginTop: 3 },
+  statusBadge: { backgroundColor: 'rgba(0,0,0,0.7)', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
+  statusBadgeActive: { backgroundColor: 'rgba(37,99,235,0.5)' },
+  statusBadgeText: { fontSize: 11, color: '#ffffff', fontWeight: '700', textTransform: 'uppercase' },
+  statusBadgeTextActive: { color: '#ffffff' },
+  personMood: { fontSize: 13, color: '#ffffff', lineHeight: 18 },
+  locationHint: { fontSize: 12, color: 'rgba(255,255,255,0.7)', fontWeight: '600', marginTop: 3 },
   personBtns: { flexDirection: 'row', gap: 8 },
-  viewProfileBtn: { flex: 1, paddingVertical: 10, borderRadius: 14, backgroundColor: 'rgba(0,107,44,0.07)', alignItems: 'center' },
-  viewProfileBtnText: { fontSize: 14, fontWeight: '600', color: GREEN_DARK },
+  viewProfileBtn: { paddingVertical: 7, paddingHorizontal: 12, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', alignSelf: 'flex-start' },
+  viewProfileBtnText: { fontSize: 14, fontWeight: '600', color: '#ffffff' },
   personActionColumn: { flex: 1, alignItems: 'stretch' },
   personActionButton: { flex: 0, width: '100%' },
-  connectBtn: { flex: 1, paddingVertical: 10, borderRadius: 14, backgroundColor: '#2563eb', alignItems: 'center', shadowColor: '#2563eb', shadowOpacity: 0.25, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
-  connectBtnDisabled: { backgroundColor: 'rgba(37,99,235,0.35)', shadowOpacity: 0 },
-  connectDisabledHint: { marginTop: 5, color: '#64748b', fontSize: 11, fontWeight: '600', textAlign: 'center', lineHeight: 14 },
-  cancelRequestBtn: { backgroundColor: 'white', borderWidth: 1, borderColor: GREEN, shadowOpacity: 0 },
-  cancelRequestBtnText: { fontSize: 14, fontWeight: '700', color: GREEN },
+  connectBtn: { paddingVertical: 7, paddingHorizontal: 12, borderRadius: 10, backgroundColor: '#2563eb', alignItems: 'center', alignSelf: 'flex-end', shadowColor: '#2563eb', shadowOpacity: 0.25, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
+  connectBtnDisabled: { backgroundColor: 'rgba(37,99,235,0.5)', shadowOpacity: 0 },
+  connectDisabledHint: { marginTop: 5, color: '#ffffff', fontSize: 11, fontWeight: '600', textAlign: 'center', lineHeight: 14 },
+  cancelRequestBtn: { backgroundColor: '#1a1a1a', borderWidth: 1, borderColor: AMBER, shadowOpacity: 0 },
+  cancelRequestBtnText: { fontSize: 14, fontWeight: '700', color: '#ffffff' },
   connectedBtn: { backgroundColor: '#0f3320', shadowOpacity: 0 },
   connectBtnText: { fontSize: 14, fontWeight: '700', color: 'white' },
   connectBtnTextDisabled: { fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.6)' },
   emptyPeople: { backgroundColor: 'rgba(26,16,8,0.75)', borderRadius: 24, padding: 28, alignItems: 'center', gap: 6 },
   emptyEmoji: { fontSize: 32 },
-  emptyTitle: { fontSize: 15, fontWeight: '700', color: GREEN_DARK },
+  emptyTitle: { fontSize: 15, fontWeight: '700', color: '#ffffff' },
   emptyText: { fontSize: 13, color: '#6e7b6c', textAlign: 'center' },
 
   // Finder
   finderCard: { backgroundColor: 'rgba(130,245,193,0.15)', borderRadius: 24, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(130,245,193,0.5)' },
   hintRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
-  hintChip: { borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)', backgroundColor: 'white' },
+  hintChip: { borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)', backgroundColor: '#1a1a1a' },
   hintChipActive: { backgroundColor: GREEN, borderColor: GREEN },
-  hintChipText: { fontSize: 13, color: GREEN_MID, fontWeight: '500' },
+  hintChipText: { fontSize: 13, color: 'rgba(255,255,255,0.7)', fontWeight: '500' },
   hintChipTextActive: { color: 'white' },
 
   // QR
@@ -893,10 +912,10 @@ const s = StyleSheet.create({
   qrStatus: { backgroundColor: 'rgba(148,163,184,0.15)', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6, marginBottom: 6 },
   qrStatusActive: { backgroundColor: 'rgba(0,107,44,0.1)' },
   qrStatusText: { fontSize: 12, color: '#64748b', fontWeight: '600' },
-  qrStatusTextActive: { color: GREEN },
-  qrTap: { fontSize: 11, color: GREEN_MID },
+  qrStatusTextActive: { color: '#ffffff' },
+  qrTap: { fontSize: 11, color: 'rgba(255,255,255,0.6)' },
   qrPlaceholder: { height: 100, justifyContent: 'center', alignItems: 'center' },
-  qrPlaceholderText: { color: GREEN_MID, fontSize: 13 },
+  qrPlaceholderText: { color: 'rgba(255,255,255,0.6)', fontSize: 13 },
   qrLocked: { minHeight: 132, borderRadius: 20, backgroundColor: 'rgba(148,163,184,0.12)', borderWidth: 1, borderColor: 'rgba(100,116,139,0.2)', justifyContent: 'center', alignItems: 'center', padding: 18 },
   qrLockIcon: { fontSize: 28, marginBottom: 8 },
   qrLockedTitle: { color: '#64748b', fontSize: 14, fontWeight: '800', textAlign: 'center', lineHeight: 20 },
@@ -908,17 +927,17 @@ const s = StyleSheet.create({
 
   // Modals
   modalOverlay: { flex: 1, backgroundColor: 'rgba(15,51,32,0.6)', justifyContent: 'center', alignItems: 'center' },
-  qrModal: { backgroundColor: 'white', borderRadius: 28, padding: 28, alignItems: 'center', width: '85%' },
-  qrModalTitle: { fontSize: 18, fontWeight: '800', color: GREEN_DARK, marginBottom: 20 },
+  qrModal: { backgroundColor: '#1a1a1a', borderRadius: 28, padding: 28, alignItems: 'center', width: '85%' },
+  qrModalTitle: { fontSize: 18, fontWeight: '800', color: '#ffffff', marginBottom: 20 },
   qrModalCode: { padding: 16, backgroundColor: 'rgba(26,16,8,0.75)', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)', marginBottom: 16 },
-  qrModalHint: { fontSize: 13, color: GREEN_MID, marginBottom: 20, textAlign: 'center' },
+  qrModalHint: { fontSize: 13, color: 'rgba(255,255,255,0.6)', marginBottom: 20, textAlign: 'center' },
   personOverlay: { flex: 1, backgroundColor: 'rgba(15,51,32,0.45)', justifyContent: 'flex-end' },
   personSheet: { minHeight: '48%', backgroundColor: BG, borderTopLeftRadius: 26, borderTopRightRadius: 26, padding: 22, paddingBottom: 40 },
   personHandle: { width: 42, height: 4, borderRadius: 2, backgroundColor: 'rgba(0,107,44,0.25)', alignSelf: 'center', marginBottom: 18 },
   personTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
-  personModalName: { fontSize: 22, fontWeight: '900', color: GREEN_DARK, marginBottom: 8 },
+  personModalName: { fontSize: 22, fontWeight: '900', color: '#ffffff', marginBottom: 8 },
   personTags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   personTag: { backgroundColor: 'rgba(0,107,44,0.1)', color: '#ffffff', fontWeight: '700', fontSize: 12, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, overflow: 'hidden' },
-  personModalMood: { fontSize: 15, color: GREEN_MID, lineHeight: 22, marginBottom: 18 },
-  personHint: { fontSize: 14, color: GREEN, fontWeight: '600' },
+  personModalMood: { fontSize: 15, color: 'rgba(255,255,255,0.7)', lineHeight: 22, marginBottom: 18 },
+  personHint: { fontSize: 14, color: 'rgba(255,255,255,0.7)', fontWeight: '600' },
 })
