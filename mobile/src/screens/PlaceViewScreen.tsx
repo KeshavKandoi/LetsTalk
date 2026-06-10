@@ -646,61 +646,6 @@ export default function PlaceViewScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* QR Code */}
-        <View style={s.card}>
-          <Text style={s.cardTitle}>Your QR Code</Text>
-          <Text style={s.cardHint}>
-            {activeConnection
-              ? `Verify your connection with ${activeConnection.counterpart.username}.`
-              : 'Accept a connection request to unlock QR'}
-          </Text>
-          {qrHandoff ? (
-            <TouchableOpacity style={s.qrContainer} onPress={() => { if (activeConnection) setQrVisible(true) }}>
-              <View style={[s.qrWrapper, !activeConnection && s.qrWrapperDim]}>
-                <QRCode value={qrHandoff.url} size={160} backgroundColor="white" color={activeConnection ? "#000000" : "#aaaaaa"} />
-              </View>
-              {activeConnection ? (
-                <>
-                  <View style={[s.qrStatus, s.qrStatusActive]}>
-                    <Text style={[s.qrStatusText, s.qrStatusTextActive]}>✓ QR verification unlocked</Text>
-                  </View>
-                  <Text style={s.qrTap}>Tap to enlarge</Text>
-                </>
-              ) : (
-                <View style={s.qrStatus}>
-                  <Text style={s.qrStatusText}>🔒 Connect with someone to activate</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity style={s.qrContainer} onPress={() => setQrVisible(true)}>
-              <View style={[s.qrWrapper, !activeConnection && s.qrWrapperDim]}>
-                <QRCode value={`letstalk://user/${state?.session?.user?.id || 'me'}`} size={160} backgroundColor="white" color={activeConnection ? "#000000" : "#aaaaaa"} />
-              </View>
-              {activeConnection ? (
-                <>
-                  <View style={[s.qrStatus, s.qrStatusActive]}>
-                    <Text style={[s.qrStatusText, s.qrStatusTextActive]}>✓ QR verification unlocked</Text>
-                  </View>
-                  <Text style={s.qrTap}>Tap to enlarge</Text>
-                </>
-              ) : (
-                <View style={s.qrStatus}>
-                  <Text style={s.qrStatusText}>🔒 Connect with someone to activate</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Scan Button */}
-        <TouchableOpacity
-          style={[s.scanBtn, isInConversation && s.scanBtnDisabled]}
-          onPress={() => setScannerVisible(true)}
-          disabled={isInConversation}
-        >
-          <Text style={s.scanBtnText}>📷 Scan someone nearby</Text>
-        </TouchableOpacity>
 
       </ScrollView>
 
