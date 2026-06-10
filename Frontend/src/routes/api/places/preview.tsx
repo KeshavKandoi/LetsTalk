@@ -13,8 +13,11 @@ export const Route = createFileRoute('/api/places/preview')({
               status: 401, headers: { 'Content-Type': 'application/json' },
             })
           }
-          const body = await request.json()
-          const result = await getNearbyPlacePreview(body)
+          const body = await request.json() as { placeId: string }
+          const result = await getNearbyPlacePreview({
+            ...body,
+            viewerUserId: session.user.id,
+          })
           return new Response(JSON.stringify(result), {
             headers: { 'Content-Type': 'application/json' },
           })
