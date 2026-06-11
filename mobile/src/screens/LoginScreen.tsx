@@ -2,11 +2,20 @@ import { useState } from 'react'
 import { useNavigation } from '@react-navigation/native'
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform
+  ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform, Alert
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { MaterialIcons, Ionicons } from '@expo/vector-icons'
+import * as WebBrowser from 'expo-web-browser'
+import * as Google from 'expo-auth-session/providers/google'
 import { signIn } from '../lib/auth'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+
+WebBrowser.maybeCompleteAuthSession()
+
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.29.59:3000'
+const ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || ''
+const WEB_CLIENT_ID = '70674819769-vu8ecco5ri04c4ob9b64jnn64eujrnpk.apps.googleusercontent.com'
 
 export default function LoginScreen() {
   const navigation = useNavigation<any>()
@@ -14,7 +23,41 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    androidClientId: ANDROID_CLIENT_ID,
+    webClientId: WEB_CLIENT_ID,
+  })
+
+  const handleGoogleLogin = async () => {
+    setGoogleLoading(true)
+    setError('')
+    try {
+      const result = await promptAsync()
+      if (result?.type === 'success') {
+        const { authentication } = result
+        const res = await fetch(`${BASE_URL}/api/auth/sign-in/social`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Origin': BASE_URL },
+          body: JSON.stringify({
+            provider: 'google',
+            idToken: authentication?.idToken,
+            accessToken: authentication?.accessToken,
+          }),
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.message || 'Google login failed')
+        if (data.token) await AsyncStorage.setItem('session_token', data.token)
+        navigation.navigate('Onboarding')
+      }
+    } catch (e: any) {
+      setError(e.message || 'Google login failed')
+    } finally {
+      setGoogleLoading(false)
+    }
+  }
 
   const handleLogin = async () => {
     if (!username || !password) { setError('Please fill in all fields'); return }
@@ -34,95 +77,60 @@ export default function LoginScreen() {
     <SafeAreaView style={styles.safeContainer}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'none'} style={styles.flex}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
             <MaterialIcons name="chevron-left" size={28} color="#405e98" />
           </TouchableOpacity>
-
           <View style={styles.brandContainer}>
             <MaterialIcons name="forum" size={28} color="#813400" />
             <Text style={styles.brandName}>Let's Talk</Text>
           </View>
-
           <View style={styles.card}>
             <Text style={styles.title}>Welcome back</Text>
             <Text style={styles.subtitle}>Sign in to continue connecting with people around you.</Text>
-
             {error ? (
               <View style={styles.errorBox}>
                 <MaterialIcons name="error-outline" size={16} color="#93000a" />
                 <Text style={styles.errorText}>{error}</Text>
               </View>
             ) : null}
-
             <Text style={styles.label}>USERNAME</Text>
             <View style={styles.inputWrap}>
               <MaterialIcons name="person-outline" size={20} color="#897268" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                value={username}
-                onChangeText={setUsername}
-                placeholder="username"
-                placeholderTextColor="#b0978a"
-                autoCapitalize="none"
-                editable={!loading}
-              />
+              <TextInput style={styles.input} value={username} onChangeText={setUsername} placeholder="username" placeholderTextColor="#b0978a" autoCapitalize="none" editable={!loading} />
             </View>
-
             <Text style={styles.label}>PASSWORD</Text>
             <View style={styles.inputWrap}>
               <MaterialIcons name="lock-outline" size={20} color="#897268" style={styles.inputIcon} />
-              <TextInput
-                style={[styles.input, { paddingRight: 8 }]}
-                value={password}
-                onChangeText={setPassword}
-                placeholder="••••••••"
-                placeholderTextColor="#b0978a"
-                secureTextEntry={!showPassword}
-                editable={!loading}
-              />
+              <TextInput style={[styles.input, { paddingRight: 8 }]} value={password} onChangeText={setPassword} placeholder="••••••••" placeholderTextColor="#b0978a" secureTextEntry={!showPassword} editable={!loading} />
               <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
                 <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#897268" />
               </TouchableOpacity>
             </View>
-
             <TouchableOpacity style={styles.forgotBtn}>
               <Text style={styles.forgotText}>Forgot password?</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity style={styles.primaryBtn} onPress={handleLogin} disabled={loading}>
-              {loading
-                ? <ActivityIndicator color="white" />
-                : <>
-                    <Text style={styles.primaryText}>Log in</Text>
-                    <MaterialIcons name="arrow-forward" size={20} color="white" style={{ marginLeft: 8 }} />
-                  </>
-              }
+            <TouchableOpacity style={styles.primaryBtn} onPress={handleLogin} disabled={loading || googleLoading}>
+              {loading ? <ActivityIndicator color="white" /> : <><Text style={styles.primaryText}>Log in</Text><MaterialIcons name="arrow-forward" size={20} color="white" style={{ marginLeft: 8 }} /></>}
             </TouchableOpacity>
-
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
               <Text style={styles.dividerText}>OR</Text>
               <View style={styles.dividerLine} />
             </View>
-
-            <TouchableOpacity style={styles.googleBtn} disabled={loading}>
-              <Text style={styles.googleIcon}>G</Text>
-              <Text style={styles.googleText}>Continue with Google</Text>
+            <TouchableOpacity style={styles.googleBtn} onPress={handleGoogleLogin} disabled={loading || googleLoading || !request}>
+              {googleLoading
+                ? <ActivityIndicator color="#4285F4" size="small" />
+                : <><Text style={styles.googleIcon}>G</Text><Text style={styles.googleText}>Continue with Google</Text></>
+              }
             </TouchableOpacity>
-
             <TouchableOpacity onPress={() => navigation.navigate('Signup')} style={{ marginTop: 20 }} disabled={loading}>
-              <Text style={styles.switchText}>
-                Don't have an account? <Text style={styles.switchLink}>Sign up</Text>
-              </Text>
+              <Text style={styles.switchText}>Don't have an account? <Text style={styles.switchLink}>Sign up</Text></Text>
             </TouchableOpacity>
           </View>
-
           <View style={styles.footer}>
             <MaterialIcons name="forum" size={14} color="#897268" />
             <Text style={styles.footerText}>© 2024 Let's Talk</Text>
           </View>
-
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -150,13 +158,13 @@ const styles = StyleSheet.create({
   forgotText: { fontSize: 13, color: '#813400', fontWeight: '600' },
   primaryBtn: { backgroundColor: '#405e98', borderRadius: 50, paddingVertical: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', shadowColor: '#405e98', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 4 },
   primaryText: { color: 'white', fontWeight: '700', fontSize: 16 },
-  switchText: { textAlign: 'center', color: '#55433a', fontSize: 13 },
   divider: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 20 },
   dividerLine: { flex: 1, height: 1, backgroundColor: 'rgba(220,193,181,0.5)' },
   dividerText: { fontSize: 11, fontWeight: '500', color: '#897268', letterSpacing: 0.8 },
   googleBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: '#fff', borderRadius: 14, paddingVertical: 13, borderWidth: 1.5, borderColor: 'rgba(220,193,181,0.8)' },
   googleIcon: { fontSize: 16, fontWeight: '700', color: '#4285F4' },
   googleText: { fontSize: 15, color: '#201b0e', fontWeight: '500' },
+  switchText: { textAlign: 'center', color: '#55433a', fontSize: 13 },
   switchLink: { fontWeight: '700', color: '#813400' },
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 32 },
   footerText: { fontSize: 12, color: '#897268' },
