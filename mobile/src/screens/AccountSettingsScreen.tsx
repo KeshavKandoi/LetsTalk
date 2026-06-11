@@ -21,6 +21,8 @@ export default function AccountSettingsScreen() {
   const [otp, setOtp] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
 
   const handleSendOtp = async () => {
@@ -31,10 +33,10 @@ export default function AccountSettingsScreen() {
       if (!userEmail) { Alert.alert('Error', 'Could not find your email.'); setLoading(false); return }
       setEmail(userEmail)
       const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.29.59:3000'
-      const res = await fetch(`${BASE_URL}/api/auth/send-otp`, {
+      const res = await fetch(`${BASE_URL}/api/auth/email-otp/send-verification-otp`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: userEmail }),
+        headers: { 'Content-Type': 'application/json', 'Origin': 'http://192.168.29.59:3000' },
+        body: JSON.stringify({ email: userEmail, type: 'forget-password' }),
       })
       const data = await res.json()
       if (data.error) throw new Error(data.error)
@@ -46,23 +48,9 @@ export default function AccountSettingsScreen() {
     setLoading(false)
   }
 
-  const handleVerifyOtp = async () => {
+  const handleVerifyOtp = () => {
     if (otp.length !== 6) { Alert.alert('Invalid', 'Enter the 6-digit OTP.'); return }
-    setLoading(true)
-    try {
-      const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.29.59:3000'
-      const res = await fetch(`${BASE_URL}/api/auth/verify-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp }),
-      })
-      const data = await res.json()
-      if (data.error) throw new Error(data.error)
-      setStep('newpass')
-    } catch (e: any) {
-      Alert.alert('Wrong OTP', e.message)
-    }
-    setLoading(false)
+    setStep('newpass')
   }
 
   const handleChangePassword = async () => {
@@ -71,7 +59,14 @@ export default function AccountSettingsScreen() {
     if (newPassword.length < 8) { Alert.alert('Too short', 'Password must be at least 8 characters.'); return }
     setLoading(true)
     try {
-      await apiFetch('/api/places/change-password', { newPassword })
+      const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.29.59:3000'
+      const res = await fetch(`${BASE_URL}/api/auth/email-otp/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Origin': 'http://192.168.29.59:3000' },
+        body: JSON.stringify({ email, otp, password: newPassword }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || 'Failed to change password')
       Alert.alert('Done! 🎉', 'Password changed successfully.')
       setSection('main')
       setStep('request')
@@ -214,26 +209,36 @@ export default function AccountSettingsScreen() {
             {step === 'newpass' && (
               <>
                 <View style={s.stepIcon}>
-                  <Text style={{ fontSize: 40 }}>🔑</Text>
+                  <Text style={{ fontSize: 40 }}></Text>
                 </View>
                 <Text style={s.stepTitle}>Set New Password</Text>
                 <Text style={s.stepSub}>Choose a strong password with at least 8 characters.</Text>
-                <TextInput
-                  style={s.input}
-                  value={newPassword}
-                  onChangeText={setNewPassword}
-                  placeholder="New password"
-                  placeholderTextColor="rgba(255,255,255,0.3)"
-                  secureTextEntry
-                />
-                <TextInput
-                  style={[s.input, { marginTop: 12 }]}
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  placeholder="Confirm new password"
-                  placeholderTextColor="rgba(255,255,255,0.3)"
-                  secureTextEntry
-                />
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 0 }}>
+                  <TextInput
+                    style={[s.input, { flex: 1, marginBottom: 0 }]}
+                    value={newPassword}
+                    onChangeText={setNewPassword}
+                    placeholder="New password"
+                    placeholderTextColor="rgba(255,255,255,0.3)"
+                    secureTextEntry={!showNewPassword}
+                  />
+                  <TouchableOpacity onPress={() => setShowNewPassword(!showNewPassword)} style={{ position: 'absolute', right: 12 }}>
+                    <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>{showNewPassword ? 'Hide' : 'Show'}</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12 }}>
+                  <TextInput
+                    style={[s.input, { flex: 1, marginBottom: 0 }]}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    placeholder="Confirm new password"
+                    placeholderTextColor="rgba(255,255,255,0.3)"
+                    secureTextEntry={!showConfirmPassword}
+                  />
+                  <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={{ position: 'absolute', right: 12 }}>
+                    <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>{showConfirmPassword ? 'Hide' : 'Show'}</Text>
+                  </TouchableOpacity>
+                </View>
                 <TouchableOpacity style={s.yellowBtn} onPress={handleChangePassword} disabled={loading}>
                   {loading ? <ActivityIndicator color={DARK} /> : <Text style={s.yellowBtnText}>Update Password</Text>}
                 </TouchableOpacity>
