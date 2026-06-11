@@ -42,6 +42,7 @@ export default function ProfileScreen() {
         gender: stateData?.profile?.gender || null,
         age: stateData?.profile?.age || null,
         intent_text: stateData?.profile?.intentText || '',
+        about: stateData?.profile?.about || '',
         current_place_id: stateData?.profile?.currentPlaceId || null,
       })
     } catch (e) {
@@ -76,6 +77,7 @@ export default function ProfileScreen() {
   const displayName = profile?.full_name || username
   const email = profile?.email || ''
   const intentText = profile?.intent_text || 'Open to a conversation.'
+  const about = profile?.about || ''
   const age = profile?.age || null
   const gender = profile?.gender || null
 
@@ -122,7 +124,7 @@ export default function ProfileScreen() {
 
           <View style={s.section}>
             <Text style={s.sectionTitle}>ABOUT</Text>
-            <Text style={s.sectionBody}>{intentText}</Text>
+            <Text style={s.sectionBody}>{about || 'No about yet. Edit your profile to add one.'}</Text>
           </View>
 
           <View style={s.statsRow}>
