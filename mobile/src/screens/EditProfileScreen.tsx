@@ -21,6 +21,7 @@ export default function EditProfileScreen() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [intentText, setIntentText] = useState('')
+  const [about, setAbout] = useState('')
   const [username, setUsername] = useState('')
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
@@ -29,6 +30,7 @@ export default function EditProfileScreen() {
     Promise.all([apiFetch('/api/places/state', {}), getSession()])
       .then(([data, session]) => {
         setIntentText(data?.profile?.intentText || '')
+        setAbout(data?.profile?.about || '')
         setUsername(data?.session?.user?.username || '')
         const u = session?.user || session?.session?.user
         const rawUrl = data?.profile?.photoUrl || u?.image || null
@@ -89,7 +91,7 @@ export default function EditProfileScreen() {
   const handleSave = async () => {
     setSaving(true)
     try {
-      const res = await apiFetch('/api/places/update-profile', { intentText })
+      const res = await apiFetch('/api/places/update-profile', { intentText, about })
       console.log('Save response:', res)
       navigation.goBack()
     } catch (e: any) {
@@ -147,18 +149,17 @@ export default function EditProfileScreen() {
             </TouchableOpacity>
           </View>
         </View>
-
-        {/* My Vibe */}
+        {/* About */}
         <View style={s.card}>
-          <Text style={s.label}>MY VIBE</Text>
-          <Text style={s.sublabel}>Describe your vibe to others</Text>
+          <Text style={s.label}>ABOUT</Text>
+          <Text style={s.sublabel}>Tell others about yourself</Text>
           <TextInput
             style={s.textArea}
-            value={intentText}
-            onChangeText={setIntentText}
+            value={about}
+            onChangeText={setAbout}
             multiline
             numberOfLines={4}
-            placeholder="Open to a conversation..."
+            placeholder="A little about yourself..."
             placeholderTextColor="rgba(21,21,21,0.35)"
           />
         </View>
