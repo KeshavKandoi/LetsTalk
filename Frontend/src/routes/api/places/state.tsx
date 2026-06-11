@@ -38,6 +38,7 @@ export const Route = createFileRoute('/api/places/state')({
               userId: profileRecord.userId,
               moodEmoji: profileRecord.moodEmoji,
               intentText: profileRecord.intentText,
+              about: profileRecord.about ?? null,
               intentSummary: profileRecord.intentSummary,
               status: profileRecord.status,
               currentPlaceId: profileRecord.currentPlaceId,
