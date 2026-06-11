@@ -19,7 +19,7 @@ const WEB_CLIENT_ID = '70674819769-vu8ecco5ri04c4ob9b64jnn64eujrnpk.apps.googleu
 
 export default function LoginScreen() {
   const navigation = useNavigation<any>()
-  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -50,7 +50,7 @@ export default function LoginScreen() {
         const data = await res.json()
         if (!res.ok) throw new Error(data.message || 'Google login failed')
         if (data.token) await AsyncStorage.setItem('session_token', data.token)
-        navigation.navigate('Onboarding')
+        navigation.navigate('Landing')
       }
     } catch (e: any) {
       setError(e.message || 'Google login failed')
@@ -60,12 +60,12 @@ export default function LoginScreen() {
   }
 
   const handleLogin = async () => {
-    if (!username || !password) { setError('Please fill in all fields'); return }
+    if (!email || !password) { setError('Please fill in all fields'); return }
     setLoading(true)
     setError('')
     try {
-      await signIn(username, password)
-      navigation.navigate('Onboarding')
+      await signIn(email, password)
+      navigation.navigate('Landing')
     } catch (e: any) {
       setError(e.message || 'Login failed')
     } finally {
@@ -93,10 +93,10 @@ export default function LoginScreen() {
                 <Text style={styles.errorText}>{error}</Text>
               </View>
             ) : null}
-            <Text style={styles.label}>USERNAME</Text>
+            <Text style={styles.label}>EMAIL</Text>
             <View style={styles.inputWrap}>
-              <MaterialIcons name="person-outline" size={20} color="#897268" style={styles.inputIcon} />
-              <TextInput style={styles.input} value={username} onChangeText={setUsername} placeholder="username" placeholderTextColor="#b0978a" autoCapitalize="none" editable={!loading} />
+              <MaterialIcons name="email" size={20} color="#897268" style={styles.inputIcon} />
+              <TextInput style={styles.input} value={email} onChangeText={setEmail} placeholder="you@example.com" placeholderTextColor="#b0978a" autoCapitalize="none" keyboardType="email-address" editable={!loading} />
             </View>
             <Text style={styles.label}>PASSWORD</Text>
             <View style={styles.inputWrap}>
@@ -106,7 +106,7 @@ export default function LoginScreen() {
                 <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#897268" />
               </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.forgotBtn}>
+            <TouchableOpacity style={[styles.forgotBtn, !email && { opacity: 0.4 }]} disabled={!email} onPress={() => navigation.navigate('ForgotPassword', { email })}>
               <Text style={styles.forgotText}>Forgot password?</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.primaryBtn} onPress={handleLogin} disabled={loading || googleLoading}>
@@ -148,10 +148,10 @@ const styles = StyleSheet.create({
   title: { fontSize: 26, fontWeight: '700', color: '#201b0e', marginBottom: 8, letterSpacing: -0.3 },
   subtitle: { fontSize: 14, color: '#55433a', lineHeight: 21, marginBottom: 24 },
   errorBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#ffdad6', borderRadius: 12, padding: 12, marginBottom: 20, borderWidth: 1, borderColor: '#ffb4ab' },
-  errorText: { color: '#93000a', fontSize: 13, flex: 1 },
-  label: { fontSize: 11, fontWeight: '500', color: '#897268', letterSpacing: 0.8, marginBottom: 8, marginLeft: 2 },
-  inputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fdf3dc', borderRadius: 14, borderWidth: 1.5, borderColor: 'rgba(220,193,181,0.6)', marginBottom: 16, paddingHorizontal: 14 },
-  inputIcon: { marginRight: 10 },
+  errorText: { fontSize: 13, color: '#93000a', fontWeight: '500', flex: 1 },
+  label: { fontSize: 11, fontWeight: '600', color: '#897268', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.4 },
+  inputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fffbf3', borderWidth: 1, borderColor: '#dcc9b6', borderRadius: 12, paddingHorizontal: 12, marginBottom: 20, height: 48 },
+  inputIcon: { marginRight: 8 },
   input: { flex: 1, paddingVertical: 13, fontSize: 15, color: '#201b0e' },
   eyeBtn: { padding: 4 },
   forgotBtn: { alignSelf: 'flex-end', marginBottom: 24, marginTop: -8 },
@@ -159,13 +159,13 @@ const styles = StyleSheet.create({
   primaryBtn: { backgroundColor: '#405e98', borderRadius: 50, paddingVertical: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', shadowColor: '#405e98', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 4 },
   primaryText: { color: 'white', fontWeight: '700', fontSize: 16 },
   divider: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 20 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: 'rgba(220,193,181,0.5)' },
-  dividerText: { fontSize: 11, fontWeight: '500', color: '#897268', letterSpacing: 0.8 },
-  googleBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: '#fff', borderRadius: 14, paddingVertical: 13, borderWidth: 1.5, borderColor: 'rgba(220,193,181,0.8)' },
-  googleIcon: { fontSize: 16, fontWeight: '700', color: '#4285F4' },
-  googleText: { fontSize: 15, color: '#201b0e', fontWeight: '500' },
-  switchText: { textAlign: 'center', color: '#55433a', fontSize: 13 },
-  switchLink: { fontWeight: '700', color: '#813400' },
+  dividerLine: { flex: 1, height: 1, backgroundColor: '#dcc9b6' },
+  dividerText: { fontSize: 12, color: '#897268', fontWeight: '600' },
+  googleBtn: { borderWidth: 1.5, borderColor: '#dcc9b6', borderRadius: 12, paddingVertical: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#fffbf3' },
+  googleIcon: { fontSize: 18, fontWeight: '700', color: '#4285F4' },
+  googleText: { fontSize: 15, color: '#201b0e', fontWeight: '600' },
+  switchText: { fontSize: 14, color: '#55433a', textAlign: 'center' },
+  switchLink: { color: '#813400', fontWeight: '700' },
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 32 },
-  footerText: { fontSize: 12, color: '#897268' },
+  footerText: { fontSize: 11, color: '#897268' },
 })
