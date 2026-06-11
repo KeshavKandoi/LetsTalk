@@ -57,10 +57,10 @@ export default function SignupScreen() {
       const dob = `${dobYear}-${dobMonth}-${dobDay}`
       await signUp(email, username, password, dob, gender)
       const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.29.59:3000'
-      await fetch(`${BASE_URL}/api/auth/send-otp`, {
+      await fetch(`${BASE_URL}/api/auth/email-otp/send-verification-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, type: "email-verification" }),
       })
       navigation.navigate('OTP', { email })
     } catch (e: any) {
