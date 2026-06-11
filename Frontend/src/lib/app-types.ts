@@ -33,6 +33,7 @@ export type UserProfileState = {
   age?: string | null
   gender?: string | null
   photoUrl?: string | null
+  about?: string | null
 }
 
 export type UserAgentState = {
@@ -105,6 +106,7 @@ export type PlaceAgentParticipantState = {
   age?: string | null
   gender?: string | null
   photoUrl?: string | null
+  about?: string | null
   pingRequestedAt: string | Date | null
   pingRequestedByUserId: string | null
   pingRequestedByUsername: string | null
