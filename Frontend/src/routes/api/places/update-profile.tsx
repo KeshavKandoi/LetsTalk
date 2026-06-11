@@ -11,11 +11,12 @@ export const Route = createFileRoute('/api/places/update-profile')({
         try {
           const session = await auth.api.getSession({ headers: (() => { const h = new Headers(Object.fromEntries(request.headers.entries())); const t = (request.headers.get('authorization') || request.headers.get('Authorization') || '').replace('Bearer ',''); if(t) h.set('cookie', 'better-auth.session_token=' + t); return h; })() })
           if (!session) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
-          const { moodEmoji, intentText, age, gender } = await request.json() as {
+          const { moodEmoji, intentText, age, gender, about } = await request.json() as {
             moodEmoji?: string
             intentText?: string
             age?: string
             gender?: string
+            about?: string
           }
           const now = new Date()
           const [existingProfile] = await db
@@ -32,6 +33,7 @@ export const Route = createFileRoute('/api/places/update-profile')({
                 intentText: intentText ?? existingProfile.intentText,
                 age: age ?? existingProfile.age,
                 gender: gender ?? existingProfile.gender,
+                about: about !== undefined ? about : existingProfile.about,
                 updatedAt: now,
               })
               .where(eq(userProfile.userId, session.user.id))
@@ -52,6 +54,7 @@ export const Route = createFileRoute('/api/places/update-profile')({
               photoUrl: null,
               age: age ?? null,
               gender: gender ?? null,
+              about: about ?? null,
               createdAt: now,
               updatedAt: now,
             })
