@@ -17,6 +17,7 @@ import AboutUsScreen from './src/screens/AboutUsScreen'
 import FriendsScreen from './src/screens/FriendsScreen'
 import ConversationScreen from './src/screens/ConversationScreen'
 import OTPScreen from './src/screens/OTPScreen'
+import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen'
 
 const Stack = createNativeStackNavigator()
 
@@ -30,7 +31,7 @@ export default function App() {
         const session = await getSession()
         // ✅ Only auto-login if session exists AND email is verified
         if (session?.session && session?.user?.emailVerified) {
-          setInitialRoute('Onboarding')
+          setInitialRoute('Landing')
         } else {
           await signOut()
           setInitialRoute('Landing')
@@ -61,6 +62,7 @@ export default function App() {
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Signup" component={SignupScreen} />
           <Stack.Screen name="OTP" component={OTPScreen} />
+          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
           <Stack.Screen name="Onboarding" component={OnboardingScreen} />
           <Stack.Screen name="PlaceView" component={PlaceViewScreen} />
           <Stack.Screen name="Profile" component={ProfileScreen} />
