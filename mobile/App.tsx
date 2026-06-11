@@ -13,6 +13,7 @@ import PlaceViewScreen from './src/screens/PlaceViewScreen'
 import ProfileScreen from './src/screens/ProfileScreen'
 import EditProfileScreen from './src/screens/EditProfileScreen'
 import AccountSettingsScreen from './src/screens/AccountSettingsScreen'
+import NotificationsScreen from './src/screens/NotificationsScreen'
 import AboutUsScreen from './src/screens/AboutUsScreen'
 import FriendsScreen from './src/screens/FriendsScreen'
 import ConversationScreen from './src/screens/ConversationScreen'
@@ -68,6 +69,7 @@ export default function App() {
           <Stack.Screen name="Profile" component={ProfileScreen} />
           <Stack.Screen name="EditProfile" component={EditProfileScreen} />
           <Stack.Screen name="AccountSettings" component={AccountSettingsScreen} />
+          <Stack.Screen name="Notifications" component={NotificationsScreen} />
           <Stack.Screen name="AboutUs" component={AboutUsScreen} />
           <Stack.Screen name="Friends" component={FriendsScreen} />
           <Stack.Screen name="Conversation" component={ConversationScreen} />
