@@ -47,6 +47,7 @@
           "googleMapsApiKey": "AIzaSyDS46VSl7BfPncdn9aIIHGKsppZP3ycNF0"
         }
       ]
-    ]
+    ],
+    "scheme": "com.letstalk.app"
   }
 }
