@@ -81,6 +81,7 @@ createdAt: profileRecord.createdAt,
     updatedAt: profileRecord.updatedAt,
     age: profileRecord.age,
     gender: profileRecord.gender,
+    about: profileRecord.about ?? null,
     photoUrl: profileRecord.photoUrl,
   }
 }
@@ -1485,6 +1486,7 @@ export async function getNearbyPlacePreview(input: {
       age: userProfile.age,
       gender: userProfile.gender,
       photoUrl: userProfile.photoUrl,
+      about: userProfile.about,
       pingRequestedAt: userProfile.pingRequestedAt,
       pingRequestedByUserId: userProfile.pingRequestedByUserId,
       pingRequestedByUsername: userProfile.pingRequestedByUsername,
@@ -1540,6 +1542,7 @@ export async function getNearbyPlacePreview(input: {
         age: record.age ?? null,
         gender: record.gender ?? null,
         photoUrl: record.photoUrl ?? null,
+        about: record.about ?? null,
         pingRequestedAt: record.pingRequestedAt,
         pingRequestedByUserId: record.pingRequestedByUserId ?? null,
         pingRequestedByUsername: record.pingRequestedByUsername ?? null,
