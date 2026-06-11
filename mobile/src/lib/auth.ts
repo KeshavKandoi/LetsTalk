@@ -4,10 +4,10 @@ const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.29.59:3000'
 const SESSION_TOKEN_KEY = 'session_token'
 
 export async function signIn(username: string, password: string) {
-  const res = await fetch(`${BASE_URL}/api/auth/sign-in/username`, {
+  const res = await fetch(`${BASE_URL}/api/auth/sign-in/email`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Origin': BASE_URL },
-    body: JSON.stringify({ username, password, rememberMe: true }),
+    body: JSON.stringify({ email: username, password, rememberMe: true }),
   })
   const data = await res.json()
   if (!res.ok || data.code || data.error) throw new Error(data.message || data.error?.message || 'Login failed')
