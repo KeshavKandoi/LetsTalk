@@ -40,6 +40,8 @@ interface Participant {
   age: string | null
   gender: string | null
   photoUrl: string | null
+  about: string | null
+  updatedAt?: string | null
 }
 interface ActiveConnection {
   id: string
@@ -329,7 +331,7 @@ export default function PlaceViewScreen() {
   const renderAvatar = (p: Participant, size = 52) => {
     const initials = (p.username || '?').slice(0, 2).toUpperCase()
     return p.photoUrl
-      ? <Image source={{ uri: p.photoUrl }} style={{ width: size, height: size, borderRadius: size / 2 }} />
+      ? <Image source={{ uri: p.photoUrl + (p.updatedAt ? '?t=' + new Date(p.updatedAt).getTime() : '') }} style={{ width: size, height: size, borderRadius: size / 2 }} />
       : <View style={[s.avatarPlaceholder, { width: size, height: size, borderRadius: size / 2 }]}>
           <Text style={s.avatarInitials}>{initials}</Text>
         </View>
@@ -693,7 +695,7 @@ export default function PlaceViewScreen() {
                 <View style={{ alignItems: 'center', marginBottom: 14 }}>
                   <View style={s.personAvatarRing}>
                     {selectedPerson.photoUrl
-                      ? <Image source={{ uri: selectedPerson.photoUrl }} style={s.personAvatarLarge} />
+                      ? <Image source={{ uri: selectedPerson.photoUrl + (selectedPerson.updatedAt ? '?t=' + new Date(selectedPerson.updatedAt).getTime() : '') }} style={s.personAvatarLarge} />
                       : <View style={[s.personAvatarLarge, { backgroundColor: 'rgba(232,130,74,0.15)', justifyContent: 'center', alignItems: 'center' }]}>
                           <Text style={{ fontSize: 36, fontWeight: '800', color: '#fff' }}>{(selectedPerson.username || '?').slice(0,2).toUpperCase()}</Text>
                         </View>
@@ -716,6 +718,18 @@ export default function PlaceViewScreen() {
                     <View style={{ flex: 1 }}>
                       <Text style={s.personStatusCardLabel}>MY VIBE</Text>
                       <Text style={s.personStatusCardText}>{selectedPerson.intentText || selectedPerson.intentSummary}</Text>
+                    </View>
+                  </View>
+                ) : null}
+                {/* About */}
+                {selectedPerson.about ? (
+                  <View style={s.personStatusCard}>
+                    <View style={s.personStatusCardIcon}>
+                      <Text style={{ fontSize: 18 }}>👤</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.personStatusCardLabel}>ABOUT</Text>
+                      <Text style={s.personStatusCardText}>{selectedPerson.about}</Text>
                     </View>
                   </View>
                 ) : null}
