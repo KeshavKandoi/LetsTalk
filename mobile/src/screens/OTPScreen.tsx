@@ -5,7 +5,7 @@ import {
 } from 'react-native'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import { MaterialIcons } from '@expo/vector-icons'
-import { apiFetch } from '../lib/api'
+import { verifyOTP, sendOTP } from '../lib/auth'
 
 export default function OTPScreen() {
   const navigation = useNavigation<any>()
@@ -30,9 +30,7 @@ export default function OTPScreen() {
     const newOtp = [...otp]
     newOtp[index] = text
     setOtp(newOtp)
-    if (text && index < 5) {
-      inputs.current[index + 1]?.focus()
-    }
+    if (text && index < 5) inputs.current[index + 1]?.focus()
   }
 
   const handleKeyPress = (e: any, index: number) => {
@@ -47,10 +45,8 @@ export default function OTPScreen() {
     setLoading(true)
     setError('')
     try {
-      const result = await apiFetch('/api/auth/verify-otp', { email, otp: code })
-      if (result.success) {
-        navigation.reset({ index: 0, routes: [{ name: 'Onboarding' }] })
-      }
+      await verifyOTP(email, code)
+      navigation.reset({ index: 0, routes: [{ name: 'Onboarding' }] })
     } catch (e: any) {
       setError(e.message || 'Invalid OTP')
     } finally {
@@ -62,7 +58,7 @@ export default function OTPScreen() {
     setResending(true)
     setError('')
     try {
-      await apiFetch('/api/auth/send-otp', { email })
+      await sendOTP(email)
       setCountdown(60)
       setOtp(['', '', '', '', '', ''])
       inputs.current[0]?.focus()
@@ -77,34 +73,27 @@ export default function OTPScreen() {
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <View style={styles.scroll}>
-
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
             <MaterialIcons name="arrow-back" size={20} color="#813400" />
             <Text style={styles.backText}>Back</Text>
           </TouchableOpacity>
-
           <View style={styles.brandRow}>
             <MaterialIcons name="forum" size={26} color="#813400" />
             <Text style={styles.brandName}>Let's Talk</Text>
           </View>
-
           <View style={styles.card}>
             <View style={styles.iconCircle}>
               <MaterialIcons name="mark-email-unread" size={36} color="#405e98" />
             </View>
-
             <Text style={styles.title}>Check your email</Text>
             <Text style={styles.subtitle}>We sent a 6-digit verification code to</Text>
             <Text style={styles.email}>{email}</Text>
-
             {error ? (
               <View style={styles.errorBox}>
                 <MaterialIcons name="error-outline" size={16} color="#93000a" />
                 <Text style={styles.errorText}>{error}</Text>
               </View>
             ) : null}
-
-            {/* OTP Boxes */}
             <View style={styles.otpRow}>
               {otp.map((digit, index) => (
                 <TextInput
@@ -120,17 +109,12 @@ export default function OTPScreen() {
                 />
               ))}
             </View>
-
             <TouchableOpacity style={styles.primaryBtn} onPress={handleVerify} disabled={loading}>
               {loading
                 ? <ActivityIndicator color="white" />
-                : <>
-                    <Text style={styles.primaryText}>Verify Email</Text>
-                    <MaterialIcons name="verified" size={20} color="white" style={{ marginLeft: 8 }} />
-                  </>
+                : <><Text style={styles.primaryText}>Verify Email</Text><MaterialIcons name="verified" size={20} color="white" style={{ marginLeft: 8 }} /></>
               }
             </TouchableOpacity>
-
             <View style={styles.resendRow}>
               <Text style={styles.resendLabel}>Didn't receive the code? </Text>
               {countdown > 0 ? (
