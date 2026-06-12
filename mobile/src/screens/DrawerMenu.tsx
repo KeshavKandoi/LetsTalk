@@ -22,7 +22,7 @@ const MENU_ITEMS = [
   { icon: 'home',           label: 'HOME',             screen: 'Landing',         color: '#F5C842' },
   { icon: 'person-outline', label: 'PROFILE',          screen: 'Profile',         color: '#F5C842' },
   { icon: 'bar-chart',      label: 'ACTIVITY',         screen: 'Friends',         color: '#F0B830' },
-  { icon: 'notifications-outline', label: 'NOTIFICATIONS',   screen: 'Notifications',   color: '#E8A020' },
+  { icon: 'notifications', label: 'NOTIFICATIONS',   screen: 'Notifications',   color: '#E8A020' },
   { icon: 'settings',       label: 'ACCOUNT SETTINGS', screen: 'AccountSettings', color: '#E8A020' },
   { icon: 'info-outline',   label: 'ABOUT US',         screen: 'AboutUs',         color: '#E09060' },
 ]
