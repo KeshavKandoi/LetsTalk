@@ -1,6 +1,6 @@
 import { drizzleAdapter } from '@better-auth/drizzle-adapter'
 import { betterAuth } from 'better-auth'
-import { username, bearer, emailOTP } from 'better-auth/plugins'
+import { bearer, emailOTP } from 'better-auth/plugins'
 import { tanstackStartCookies } from 'better-auth/tanstack-start'
 import { Resend } from 'resend'
 import { db } from './db'
@@ -27,6 +27,17 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
+  databaseHooks: {
+    user: {
+      create: {
+        before: async (user: any) => {
+          // username is passed as part of the signup body — better-auth puts extra fields in additionalFields
+          // We store it in the username column; name is already set to username from the client
+          return { data: { ...user, username: user.username || user.name || null } }
+        },
+      },
+    },
+  },
   socialProviders: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -34,7 +45,6 @@ export const auth = betterAuth({
     },
   },
   plugins: [
-    username(),
     tanstackStartCookies(),
     bearer(),
     emailOTP({
