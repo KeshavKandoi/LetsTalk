@@ -278,6 +278,7 @@ export default function LandingScreen() {
                 try {
                   const session = await getSession()
                   if (!session?.session) { navigation.navigate('Signup' as never); return }
+                  if (item.label === 'Chats') { navigation.navigate('Friends' as never); return }
                   navigation.navigate('Onboarding' as never)
                 } catch { navigation.navigate('Signup' as never) }
               }
