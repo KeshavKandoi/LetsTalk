@@ -110,6 +110,9 @@ export default function OnboardingScreen() {
 
   const handleJoin = async () => {
     if (!selectedPlace) { setError('Pick a place first.'); return }
+    if (!intentText.trim()) { setError('Please tell us what you would like to talk about.'); return }
+    const wordCount = intentText.trim().split(/\s+/).length
+    if (wordCount > 20) { setError('Please keep it to 20 words or less.'); return }
     setSaving(true)
     setError('')
     try {
@@ -213,7 +216,7 @@ export default function OnboardingScreen() {
                 <Text style={s.moodTitle}>What would you like to talk about?</Text>
                 <TextInput
                   style={s.intentInput}
-                  placeholder="What's on your mind? (optional)"
+                  placeholder="What's on your mind?"
                   placeholderTextColor="rgba(232,130,74,0.35)"
                   value={intentText}
                   onChangeText={setIntentText}
@@ -222,6 +225,9 @@ export default function OnboardingScreen() {
                 />
               </View>
 
+              <Text style={{ color: intentText.trim().split(/\s+/).filter(Boolean).length > 20 ? '#ff4444' : 'rgba(255,255,255,0.4)', fontSize: 11, textAlign: 'right', marginTop: 4, marginBottom: 4 }}>
+                {intentText.trim() ? intentText.trim().split(/\s+/).filter(Boolean).length : 0}/20 words
+              </Text>
               <TouchableOpacity style={s.joinBtn} onPress={handleJoin} disabled={saving}>
                 {saving ? <ActivityIndicator color="white" /> : <Text style={s.joinBtnText}>Join this place →</Text>}
               </TouchableOpacity>
