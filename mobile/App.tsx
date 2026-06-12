@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
+import { useNetworkCheck } from './src/hooks/useNetworkCheck'
 import { NavigationContainer } from '@react-navigation/native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { getSession, signOut } from './src/lib/auth'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { StatusBar } from 'expo-status-bar'
-import { View, ActivityIndicator } from 'react-native'
+import { View, Text, ActivityIndicator } from 'react-native'
 import LandingScreen from './src/screens/LandingScreen'
 import LoginScreen from './src/screens/LoginScreen'
 import SignupScreen from './src/screens/SignupScreen'
@@ -26,6 +27,7 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [initialRoute, setInitialRoute] = useState('Landing')
 
+  const isConnected = useNetworkCheck()
   useEffect(() => {
     const init = async () => {
       try {
@@ -56,6 +58,16 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
+      {!isConnected && (
+        <View style={{ backgroundColor: '#b00020', paddingVertical: 5, alignItems: 'center' }}>
+          <Text style={{ color: '#fff', fontWeight: '600', fontSize: 11 }}>⚠ No internet connection</Text>
+        </View>
+      )}
+      {!isConnected && (
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 9999, backgroundColor: '#b00020', paddingTop: 44, paddingBottom: 10, alignItems: 'center' }}>
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>No internet connection</Text>
+        </View>
+      )}
       <NavigationContainer>
         <StatusBar style="dark" />
         <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRoute}>
