@@ -32,6 +32,7 @@ import { Route as ApiPlacesChangePasswordRouteImport } from './routes/api/places
 import { Route as ApiFriendsRespondRouteImport } from './routes/api/friends/respond'
 import { Route as ApiFriendsRequestRouteImport } from './routes/api/friends/request'
 import { Route as ApiFriendsOnlineStatusRouteImport } from './routes/api/friends/online-status'
+import { Route as ApiFriendsNotificationsRouteImport } from './routes/api/friends/notifications'
 import { Route as ApiFriendsMessagesRouteImport } from './routes/api/friends/messages'
 import { Route as ApiFriendsMessageStatusRouteImport } from './routes/api/friends/message-status'
 import { Route as ApiFriendsListRouteImport } from './routes/api/friends/list'
@@ -156,6 +157,11 @@ const ApiFriendsOnlineStatusRoute = ApiFriendsOnlineStatusRouteImport.update({
   path: '/api/friends/online-status',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiFriendsNotificationsRoute = ApiFriendsNotificationsRouteImport.update({
+  id: '/api/friends/notifications',
+  path: '/api/friends/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiFriendsMessagesRoute = ApiFriendsMessagesRouteImport.update({
   id: '/api/friends/messages',
   path: '/api/friends/messages',
@@ -203,6 +209,7 @@ export interface FileRoutesByFullPath {
   '/api/friends/list': typeof ApiFriendsListRoute
   '/api/friends/message-status': typeof ApiFriendsMessageStatusRoute
   '/api/friends/messages': typeof ApiFriendsMessagesRoute
+  '/api/friends/notifications': typeof ApiFriendsNotificationsRoute
   '/api/friends/online-status': typeof ApiFriendsOnlineStatusRoute
   '/api/friends/request': typeof ApiFriendsRequestRoute
   '/api/friends/respond': typeof ApiFriendsRespondRoute
@@ -235,6 +242,7 @@ export interface FileRoutesByTo {
   '/api/friends/list': typeof ApiFriendsListRoute
   '/api/friends/message-status': typeof ApiFriendsMessageStatusRoute
   '/api/friends/messages': typeof ApiFriendsMessagesRoute
+  '/api/friends/notifications': typeof ApiFriendsNotificationsRoute
   '/api/friends/online-status': typeof ApiFriendsOnlineStatusRoute
   '/api/friends/request': typeof ApiFriendsRequestRoute
   '/api/friends/respond': typeof ApiFriendsRespondRoute
@@ -268,6 +276,7 @@ export interface FileRoutesById {
   '/api/friends/list': typeof ApiFriendsListRoute
   '/api/friends/message-status': typeof ApiFriendsMessageStatusRoute
   '/api/friends/messages': typeof ApiFriendsMessagesRoute
+  '/api/friends/notifications': typeof ApiFriendsNotificationsRoute
   '/api/friends/online-status': typeof ApiFriendsOnlineStatusRoute
   '/api/friends/request': typeof ApiFriendsRequestRoute
   '/api/friends/respond': typeof ApiFriendsRespondRoute
@@ -302,6 +311,7 @@ export interface FileRouteTypes {
     | '/api/friends/list'
     | '/api/friends/message-status'
     | '/api/friends/messages'
+    | '/api/friends/notifications'
     | '/api/friends/online-status'
     | '/api/friends/request'
     | '/api/friends/respond'
@@ -334,6 +344,7 @@ export interface FileRouteTypes {
     | '/api/friends/list'
     | '/api/friends/message-status'
     | '/api/friends/messages'
+    | '/api/friends/notifications'
     | '/api/friends/online-status'
     | '/api/friends/request'
     | '/api/friends/respond'
@@ -366,6 +377,7 @@ export interface FileRouteTypes {
     | '/api/friends/list'
     | '/api/friends/message-status'
     | '/api/friends/messages'
+    | '/api/friends/notifications'
     | '/api/friends/online-status'
     | '/api/friends/request'
     | '/api/friends/respond'
@@ -399,6 +411,7 @@ export interface RootRouteChildren {
   ApiFriendsListRoute: typeof ApiFriendsListRoute
   ApiFriendsMessageStatusRoute: typeof ApiFriendsMessageStatusRoute
   ApiFriendsMessagesRoute: typeof ApiFriendsMessagesRoute
+  ApiFriendsNotificationsRoute: typeof ApiFriendsNotificationsRoute
   ApiFriendsOnlineStatusRoute: typeof ApiFriendsOnlineStatusRoute
   ApiFriendsRequestRoute: typeof ApiFriendsRequestRoute
   ApiFriendsRespondRoute: typeof ApiFriendsRespondRoute
@@ -584,6 +597,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiFriendsOnlineStatusRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/friends/notifications': {
+      id: '/api/friends/notifications'
+      path: '/api/friends/notifications'
+      fullPath: '/api/friends/notifications'
+      preLoaderRoute: typeof ApiFriendsNotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/friends/messages': {
       id: '/api/friends/messages'
       path: '/api/friends/messages'
@@ -647,6 +667,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiFriendsListRoute: ApiFriendsListRoute,
   ApiFriendsMessageStatusRoute: ApiFriendsMessageStatusRoute,
   ApiFriendsMessagesRoute: ApiFriendsMessagesRoute,
+  ApiFriendsNotificationsRoute: ApiFriendsNotificationsRoute,
   ApiFriendsOnlineStatusRoute: ApiFriendsOnlineStatusRoute,
   ApiFriendsRequestRoute: ApiFriendsRequestRoute,
   ApiFriendsRespondRoute: ApiFriendsRespondRoute,
