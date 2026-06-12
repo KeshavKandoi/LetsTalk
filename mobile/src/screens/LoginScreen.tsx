@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigation } from '@react-navigation/native'
+import { useNetworkCheck } from '../hooks/useNetworkCheck'
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform, Alert
@@ -19,6 +20,7 @@ const WEB_CLIENT_ID = '70674819769-vu8ecco5ri04c4ob9b64jnn64eujrnpk.apps.googleu
 
 export default function LoginScreen() {
   const navigation = useNavigation<any>()
+  const isConnected = useNetworkCheck()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -60,6 +62,7 @@ export default function LoginScreen() {
   }
 
   const handleLogin = async () => {
+    if (!isConnected) { setError('No internet connection. Please check your network.'); return }
     if (!email || !password) { setError('Please fill in all fields'); return }
     setLoading(true)
     setError('')
@@ -75,6 +78,11 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.safeContainer}>
+      {!isConnected && (
+        <View style={{ backgroundColor: '#b00020', padding: 10, alignItems: 'center' }}>
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>No internet connection</Text>
+        </View>
+      )}
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'none'} style={styles.flex}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
