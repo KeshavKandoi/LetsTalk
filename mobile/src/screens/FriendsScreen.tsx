@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import {
   Image, Modal,
-  View, Text, StyleSheet, TouchableOpacity,
+  View, Text, StyleSheet, TouchableOpacity, Alert,
   ActivityIndicator, ScrollView, RefreshControl, Animated,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -105,6 +105,24 @@ export default function FriendsScreen() {
     setRefreshing(false)
   }
 
+  const removeFriend = (friend: FriendUser) => {
+    Alert.alert(
+      'Remove Friend',
+      `Remove ${friend.username} from your friends?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove', style: 'destructive', onPress: async () => {
+            try {
+              await apiFetch('/api/friends/respond', { requestId: friend.id, action: 'remove' })
+              refresh()
+            } catch (e: any) { Alert.alert('Error', e.message) }
+          }
+        }
+      ]
+    )
+  }
+
   const respond = async (requestId: string, action: 'accept' | 'reject') => {
     setBusyId(requestId)
     try {
@@ -142,6 +160,9 @@ export default function FriendsScreen() {
             </TouchableOpacity>
           ))}
         </View>
+        <Text style={{ textAlign: 'center', color: 'rgba(255,255,255,0.45)', fontSize: 12, fontWeight: '700', paddingVertical: 8 }}>
+          Hold on a friend to remove them
+        </Text>
 
         {loading ? (
           <View style={s.centered}><ActivityIndicator color={AMBER} size="large" /></View>
@@ -151,22 +172,26 @@ export default function FriendsScreen() {
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={AMBER} />}
           >
             {tab === 'friends' && (
-              friends.length ? friends.map((friend) => (
-                <TouchableOpacity
-                  key={friend.userId}
-                  style={s.row}
-                  onPress={() => navigation.navigate('Conversation', { friend })}
-                >
-                  <Avatar
-                    user={friend}
-                    onPress={friend.photoUrl ? () => openPhoto(friend.photoUrl!, friend.username) : undefined}
-                  />
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.name}>{friend.username}</Text>
-                    <Text style={s.messagePreview}>{friend.lastMessage || 'Start a conversation'}</Text>
-                  </View>
-                </TouchableOpacity>
-              )) : <Text style={s.empty}>Accepted friends will show up here.</Text>
+              <>
+                {friends.length ? friends.map((friend) => (
+                  <TouchableOpacity
+                    key={friend.userId}
+                    style={s.row}
+                    onPress={() => navigation.navigate('Conversation', { friend })}
+                    onLongPress={() => removeFriend(friend)}
+                  >
+                    <Avatar
+                      user={friend}
+                      onPress={friend.photoUrl ? () => openPhoto(friend.photoUrl!, friend.username) : undefined}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.name}>{friend.username}</Text>
+                      <Text style={s.messagePreview}>{friend.lastMessage || 'Start a conversation'}</Text>
+                    </View>
+                  </TouchableOpacity>
+                )) : <Text style={s.empty}>Accepted friends will show up here.</Text>}
+
+              </>
             )}
 
             {tab === 'requests' && (
