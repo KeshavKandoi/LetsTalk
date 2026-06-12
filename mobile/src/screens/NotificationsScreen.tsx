@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { useNavigation } from '@react-navigation/native'
 import { MaterialIcons } from '@expo/vector-icons'
 import { apiFetch } from '../lib/api'
+import { useNetworkCheck } from '../hooks/useNetworkCheck'
 
 type Notification = { id: string; type: string; message: string; time: string }
 
@@ -30,6 +31,7 @@ export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const isConnected = useNetworkCheck()
 
   useEffect(() => {
     apiFetch('/api/friends/notifications', {})
@@ -56,6 +58,11 @@ export default function NotificationsScreen() {
           <View style={{ width: 36 }} />
         </View>
 
+        {!isConnected && (
+          <View style={{ backgroundColor: '#b00020', padding: 10, alignItems: 'center' }}>
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>No internet connection</Text>
+          </View>
+        )}
         {loading ? (
           <ActivityIndicator color="#fff" style={{ marginTop: 60 }} />
         ) : error ? (
