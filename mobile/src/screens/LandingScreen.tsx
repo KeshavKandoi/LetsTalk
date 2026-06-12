@@ -1,4 +1,5 @@
 import { useNavigation } from '@react-navigation/native'
+import { useNetworkCheck } from '../hooks/useNetworkCheck'
 import { getSession, signOut } from '../lib/auth'
 import DrawerMenu from './DrawerMenu'
 import { useEffect, useRef, useState } from 'react'
@@ -12,6 +13,7 @@ import { VideoView, useVideoPlayer } from 'expo-video'
 
 export default function LandingScreen() {
   const navigation = useNavigation<any>()
+  const isConnected = useNetworkCheck()
   const insets = useSafeAreaInsets()
   const [profileVisible, setProfileVisible] = useState(false)
   const [drawerVisible, setDrawerVisible] = useState(false)
@@ -60,6 +62,7 @@ export default function LandingScreen() {
   }
 
   const handleJoin = async () => {
+    if (!isConnected) return
     try {
       const session = await getSession()
       if (session?.session) {
@@ -275,6 +278,7 @@ export default function LandingScreen() {
             onPress={async () => {
               if (item.label === 'Profile') { setDrawerVisible(true); return }
               if (item.guard) {
+                if (!isConnected) return
                 try {
                   const session = await getSession()
                   if (!session?.session) { navigation.navigate('Signup' as never); return }
