@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigation } from '@react-navigation/native'
 import { useNetworkCheck } from '../hooks/useNetworkCheck'
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform, Alert
+  ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform, Alert, Animated, Dimensions
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { MaterialIcons, Ionicons } from '@expo/vector-icons'
@@ -17,6 +17,7 @@ WebBrowser.maybeCompleteAuthSession()
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.29.59:3000'
 const ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || ''
 const WEB_CLIENT_ID = '70674819769-vu8ecco5ri04c4ob9b64jnn64eujrnpk.apps.googleusercontent.com'
+const { width, height } = Dimensions.get('window')
 
 export default function LoginScreen() {
   const navigation = useNavigation<any>()
@@ -27,6 +28,14 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const embersAnim = useRef(new Animated.Value(0)).current
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.timing(embersAnim, { toValue: 1, duration: 8000, useNativeDriver: true })
+    ).start()
+  }, [])
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     androidClientId: ANDROID_CLIENT_ID,
@@ -85,14 +94,10 @@ export default function LoginScreen() {
       })
       const { hasSession } = await res.json()
       if (hasSession) {
-        Alert.alert(
-          'Already Logged In',
-          'This account is already logged in on another device. Logging in here will log out the other device.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Log In Here', style: 'destructive', onPress: doLogin },
-          ]
-        )
+        Alert.alert('Already Logged In', 'This account is already logged in on another device. Logging in here will log out the other device.', [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Log In Here', style: 'destructive', onPress: doLogin },
+        ])
       } else {
         await doLogin()
       }
@@ -108,97 +113,233 @@ export default function LoginScreen() {
           <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>No internet connection</Text>
         </View>
       )}
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'none'} style={styles.flex}>
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <MaterialIcons name="chevron-left" size={28} color="#405e98" />
+
+      <View style={styles.bgContainer}>
+        <View style={[styles.bgGradient, { backgroundColor: '#121414' }]} />
+        <View style={[styles.bgGradient, { backgroundColor: '#D84315', opacity: 0.85 }]} />
+      </View>
+
+      <View style={styles.embersContainer}>
+        {[...Array(15)].map((_, i) => (
+          <Animated.View
+            key={i}
+            style={[
+              styles.ember,
+              {
+                left: `${Math.random() * 100}%`,
+                opacity: embersAnim.interpolate({
+                  inputRange: [0, 0.2, 0.8, 1],
+                  outputRange: [0, 0.8, 0.8, 0],
+                }),
+                transform: [
+                  {
+                    translateY: embersAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [height, -height],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          />
+        ))}
+      </View>
+
+
+
+      <KeyboardAvoidingView
+  style={styles.flex}
+  behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+  keyboardVerticalOffset={0}
+>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <MaterialIcons name="chevron-left" size={28} color="#ff525f" />
           </TouchableOpacity>
-          <View style={styles.brandContainer}>
-            <MaterialIcons name="forum" size={28} color="#813400" />
-            <Text style={styles.brandName}>Let's Talk</Text>
+
+          <View style={styles.headerSection}>
+            <Text style={styles.authBadgeText}>AUTHORIZATION REQUIRED</Text>
+            <Text style={styles.mainTitle}>Welcome{'\n'}back</Text>
           </View>
-          <View style={styles.card}>
-            <Text style={styles.title}>Welcome back</Text>
-            <Text style={styles.subtitle}>Sign in to continue connecting with people around you.</Text>
-            {error ? (
+
+          <View style={styles.formCard}>
+            <View style={styles.formContent}>
+            {error && (
               <View style={styles.errorBox}>
-                <MaterialIcons name="error-outline" size={16} color="#93000a" />
+                <MaterialIcons name="error-outline" size={16} color="#ff5555" />
                 <Text style={styles.errorText}>{error}</Text>
               </View>
-            ) : null}
-            <Text style={styles.label}>EMAIL</Text>
-            <View style={styles.inputWrap}>
-              <MaterialIcons name="email" size={20} color="#897268" style={styles.inputIcon} />
-              <TextInput style={styles.input} value={email} onChangeText={setEmail} placeholder="you@example.com" placeholderTextColor="#b0978a" autoCapitalize="none" keyboardType="email-address" editable={!loading} />
+            )}
+            
+
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Email</Text>
+              <View style={styles.inputContainer}>
+                <View style={styles.ghostOffset}>
+                  <View style={styles.inputBox}>
+                    <MaterialIcons name="alternate-email" size={20} color="#121414" style={styles.inputIcon} />
+                    <TextInput
+                      style={styles.input}
+                      value={email}
+                      onChangeText={setEmail}
+                      placeholder="identity@gmail.com"
+                      placeholderTextColor="#999999"
+                      autoCapitalize="none"
+                      keyboardType="email-address"
+                      editable={!loading}
+                      allowFontScaling={false}
+                      autoCorrect={false}
+                      secureTextEntry={false}
+                    />
+                  </View>
+                </View>
+              </View>
             </View>
-            <Text style={styles.label}>PASSWORD</Text>
-            <View style={styles.inputWrap}>
-              <MaterialIcons name="lock-outline" size={20} color="#897268" style={styles.inputIcon} />
-              <TextInput style={[styles.input, { paddingRight: 8 }]} value={password} onChangeText={setPassword} placeholder="••••••••" placeholderTextColor="#b0978a" secureTextEntry={!showPassword} editable={!loading} />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
-                <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#897268" />
+
+            <View style={styles.fieldGroup}>
+              <View style={styles.passwordHeader}>
+                <Text style={styles.fieldLabel}>Password</Text>
+                <TouchableOpacity disabled={!email} onPress={() => navigation.navigate('ForgotPassword', { email })}>
+                  <Text style={styles.lostAccessText}>Lost access?</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.inputContainer}>
+                <View style={styles.ghostOffset}>
+                  <View style={styles.inputBox}>
+                    <MaterialIcons name="lock-open" size={20} color="#121414" style={styles.inputIcon} />
+                    <TextInput
+                      style={styles.input}
+                      value={password}
+                      onChangeText={setPassword}
+                      placeholder="••••••••"
+                      placeholderTextColor="#999999"
+                      secureTextEntry={!showPassword}
+                      allowFontScaling={false}
+                      editable={!loading}
+                    />
+                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeButton}>
+                      <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color="#121414" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.initiateButton, { transform: [{ skewX: '12deg' }] }]}
+              onPress={handleLogin}
+              disabled={loading || googleLoading}
+            >
+              <View style={[styles.buttonShade, { position: 'absolute', left: -15, backgroundColor: '#ff525f' }]} />
+              {loading ? (
+                <ActivityIndicator color="#121414" size="small" />
+              ) : (
+                <View style={styles.buttonContent}>
+                  <Text style={styles.buttonText}>Initiate Session</Text>
+                  <MaterialIcons name="arrow-forward-ios" size={18} color="#121414" style={{ marginLeft: 12 }} />
+                </View>
+              )}
+            </TouchableOpacity>
+
+            <View style={styles.dividerLine} />
+
+            <View style={styles.signupSection}>
+              <Text style={styles.signupText}>New operative?</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Signup')} disabled={loading}>
+                <Text style={styles.createText}>Create Identity</Text>
               </TouchableOpacity>
+              <MaterialIcons name="bolt" size={14} color="#00e3fd" style={{ marginLeft: 6 }} />
             </View>
-            <TouchableOpacity style={[styles.forgotBtn, !email && { opacity: 0.4 }]} disabled={!email} onPress={() => navigation.navigate('ForgotPassword', { email })}>
-              <Text style={styles.forgotText}>Forgot password?</Text>
+
+            <TouchableOpacity
+              style={[styles.googleButton, { transform: [{ skewX: '12deg' }] }]}
+              onPress={handleGoogleLogin}
+              disabled={loading || googleLoading || !request}
+            >
+              
+              {googleLoading ? (
+                <ActivityIndicator color="#00e3fd" size="small" />
+              ) : (
+                <View style={styles.googleContent}>
+                  <Text style={styles.googleLetter}>G</Text>
+                  <Text style={styles.googleText}>Continue with Google</Text>
+                </View>
+              )}
             </TouchableOpacity>
-            <TouchableOpacity style={styles.primaryBtn} onPress={handleLogin} disabled={loading || googleLoading}>
-              {loading ? <ActivityIndicator color="white" /> : <><Text style={styles.primaryText}>Log in</Text><MaterialIcons name="arrow-forward" size={20} color="white" style={{ marginLeft: 8 }} /></>}
-            </TouchableOpacity>
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>OR</Text>
-              <View style={styles.dividerLine} />
             </View>
-            <TouchableOpacity style={styles.googleBtn} onPress={handleGoogleLogin} disabled={loading || googleLoading || !request}>
-              {googleLoading
-                ? <ActivityIndicator color="#4285F4" size="small" />
-                : <><Text style={styles.googleIcon}>G</Text><Text style={styles.googleText}>Continue with Google</Text></>
-              }
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => navigation.navigate('Signup')} style={{ marginTop: 20 }} disabled={loading}>
-              <Text style={styles.switchText}>Don't have an account? <Text style={styles.switchLink}>Sign up</Text></Text>
-            </TouchableOpacity>
           </View>
-          <View style={styles.footer}>
-            <MaterialIcons name="forum" size={14} color="#897268" />
-            <Text style={styles.footerText}>© 2024 Let's Talk</Text>
+
+          <View style={[styles.accentBars, { transform: [{ skewX: '-12deg' }] }]}>
+            <View style={[styles.bar, { width: '20%', backgroundColor: '#ff525f' }]} />
+            <View style={[styles.bar, { width: '8%', backgroundColor: '#00e3fd' }]} />
+            <View style={[styles.bar, { width: '40%', backgroundColor: 'rgba(255,255,255,0.08)' }]} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <View style={styles.bottomStatus}>
+        <Text style={styles.statusText}>UPLINK: ACTIVE [99.2%]</Text>
+      </View>
     </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
-  safeContainer: { flex: 1, backgroundColor: '#E9DFC9' },
-  flex: { flex: 1 },
-  scrollContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 48 },
-  backButton: { width: 44, height: 44, justifyContent: 'center', alignItems: 'flex-start', marginBottom: 8 },
-  brandContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 28 },
-  brandName: { fontSize: 24, fontWeight: '800', color: '#813400', letterSpacing: -0.5 },
-  card: { backgroundColor: 'rgba(253,243,220,0.88)', borderRadius: 24, padding: 28, borderWidth: 1, borderColor: 'rgba(255,255,255,0.45)' },
-  title: { fontSize: 26, fontWeight: '700', color: '#201b0e', marginBottom: 8, letterSpacing: -0.3 },
-  subtitle: { fontSize: 14, color: '#55433a', lineHeight: 21, marginBottom: 24 },
-  errorBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#ffdad6', borderRadius: 12, padding: 12, marginBottom: 20, borderWidth: 1, borderColor: '#ffb4ab' },
-  errorText: { fontSize: 13, color: '#93000a', fontWeight: '500', flex: 1 },
-  label: { fontSize: 11, fontWeight: '600', color: '#897268', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.4 },
-  inputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fffbf3', borderWidth: 1, borderColor: '#dcc9b6', borderRadius: 12, paddingHorizontal: 12, marginBottom: 20, height: 48 },
-  inputIcon: { marginRight: 8 },
-  input: { flex: 1, paddingVertical: 13, fontSize: 15, color: '#201b0e' },
-  eyeBtn: { padding: 4 },
-  forgotBtn: { alignSelf: 'flex-end', marginBottom: 24, marginTop: -8 },
-  forgotText: { fontSize: 13, color: '#813400', fontWeight: '600' },
-  primaryBtn: { backgroundColor: '#405e98', borderRadius: 50, paddingVertical: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', shadowColor: '#405e98', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 4 },
-  primaryText: { color: 'white', fontWeight: '700', fontSize: 16 },
-  divider: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 20 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: '#dcc9b6' },
-  dividerText: { fontSize: 12, color: '#897268', fontWeight: '600' },
-  googleBtn: { borderWidth: 1.5, borderColor: '#dcc9b6', borderRadius: 12, paddingVertical: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#fffbf3' },
-  googleIcon: { fontSize: 18, fontWeight: '700', color: '#4285F4' },
-  googleText: { fontSize: 15, color: '#201b0e', fontWeight: '600' },
-  switchText: { fontSize: 14, color: '#55433a', textAlign: 'center' },
-  switchLink: { color: '#813400', fontWeight: '700' },
-  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 32 },
-  footerText: { fontSize: 11, color: '#897268' },
+  safeContainer: { flex: 1, backgroundColor: '#121414', overflow: 'hidden' },
+  bgContainer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0 },
+  bgGradient: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  embersContainer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1 },
+  ember: { position: 'absolute', width: 2, height: 2, backgroundColor: '#ff525f', borderRadius: 1 },
+  topLeftHUD: { position: 'absolute', top: 32, left: 16, zIndex: 10 },
+  hudText: { fontSize: 10, color: 'rgba(0, 227, 253, 0.6)', fontWeight: '600', letterSpacing: 0.5, fontFamily: 'monospace', marginBottom: 4 },
+  flex: { flex: 1, zIndex: 5 },
+  scrollContent: { paddingHorizontal: 16, paddingTop: 60, paddingBottom: 20 },
+  backButton: { position: 'absolute', top: 16, left: 16, width: 44, height: 44, justifyContent: 'center', alignItems: 'flex-start', zIndex: 20, marginBottom: 0 },
+  headerSection: { marginBottom: 40, paddingTop: 8, paddingLeft: 12 },
+
+  authBadgeText: { fontSize: 12, fontWeight: '900', color: '#ff525f', letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 12 },
+  mainTitle: { fontSize: 56, fontWeight: '900', color: '#e2e2e2', letterSpacing: -2, textTransform: 'uppercase', lineHeight: 60, fontStyle: 'italic' },
+  formCard: { backgroundColor: 'rgba(18, 20, 20, 0.85)', borderWidth: 1, borderColor: 'rgba(255, 179, 179, 0.15)', padding: 28, marginBottom: 28, transform: [{ rotateZ: '-4deg' },{ translateX: -8 },], },formContent: {
+  transform: [{ rotateZ: '4deg' }],
+},
+  errorBox: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255, 82, 95, 0.12)', borderLeftWidth: 4, borderLeftColor: '#ff525f', padding: 12, marginBottom: 28 },
+  errorText: { fontSize: 12, color: '#ff9999', fontWeight: '600', flex: 1, textTransform: 'uppercase' },
+  fieldGroup: { marginBottom: 24 },
+  fieldLabel: { fontSize: 11, fontWeight: '800', color: '#ae8787', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 8 },
+  passwordHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  lostAccessText: { fontSize: 10, fontWeight: '700', color: '#ff525f', letterSpacing: 1, textTransform: 'uppercase' },
+  inputContainer: { marginBottom: 0 },
+  ghostOffset: { position: 'relative' },
+  inputBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#e2e2e2', paddingHorizontal: 12, paddingVertical: 12, height: 52, justifyContent: 'flex-start', width: '100%' },
+  inputIcon: { marginRight: 10, marginLeft: 4 },
+  input: {
+  flex: 1,
+  fontSize: 15,
+  color: '#121414',
+  fontWeight: '500',
+  letterSpacing: 0.3,
+  paddingVertical: 0,
+  paddingHorizontal: 8,
+  margin: 0,
+  includeFontPadding: false,
+  textAlignVertical: 'center',
+},
+  eyeButton: { padding: 6 },
+  initiateButton: { backgroundColor: '#e2e2e2', paddingVertical: 16, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 24, position: 'relative', overflow: 'visible' },
+  buttonShade: { top: 0, height: '100%', width: 12, zIndex: -1 },
+  buttonContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  buttonText: { color: '#121414', fontWeight: '900', fontSize: 15, letterSpacing: 1.2, textTransform: 'uppercase' },
+  dividerLine: { height: 1, backgroundColor: 'rgba(255, 255, 255, 0.12)', marginVertical: 20 },
+  signupSection: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 18 },
+  signupText: { fontSize: 12, color: '#ae8787', fontWeight: '600', textTransform: 'uppercase' },
+  createText: { fontSize: 12, fontWeight: '800', color: '#00e3fd', letterSpacing: 0.6, textTransform: 'uppercase', marginLeft: 4 },
+  googleButton: { borderWidth: 2, borderColor: '#00e3fd', backgroundColor: 'transparent', paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  googleContent: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  googleLetter: { fontSize: 16, fontWeight: '900', color: '#00e3fd' },
+  googleText: { fontSize: 13, fontWeight: '700', color: '#00e3fd', letterSpacing: 0.6, textTransform: 'uppercase' },
+  accentBars: { flexDirection: 'row', gap: 8 },
+  bar: { height: 3, borderRadius: 1.5 },
+  bottomStatus: { position: 'absolute', bottom: 20, right: 20, zIndex: 10 },
+  statusText: { fontSize: 10, color: '#ff525f', fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', fontFamily: 'monospace' },
 })
