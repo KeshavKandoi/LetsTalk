@@ -24,6 +24,7 @@ export type UserProfileState = {
   status: PresenceStatus
   currentPlaceId: string | null
   isFindable: boolean
+  isVerifiedOnSite?: boolean
   locationHint: string | null
   pingRequestedAt: string | Date | null
   pingRequestedByUserId: string | null
@@ -44,6 +45,7 @@ export type UserAgentState = {
   status: PresenceStatus
   currentPlaceId: string | null
   isFindable: boolean
+  isVerifiedOnSite?: boolean
   locationHint: string | null
   pingRequestedAt: string | null
   pingRequestedByUserId: string | null
@@ -58,6 +60,8 @@ export type NearbyPlace = {
   address: string
   lat: number
   lng: number
+  latitude?: number | null
+  longitude?: number | null
   readyCount: number
 }
 
@@ -102,6 +106,7 @@ export type PlaceAgentParticipantState = {
   intentSummary: string | null
   status: PresenceStatus
   isFindable: boolean
+  isVerifiedOnSite?: boolean
   locationHint: string | null
   age?: string | null
   gender?: string | null
@@ -175,6 +180,7 @@ export type ConnectionEventState = {
   status: string
   direction: 'incoming' | 'outgoing'
   updatedAt: string | Date
+  message?: string
   user: {
     userId: string
     username: string
