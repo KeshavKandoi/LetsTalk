@@ -5,6 +5,7 @@ import {
 } from 'react-native'
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
 import { VideoView, useVideoPlayer } from 'expo-video'
+import * as Location from 'expo-location'
 import { useCallback } from 'react'
 import QRCode from 'react-native-qrcode-svg'
 import ScannerModal from './ScannerModal'
@@ -12,6 +13,23 @@ import { apiFetch } from '../lib/api'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
 const FINDER_HINTS = ['By the window', 'Near the counter', 'At the bar', 'Corner table', 'Outside area', 'Near entrance']
+const GPS_LIMIT_METERS = 100
+
+function distanceMeters(
+  a: { latitude: number; longitude: number },
+  b: { latitude: number; longitude: number },
+) {
+  const toRad = (value: number) => (value * Math.PI) / 180
+  const earthRadiusMeters = 6371000
+  const dLat = toRad(b.latitude - a.latitude)
+  const dLng = toRad(b.longitude - a.longitude)
+  const lat1 = toRad(a.latitude)
+  const lat2 = toRad(b.latitude)
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2
+  return 2 * earthRadiusMeters * Math.asin(Math.sqrt(h))
+}
 
 interface Profile {
   moodEmoji: string
@@ -20,12 +38,14 @@ interface Profile {
   status: string
   currentPlaceId: string
   isFindable: boolean
+  isVerifiedOnSite: boolean
   locationHint: string | null
   pingRequestedAt: string | null
   pingRequestedByUsername: string | null
+  photoUrl?: string | null
 }
 interface CurrentPlace {
-  place: { placeId: string; name: string; address: string; readyCount: number }
+  place: { placeId: string; name: string; address: string; readyCount: number; lat?: number; lng?: number; latitude?: number | null; longitude?: number | null }
   readyCount: number
 }
 interface Participant {
@@ -36,6 +56,7 @@ interface Participant {
   intentSummary: string | null
   status: string
   isFindable: boolean
+  isVerifiedOnSite: boolean
   locationHint: string | null
   age: string | null
   gender: string | null
@@ -53,6 +74,7 @@ interface ActiveConnection {
     moodEmoji: string
     intentSummary: string | null
     photoUrl?: string | null
+    spotLabel?: string | null
   }
 }
 interface PendingConnectionRequest {
@@ -70,8 +92,9 @@ interface PendingConnectionRequest {
 }
 interface ConnectionEvent {
   id: string
-  status: 'accepted' | 'declined'
+  status: string
   direction: 'incoming' | 'outgoing'
+  message?: string
   user: {
     userId: string
     username: string
@@ -142,8 +165,51 @@ export default function PlaceViewScreen() {
   const [selectedHint, setSelectedHint] = useState<string | null>(null)
   const [myUsername, setMyUsername] = useState<string>('')
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const gpsVerifyRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const photoLoadedRef = useRef(false)
   const seenConnectionEventIdsRef = useRef<Set<string>>(new Set())
+
+  const getCurrentGpsLocation = async () => {
+    const { status } = await Location.requestForegroundPermissionsAsync()
+    if (status !== 'granted') {
+      throw new Error('Location permission denied. Please enable location access to set yourself ready.')
+    }
+    const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High })
+    return {
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude,
+    }
+  }
+
+  const getCurrentPlaceLocation = () => {
+    const place = state?.currentPlace?.place
+    const latitude = place?.latitude ?? place?.lat
+    const longitude = place?.longitude ?? place?.lng
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null
+    return { latitude: latitude as number, longitude: longitude as number }
+  }
+
+  const verifyCurrentGpsLocation = async (silent = false) => {
+    if (!state?.profile || !['ready', 'in_conversation'].includes(state.profile.status)) return
+    const currentPlaceLocation = getCurrentPlaceLocation()
+    if (!currentPlaceLocation) return
+    const currentLocation = await getCurrentGpsLocation()
+    if (distanceMeters(currentLocation, currentPlaceLocation) > GPS_LIMIT_METERS) {
+      const result = await apiFetch('/api/places/verify-location', currentLocation)
+      setQrVerified(false)
+      setNotice(result.message || 'You are out of 100 meters. Your availability has been deactivated.')
+      await loadState(true)
+      return
+    }
+    const result = await apiFetch('/api/places/verify-location', currentLocation)
+    if (result.deactivated) {
+      setQrVerified(false)
+      setNotice(result.message || 'You are out of 100 meters. Your availability has been deactivated.')
+      await loadState(true)
+    } else if (!silent) {
+      await loadState(true)
+    }
+  }
 
   const loadState = async (silent = false) => {
     if (!silent) setLoading(true)
@@ -175,6 +241,8 @@ export default function PlaceViewScreen() {
             setNotice(`${event.user.username} declined your connection request.`)
           } else if (event.status === 'accepted') {
             setNotice(`You and ${event.user.username} are now connected. QR verification is unlocked.`)
+          } else if (event.status === 'left_verified_location') {
+            setNotice(event.message || 'Your connection has left the verified location and is no longer available.')
           }
         }
         if (!photoLoadedRef.current) {
@@ -211,9 +279,27 @@ export default function PlaceViewScreen() {
     })
     return () => {
       if (pollRef.current) clearInterval(pollRef.current)
+      if (gpsVerifyRef.current) clearInterval(gpsVerifyRef.current)
       subscription.remove()
     }
   }, [])
+
+  useEffect(() => {
+    if (gpsVerifyRef.current) {
+      clearInterval(gpsVerifyRef.current)
+      gpsVerifyRef.current = null
+    }
+    if (!state?.profile || !['ready', 'in_conversation'].includes(state.profile.status)) return
+    gpsVerifyRef.current = setInterval(() => {
+      verifyCurrentGpsLocation(true).catch((e: any) => setError(e.message || 'Could not verify your location.'))
+    }, 30000)
+    return () => {
+      if (gpsVerifyRef.current) {
+        clearInterval(gpsVerifyRef.current)
+        gpsVerifyRef.current = null
+      }
+    }
+  }, [state?.profile?.status, state?.currentPlace?.place?.placeId])
 
 
   useEffect(() => {
@@ -243,7 +329,18 @@ export default function PlaceViewScreen() {
     setError('')
     try {
       const isReady = state.profile.status === 'ready'
-      await apiFetch('/api/places/ready', { ready: !isReady })
+      if (!isReady) {
+        const currentPlaceLocation = getCurrentPlaceLocation()
+        if (!currentPlaceLocation) throw new Error('This place is missing GPS coordinates.')
+        const currentLocation = await getCurrentGpsLocation()
+        if (distanceMeters(currentLocation, currentPlaceLocation) > GPS_LIMIT_METERS) {
+          throw new Error('You are outside 100 meters of this location.')
+        }
+        await apiFetch('/api/places/ready', { ready: true, ...currentLocation })
+      } else {
+        await apiFetch('/api/places/ready', { ready: false })
+        setQrVerified(false)
+      }
       await loadState(true)
     } catch (e: any) { setError(e.message) }
     finally { setTogglingReady(false) }
@@ -379,7 +476,7 @@ export default function PlaceViewScreen() {
   const isInConversation = profile.status === 'in_conversation'
   const myUserId = state.session?.user.id
   const myDisplayName = myUsername || state.session?.user.username || state.session?.user.name || 'You'
-  const availableParticipants = participants.filter((p) => p.status !== 'in_conversation')
+  const availableParticipants = participants.filter((p) => p.status !== 'in_conversation' && (p.isVerifiedOnSite || p.userId === myUserId))
   const incomingRequests = pendingRequests.filter((request) => request.direction === 'incoming')
   const requestByUserId = new Map(pendingRequests.map((request) => [request.user.userId, request]))
   const currentParticipant = participants.find((p) => p.userId === myUserId)
@@ -568,27 +665,22 @@ export default function PlaceViewScreen() {
                 const isMe = myUserId === p.userId
                 const isConnectedPerson = activeConnection?.counterpart.userId === p.userId
                 const actionLoading = connectionActionId === p.userId || (request && connectionActionId === request.id)
-                const canSendConnectRequest = isReady && !activeConnection && p.status === 'ready'
+                const canSendConnectRequest = isReady && profile.isVerifiedOnSite && !activeConnection && p.status === 'ready' && p.isVerifiedOnSite
                 return (
-                <View key={p.userId} style={s.personCard}>
+                <View key={p.userId} style={[s.personCard, { paddingVertical: 10, paddingHorizontal: 12 }]}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                    {isMe ? <Text style={{ color: '#e8824a', fontSize: 11, fontWeight: '600' }}>you</Text> : <View />}
+                    <Text style={{ color: p.status === 'ready' ? '#e8824a' : '#888', fontSize: 12, fontWeight: '700' }}>
+                      {p.status === 'ready' ? 'Open to Talk' : 'Browsing'}
+                    </Text>
+                  </View>
                   <View style={s.personCardTop}>
-                    {renderAvatar(p, 56)}
-                    <View style={{ flex: 1, marginLeft: 12 }}>
-                      <View style={s.personNameRow}>
-                        <Text style={s.personName}>{p.username}</Text>
-                        {isMe && (
-                          <View style={s.youBadge}><Text style={s.youBadgeText}>You</Text></View>
-                        )}
-                        <View style={[s.statusBadge, p.status === 'ready' && s.statusBadgeActive]}>
-                          <Text style={[s.statusBadgeText, p.status === 'ready' && s.statusBadgeTextActive]}>
-                            {p.status === 'ready' ? 'Open to Talk' : 'Browsing'}
-                          </Text>
-                        </View>
-                      </View>
-                      
-                      {p.isFindable && p.locationHint ? (
-                        <Text style={s.locationHint}>📍 Near {p.locationHint.toLowerCase()}</Text>
-                      ) : null}
+                    {renderAvatar(p, 52)}
+                    <View style={{ flex: 1, marginLeft: 12, justifyContent: 'center' }}>
+                        <Text style={[s.personName, { textAlign: 'left' }]}>{p.username}</Text>
+                        {p.isFindable && p.locationHint ? (
+                          <Text style={s.locationHint}>📍 Near {p.locationHint.toLowerCase()}</Text>
+                        ) : null}
                     </View>
                   </View>
                   {!isMe && (
@@ -788,56 +880,27 @@ export default function PlaceViewScreen() {
       {/* Person Profile Modal */}
       <Modal visible={!!selectedPerson} transparent animationType="slide" onRequestClose={() => setSelectedPerson(null)}>
         <TouchableOpacity style={s.personOverlay} activeOpacity={1} onPress={() => setSelectedPerson(null)}>
-          <TouchableOpacity activeOpacity={1} style={s.personSheet}>
-            <View style={s.personHandle} />
+          <TouchableOpacity activeOpacity={1} style={{ backgroundColor: "#1a1a1a", borderRadius: 24, marginHorizontal: 20, overflow: 'hidden' }}>
             {selectedPerson ? (
               <>
-                {/* Avatar centered with orange ring */}
-                <View style={{ alignItems: 'center', marginBottom: 14 }}>
-                  <View style={s.personAvatarRing}>
-                    {selectedPerson.photoUrl
-                      ? <Image source={{ uri: selectedPerson.photoUrl + (selectedPerson.updatedAt ? '?t=' + new Date(selectedPerson.updatedAt).getTime() : '') }} style={s.personAvatarLarge} />
-                      : <View style={[s.personAvatarLarge, { backgroundColor: 'rgba(232,130,74,0.15)', justifyContent: 'center', alignItems: 'center' }]}>
-                          <Text style={{ fontSize: 36, fontWeight: '800', color: '#fff' }}>{(selectedPerson.username || '?').slice(0,2).toUpperCase()}</Text>
-                        </View>
-                    }
-                  </View>
-                  <Text style={s.personModalName}>{selectedPerson.username}</Text>
-                  {/* Badges row */}
-                  <View style={s.personTags}>
-                    {selectedPerson.gender ? <Text style={s.personTag}>{selectedPerson.gender}</Text> : null}
-                    {selectedPerson.age ? <Text style={s.personTag}>{selectedPerson.age}</Text> : null}
-
-                  </View>
+                <View style={{ height: 100, backgroundColor: '#e8824a' }} />
+                <View style={{ position: 'absolute', top: 40, left: 20, width: 80, height: 80, borderRadius: 40, borderWidth: 3, borderColor: '#1a1a1a', overflow: 'hidden', backgroundColor: 'rgba(232,130,74,0.3)', justifyContent: 'center', alignItems: 'center' }}>
+                  {selectedPerson.photoUrl
+                    ? <Image source={{ uri: selectedPerson.photoUrl }} style={{ width: 80, height: 80 }} />
+                    : <Text style={{ fontSize: 28, fontWeight: '800', color: '#fff' }}>{(selectedPerson.username || '?').slice(0,2).toUpperCase()}</Text>
+                  }
                 </View>
-                {/* Current Status card */}
-                {(selectedPerson.intentText || selectedPerson.intentSummary) ? (
-                  <View style={s.personStatusCard}>
-                    <View style={s.personStatusCardIcon}>
-                      <Text style={{ fontSize: 18 }}>💬</Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.personStatusCardLabel}>MY VIBE</Text>
-                      <Text style={s.personStatusCardText}>{selectedPerson.intentText || selectedPerson.intentSummary}</Text>
-                    </View>
+                <View style={{ paddingHorizontal: 20, paddingTop: 50, paddingBottom: 24 }}>
+                  <Text style={{ color: '#fff', fontSize: 22, fontWeight: '800', marginBottom: 6 }}>{selectedPerson.username}</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+                    {selectedPerson.gender ? <View style={{ backgroundColor: 'rgba(232,130,74,0.15)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4 }}><Text style={{ color: '#e8824a', fontSize: 13, fontWeight: '600' }}>{selectedPerson.gender}</Text></View> : null}
+                    {selectedPerson.age ? <View style={{ backgroundColor: 'rgba(232,130,74,0.15)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4 }}><Text style={{ color: '#e8824a', fontSize: 13, fontWeight: '600' }}>{selectedPerson.age}</Text></View> : null}
+                    <View style={{ backgroundColor: 'rgba(232,130,74,0.15)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4 }}><Text style={{ color: '#e8824a', fontSize: 13, fontWeight: '600' }}>{selectedPerson.status === 'ready' ? 'Open to Talk' : 'Browsing'}</Text></View>
                   </View>
-                ) : null}
-                {/* About */}
-                {selectedPerson.about ? (
-                  <View style={s.personStatusCard}>
-                    <View style={s.personStatusCardIcon}>
-                      <Text style={{ fontSize: 18 }}>👤</Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.personStatusCardLabel}>ABOUT</Text>
-                      <Text style={s.personStatusCardText}>{selectedPerson.about}</Text>
-                    </View>
-                  </View>
-                ) : null}
-                {/* Hint */}
-                {state.session?.user.id !== selectedPerson.userId && (
-                  <Text style={s.personHint}>Scan their QR code to send a friend request.</Text>
-                )}
+                  {(selectedPerson.intentText || selectedPerson.about || selectedPerson.intentSummary) ? (
+                    <Text style={{ color: '#aaa', fontSize: 14, lineHeight: 22 }}>{selectedPerson.intentText || selectedPerson.about || selectedPerson.intentSummary}</Text>
+                  ) : null}
+                </View>
               </>
             ) : null}
           </TouchableOpacity>
@@ -956,6 +1019,8 @@ const s = StyleSheet.create({
   statusBadgeActive: { backgroundColor: 'transparent', borderColor: '#4CAF50' },
   statusBadgeText: { fontSize: 11, color: '#4CAF50', fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5 },
   statusBadgeTextActive: { color: '#4CAF50' },
+  verifiedBadge: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1, borderWidth: 1, borderColor: '#FFD700', backgroundColor: 'rgba(255,215,0,0.08)', marginTop: 2 },
+  verifiedBadgeText: { fontSize: 11, color: '#FFD700', fontWeight: '900' },
   personMood: { fontSize: 13, color: '#ffffff', lineHeight: 18 },
   locationHint: { fontSize: 12, color: 'rgba(255,255,255,0.7)', fontWeight: '600', marginTop: 3 },
   personBtns: { flexDirection: 'row', gap: 8, marginTop: 2 },
@@ -1011,7 +1076,7 @@ const s = StyleSheet.create({
   qrModalTitle: { fontSize: 18, fontWeight: '800', color: '#ffffff', marginBottom: 20 },
   qrModalCode: { padding: 16, backgroundColor: 'rgba(26,16,8,0.75)', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)', marginBottom: 16 },
   qrModalHint: { fontSize: 13, color: 'rgba(255,255,255,0.6)', marginBottom: 20, textAlign: 'center' },
-  personOverlay: { flex: 1, backgroundColor: 'rgba(15,51,32,0.45)', justifyContent: 'flex-end' },
+  personOverlay: { flex: 1, backgroundColor: 'rgba(15,51,32,0.45)', justifyContent: 'center' },
   personAvatarRing: { width: 120, height: 120, borderRadius: 60, padding: 3, backgroundColor: '#e8824a', marginBottom: 14, shadowColor: '#e8824a', shadowOpacity: 0.5, shadowRadius: 12, shadowOffset: { width: 0, height: 0 } },
   personAvatarLarge: { width: '100%', height: '100%', borderRadius: 60, borderWidth: 3, borderColor: '#0a0704' },
   personStatusPill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, backgroundColor: 'rgba(232,130,74,0.15)', borderWidth: 1, borderColor: 'rgba(232,130,74,0.4)' },
