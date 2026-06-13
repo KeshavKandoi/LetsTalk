@@ -57,7 +57,7 @@ export function assertCanUpdateFinderProfile(input: {
     return
   }
 
-  if (profile.status !== 'ready') {
+  if (profile.status !== 'ready' && profile.status !== 'in_conversation') {
     throw new Error('Set yourself ready before helping someone find you.')
   }
 
