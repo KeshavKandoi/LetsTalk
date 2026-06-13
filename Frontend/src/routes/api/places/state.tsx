@@ -54,7 +54,7 @@ export const Route = createFileRoute('/api/places/state')({
               if (!profileRecord?.currentPlaceId) return null
               const [placeRecord] = await db.select().from(place).where(eq(place.placeId, profileRecord.currentPlaceId)).limit(1)
               if (!placeRecord) return null
-              return { place: { placeId: placeRecord.placeId, name: placeRecord.name, address: placeRecord.address, readyCount: 0 }, readyCount: 0 }
+              return { place: { placeId: placeRecord.placeId, name: placeRecord.name, address: placeRecord.address, lat: placeRecord.lat, lng: placeRecord.lng, readyCount: 0 }, readyCount: 0 }
             })(),
             qrHandoff: await (async () => {
               if (!profileRecord?.currentPlaceId) return null
