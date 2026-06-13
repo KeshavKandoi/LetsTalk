@@ -29,13 +29,14 @@ export default function ProfileScreen() {
       const session = await getSession()
       if (!session?.session) { navigation.goBack(); return }
       const u = session.user
-      const [stateData, photoTs] = await Promise.all([
-        apiFetch('/api/places/state', {}),
-        AsyncStorage.getItem('photo_ts').then(t => t || '1'),
-      ])
+      const photoTs = await AsyncStorage.getItem('photo_ts').then(t => t || '1')
+      let stateData: any = null
+      try {
+        stateData = await apiFetch('/api/places/state', {})
+      } catch {}
       setProfile({
-        username: u?.username || u?.name || 'You',
-        full_name: u?.name || u?.username || 'You',
+        username: u?.name || u?.username || 'You',
+        full_name: u?.name || 'You',
         email: u?.email || '',
         photoUrl: stateData?.profile?.photoUrl ? stateData.profile.photoUrl + '?t=' + photoTs : null,
         created_at: u?.createdAt || null,
@@ -46,7 +47,6 @@ export default function ProfileScreen() {
         current_place_id: stateData?.profile?.currentPlaceId || null,
       })
     } catch (e) {
-      console.log(e)
     }
     setLoading(false)
   }
