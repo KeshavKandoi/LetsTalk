@@ -61,9 +61,7 @@ export default function LoginScreen() {
     }
   }
 
-  const handleLogin = async () => {
-    if (!isConnected) { setError('No internet connection. Please check your network.'); return }
-    if (!email || !password) { setError('Please fill in all fields'); return }
+  const doLogin = async () => {
     setLoading(true)
     setError('')
     try {
@@ -73,6 +71,33 @@ export default function LoginScreen() {
       setError(e.message || 'Login failed')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleLogin = async () => {
+    if (!isConnected) { setError('No internet connection. Please check your network.'); return }
+    if (!email || !password) { setError('Please fill in all fields'); return }
+    try {
+      const res = await fetch(`${BASE_URL}/api/auth/check-session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      const { hasSession } = await res.json()
+      if (hasSession) {
+        Alert.alert(
+          'Already Logged In',
+          'This account is already logged in on another device. Logging in here will log out the other device.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Log In Here', style: 'destructive', onPress: doLogin },
+          ]
+        )
+      } else {
+        await doLogin()
+      }
+    } catch {
+      await doLogin()
     }
   }
 
