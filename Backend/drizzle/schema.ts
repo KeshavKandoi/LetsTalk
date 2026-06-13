@@ -1,5 +1,4 @@
 import { pgTable, uniqueIndex, index, foreignKey, text, timestamp, boolean, real } from "drizzle-orm/pg-core"
-import { sql } from "drizzle-orm"
 
 
 
@@ -87,6 +86,7 @@ export const userProfile = pgTable("user_profile", {
 	status: text().default('offline').notNull(),
 	currentPlaceId: text("current_place_id"),
 	isFindable: boolean("is_findable").default(false).notNull(),
+	isVerifiedOnSite: boolean("is_verified_on_site").default(false).notNull(),
 	locationHint: text("location_hint"),
 	pingRequestedAt: timestamp("ping_requested_at", { mode: 'string' }),
 	pingRequestedByUserId: text("ping_requested_by_user_id"),
