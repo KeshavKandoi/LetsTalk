@@ -28,12 +28,51 @@ export const auth = betterAuth({
     enabled: true,
   },
   databaseHooks: {
+    session: {
+      create: {
+        after: async (session: any) => {
+          try {
+            const { db } = await import('./db')
+            const { session: sessionTable } = await import('./db/schema')
+            const { and, eq, ne } = await import('drizzle-orm')
+            // Delete all other sessions for this user except the new one
+            await db.delete(sessionTable).where(
+              and(
+                eq(sessionTable.userId, session.userId),
+                ne(sessionTable.id, session.id)
+              )
+            )
+          } catch (e) {}
+        },
+      },
+    },
     user: {
       create: {
         before: async (user: any) => {
-          // username is passed as part of the signup body — better-auth puts extra fields in additionalFields
-          // We store it in the username column; name is already set to username from the client
           return { data: { ...user, username: user.username || user.name || null } }
+        },
+        after: async (user: any) => {
+          try {
+            const { db } = await import('./db')
+            const { userProfile } = await import('./db/schema')
+            const dob = user.dob || null
+            let age = null
+            if (dob) {
+              const birth = new Date(dob)
+              const today = new Date()
+              age = today.getFullYear() - birth.getFullYear()
+              const m = today.getMonth() - birth.getMonth()
+              if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--
+            }
+            await db.insert(userProfile).values({
+              userId: user.id,
+              gender: user.gender || null,
+              age: age ? String(age) : null,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            }).onConflictDoNothing()
+          } catch (e) {
+          }
         },
       },
     },
