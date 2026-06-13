@@ -9,7 +9,7 @@ export const Route = createFileRoute('/api/places/ready')({
         try {
           const session = await auth.api.getSession({ headers: (() => { const h = new Headers(Object.fromEntries(request.headers.entries())); const t = (request.headers.get('authorization') || request.headers.get('Authorization') || '').replace('Bearer ',''); if(t) h.set('cookie', 'better-auth.session_token=' + t); return h; })() })
           if (!session) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
-          const body = await request.json()
+          const body = await request.json() as { ready: boolean; latitude?: number; longitude?: number }
           await setReadyState(body)
           return new Response(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json' } })
         } catch (e: any) {
