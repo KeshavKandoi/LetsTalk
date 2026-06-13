@@ -65,6 +65,7 @@ async function loadUserState(userId: string): Promise<UserAgentState> {
     status: (profileRecord?.status as PresenceStatus | undefined) ?? 'offline',
     currentPlaceId: profileRecord?.currentPlaceId ?? null,
     isFindable: profileRecord?.isFindable ?? false,
+    isVerifiedOnSite: profileRecord?.isVerifiedOnSite ?? false,
     locationHint: profileRecord?.locationHint ?? null,
     pingRequestedAt: profileRecord?.pingRequestedAt?.toISOString() ?? null,
     pingRequestedByUserId: profileRecord?.pingRequestedByUserId ?? null,
@@ -168,13 +169,14 @@ export class UserAgent {
 
     await db.insert(userProfile).values({
       userId: this.userId, moodEmoji: input.moodEmoji, intentText, intentSummary,
-      status: 'present', currentPlaceId: input.currentPlaceId, isFindable: false,
+      status: 'present', currentPlaceId: input.currentPlaceId, isFindable: false, isVerifiedOnSite: false,
       locationHint: null, pingRequestedAt: null, pingRequestedByUserId: null,
       pingRequestedByUsername: null, createdAt: now, updatedAt: now,
     }).onConflictDoUpdate({
       target: userProfile.userId,
       set: { moodEmoji: input.moodEmoji, intentText, intentSummary, status: 'present',
         currentPlaceId: input.currentPlaceId, isFindable: false, locationHint: null,
+        isVerifiedOnSite: false,
         pingRequestedAt: null, pingRequestedByUserId: null, pingRequestedByUsername: null, updatedAt: now },
     })
 
@@ -189,6 +191,7 @@ export class UserAgent {
     await db.update(userProfile).set({
       status: input.ready ? 'ready' : 'present',
       isFindable: input.ready ? profileRecord?.isFindable ?? false : false,
+      isVerifiedOnSite: input.ready ? profileRecord?.isVerifiedOnSite ?? false : false,
       pingRequestedAt: null, pingRequestedByUserId: null, pingRequestedByUsername: null,
       updatedAt: new Date(),
     }).where(eq(userProfile.userId, this.userId))
@@ -219,6 +222,7 @@ export class UserAgent {
     const endedConnections = await endAcceptedConnectionsForUser(this.userId)
     await db.update(userProfile).set({
       status: 'offline', currentPlaceId: null, isFindable: false, locationHint: null,
+      isVerifiedOnSite: false,
       pingRequestedAt: null, pingRequestedByUserId: null, pingRequestedByUsername: null, updatedAt: new Date(),
     }).where(eq(userProfile.userId, this.userId))
     await syncPlaceAgents([profileRecord?.currentPlaceId, ...endedConnections.placeIds])
