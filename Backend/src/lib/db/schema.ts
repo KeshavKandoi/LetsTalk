@@ -96,6 +96,7 @@ export const userProfile = pgTable('user_profile', {
   moodEmoji: text('mood_emoji'),
   intentText: text('intent_text'),
   about: text('about'),
+  spotLabel: text('spot_label'),
   intentSummary: text('intent_summary'),
   status: text('status').notNull().default('offline'),
   currentPlaceId: text('current_place_id'),
