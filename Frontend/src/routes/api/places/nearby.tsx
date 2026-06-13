@@ -13,7 +13,7 @@ export const Route = createFileRoute('/api/places/nearby')({
               status: 401, headers: { 'Content-Type': 'application/json' },
             })
           }
-          const body = await request.json()
+          const body = await request.json() as { latitude: number; longitude: number }
           const result = await searchNearbyPlacesForLocation(body)
           return new Response(JSON.stringify(result), {
             headers: { 'Content-Type': 'application/json' },
