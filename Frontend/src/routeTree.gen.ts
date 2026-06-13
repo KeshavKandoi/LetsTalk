@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiPlacesVerifyLocationRouteImport } from './routes/api/places/verify-location'
 import { Route as ApiPlacesUploadPhotoRouteImport } from './routes/api/places/upload-photo'
 import { Route as ApiPlacesUpdateProfileRouteImport } from './routes/api/places/update-profile'
 import { Route as ApiPlacesStateRouteImport } from './routes/api/places/state'
@@ -59,6 +60,11 @@ const LoginRoute = LoginRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPlacesVerifyLocationRoute = ApiPlacesVerifyLocationRouteImport.update({
+  id: '/api/places/verify-location',
+  path: '/api/places/verify-location',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPlacesUploadPhotoRoute = ApiPlacesUploadPhotoRouteImport.update({
@@ -266,6 +272,7 @@ export interface FileRoutesByFullPath {
   '/api/places/state': typeof ApiPlacesStateRoute
   '/api/places/update-profile': typeof ApiPlacesUpdateProfileRoute
   '/api/places/upload-photo': typeof ApiPlacesUploadPhotoRoute
+  '/api/places/verify-location': typeof ApiPlacesVerifyLocationRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -304,6 +311,7 @@ export interface FileRoutesByTo {
   '/api/places/state': typeof ApiPlacesStateRoute
   '/api/places/update-profile': typeof ApiPlacesUpdateProfileRoute
   '/api/places/upload-photo': typeof ApiPlacesUploadPhotoRoute
+  '/api/places/verify-location': typeof ApiPlacesVerifyLocationRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -343,6 +351,7 @@ export interface FileRoutesById {
   '/api/places/state': typeof ApiPlacesStateRoute
   '/api/places/update-profile': typeof ApiPlacesUpdateProfileRoute
   '/api/places/upload-photo': typeof ApiPlacesUploadPhotoRoute
+  '/api/places/verify-location': typeof ApiPlacesVerifyLocationRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -383,6 +392,7 @@ export interface FileRouteTypes {
     | '/api/places/state'
     | '/api/places/update-profile'
     | '/api/places/upload-photo'
+    | '/api/places/verify-location'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -421,6 +431,7 @@ export interface FileRouteTypes {
     | '/api/places/state'
     | '/api/places/update-profile'
     | '/api/places/upload-photo'
+    | '/api/places/verify-location'
   id:
     | '__root__'
     | '/'
@@ -459,6 +470,7 @@ export interface FileRouteTypes {
     | '/api/places/state'
     | '/api/places/update-profile'
     | '/api/places/upload-photo'
+    | '/api/places/verify-location'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -498,6 +510,7 @@ export interface RootRouteChildren {
   ApiPlacesStateRoute: typeof ApiPlacesStateRoute
   ApiPlacesUpdateProfileRoute: typeof ApiPlacesUpdateProfileRoute
   ApiPlacesUploadPhotoRoute: typeof ApiPlacesUploadPhotoRoute
+  ApiPlacesVerifyLocationRoute: typeof ApiPlacesVerifyLocationRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -521,6 +534,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/places/verify-location': {
+      id: '/api/places/verify-location'
+      path: '/api/places/verify-location'
+      fullPath: '/api/places/verify-location'
+      preLoaderRoute: typeof ApiPlacesVerifyLocationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/places/upload-photo': {
@@ -794,6 +814,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPlacesStateRoute: ApiPlacesStateRoute,
   ApiPlacesUpdateProfileRoute: ApiPlacesUpdateProfileRoute,
   ApiPlacesUploadPhotoRoute: ApiPlacesUploadPhotoRoute,
+  ApiPlacesVerifyLocationRoute: ApiPlacesVerifyLocationRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
