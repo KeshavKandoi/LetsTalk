@@ -101,6 +101,7 @@ export const userProfile = pgTable('user_profile', {
   status: text('status').notNull().default('offline'),
   currentPlaceId: text('current_place_id'),
   isFindable: boolean('is_findable').notNull().default(false),
+  isVerifiedOnSite: boolean('is_verified_on_site').notNull().default(false),
   locationHint: text('location_hint'),
   pingRequestedAt: timestamp('ping_requested_at'),
   pingRequestedByUserId: text('ping_requested_by_user_id'),
