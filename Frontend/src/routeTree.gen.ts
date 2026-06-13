@@ -15,11 +15,13 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiPlacesUploadPhotoRouteImport } from './routes/api/places/upload-photo'
 import { Route as ApiPlacesUpdateProfileRouteImport } from './routes/api/places/update-profile'
 import { Route as ApiPlacesStateRouteImport } from './routes/api/places/state'
+import { Route as ApiPlacesSpotRouteImport } from './routes/api/places/spot'
 import { Route as ApiPlacesScanPreviewRouteImport } from './routes/api/places/scan-preview'
 import { Route as ApiPlacesScanJoinConnectRouteImport } from './routes/api/places/scan-join-connect'
 import { Route as ApiPlacesScanConnectRouteImport } from './routes/api/places/scan-connect'
 import { Route as ApiPlacesReadyRouteImport } from './routes/api/places/ready'
 import { Route as ApiPlacesPushTokenRouteImport } from './routes/api/places/push-token'
+import { Route as ApiPlacesProfileRouteImport } from './routes/api/places/profile'
 import { Route as ApiPlacesPreviewRouteImport } from './routes/api/places/preview'
 import { Route as ApiPlacesNearbyRouteImport } from './routes/api/places/nearby'
 import { Route as ApiPlacesLeaveRouteImport } from './routes/api/places/leave'
@@ -37,7 +39,10 @@ import { Route as ApiFriendsMessagesRouteImport } from './routes/api/friends/mes
 import { Route as ApiFriendsMessageStatusRouteImport } from './routes/api/friends/message-status'
 import { Route as ApiFriendsListRouteImport } from './routes/api/friends/list'
 import { Route as ApiAuthVerifyOtpRouteImport } from './routes/api/auth/verify-otp'
+import { Route as ApiAuthSignupWithProfileRouteImport } from './routes/api/auth/signup-with-profile'
+import { Route as ApiAuthSignInSingleRouteImport } from './routes/api/auth/sign-in-single'
 import { Route as ApiAuthSendOtpRouteImport } from './routes/api/auth/send-otp'
+import { Route as ApiAuthCheckSessionRouteImport } from './routes/api/auth/check-session'
 import { Route as ApiAuthCheckEmailRouteImport } from './routes/api/auth/check-email'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
@@ -71,6 +76,11 @@ const ApiPlacesStateRoute = ApiPlacesStateRouteImport.update({
   path: '/api/places/state',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPlacesSpotRoute = ApiPlacesSpotRouteImport.update({
+  id: '/api/places/spot',
+  path: '/api/places/spot',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPlacesScanPreviewRoute = ApiPlacesScanPreviewRouteImport.update({
   id: '/api/places/scan-preview',
   path: '/api/places/scan-preview',
@@ -95,6 +105,11 @@ const ApiPlacesReadyRoute = ApiPlacesReadyRouteImport.update({
 const ApiPlacesPushTokenRoute = ApiPlacesPushTokenRouteImport.update({
   id: '/api/places/push-token',
   path: '/api/places/push-token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPlacesProfileRoute = ApiPlacesProfileRouteImport.update({
+  id: '/api/places/profile',
+  path: '/api/places/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPlacesPreviewRoute = ApiPlacesPreviewRouteImport.update({
@@ -182,9 +197,25 @@ const ApiAuthVerifyOtpRoute = ApiAuthVerifyOtpRouteImport.update({
   path: '/api/auth/verify-otp',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthSignupWithProfileRoute =
+  ApiAuthSignupWithProfileRouteImport.update({
+    id: '/api/auth/signup-with-profile',
+    path: '/api/auth/signup-with-profile',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiAuthSignInSingleRoute = ApiAuthSignInSingleRouteImport.update({
+  id: '/api/auth/sign-in-single',
+  path: '/api/auth/sign-in-single',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSendOtpRoute = ApiAuthSendOtpRouteImport.update({
   id: '/api/auth/send-otp',
   path: '/api/auth/send-otp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthCheckSessionRoute = ApiAuthCheckSessionRouteImport.update({
+  id: '/api/auth/check-session',
+  path: '/api/auth/check-session',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthCheckEmailRoute = ApiAuthCheckEmailRouteImport.update({
@@ -204,7 +235,10 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/check-email': typeof ApiAuthCheckEmailRoute
+  '/api/auth/check-session': typeof ApiAuthCheckSessionRoute
   '/api/auth/send-otp': typeof ApiAuthSendOtpRoute
+  '/api/auth/sign-in-single': typeof ApiAuthSignInSingleRoute
+  '/api/auth/signup-with-profile': typeof ApiAuthSignupWithProfileRoute
   '/api/auth/verify-otp': typeof ApiAuthVerifyOtpRoute
   '/api/friends/list': typeof ApiFriendsListRoute
   '/api/friends/message-status': typeof ApiFriendsMessageStatusRoute
@@ -222,11 +256,13 @@ export interface FileRoutesByFullPath {
   '/api/places/leave': typeof ApiPlacesLeaveRoute
   '/api/places/nearby': typeof ApiPlacesNearbyRoute
   '/api/places/preview': typeof ApiPlacesPreviewRoute
+  '/api/places/profile': typeof ApiPlacesProfileRoute
   '/api/places/push-token': typeof ApiPlacesPushTokenRoute
   '/api/places/ready': typeof ApiPlacesReadyRoute
   '/api/places/scan-connect': typeof ApiPlacesScanConnectRoute
   '/api/places/scan-join-connect': typeof ApiPlacesScanJoinConnectRoute
   '/api/places/scan-preview': typeof ApiPlacesScanPreviewRoute
+  '/api/places/spot': typeof ApiPlacesSpotRoute
   '/api/places/state': typeof ApiPlacesStateRoute
   '/api/places/update-profile': typeof ApiPlacesUpdateProfileRoute
   '/api/places/upload-photo': typeof ApiPlacesUploadPhotoRoute
@@ -237,7 +273,10 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/check-email': typeof ApiAuthCheckEmailRoute
+  '/api/auth/check-session': typeof ApiAuthCheckSessionRoute
   '/api/auth/send-otp': typeof ApiAuthSendOtpRoute
+  '/api/auth/sign-in-single': typeof ApiAuthSignInSingleRoute
+  '/api/auth/signup-with-profile': typeof ApiAuthSignupWithProfileRoute
   '/api/auth/verify-otp': typeof ApiAuthVerifyOtpRoute
   '/api/friends/list': typeof ApiFriendsListRoute
   '/api/friends/message-status': typeof ApiFriendsMessageStatusRoute
@@ -255,11 +294,13 @@ export interface FileRoutesByTo {
   '/api/places/leave': typeof ApiPlacesLeaveRoute
   '/api/places/nearby': typeof ApiPlacesNearbyRoute
   '/api/places/preview': typeof ApiPlacesPreviewRoute
+  '/api/places/profile': typeof ApiPlacesProfileRoute
   '/api/places/push-token': typeof ApiPlacesPushTokenRoute
   '/api/places/ready': typeof ApiPlacesReadyRoute
   '/api/places/scan-connect': typeof ApiPlacesScanConnectRoute
   '/api/places/scan-join-connect': typeof ApiPlacesScanJoinConnectRoute
   '/api/places/scan-preview': typeof ApiPlacesScanPreviewRoute
+  '/api/places/spot': typeof ApiPlacesSpotRoute
   '/api/places/state': typeof ApiPlacesStateRoute
   '/api/places/update-profile': typeof ApiPlacesUpdateProfileRoute
   '/api/places/upload-photo': typeof ApiPlacesUploadPhotoRoute
@@ -271,7 +312,10 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/check-email': typeof ApiAuthCheckEmailRoute
+  '/api/auth/check-session': typeof ApiAuthCheckSessionRoute
   '/api/auth/send-otp': typeof ApiAuthSendOtpRoute
+  '/api/auth/sign-in-single': typeof ApiAuthSignInSingleRoute
+  '/api/auth/signup-with-profile': typeof ApiAuthSignupWithProfileRoute
   '/api/auth/verify-otp': typeof ApiAuthVerifyOtpRoute
   '/api/friends/list': typeof ApiFriendsListRoute
   '/api/friends/message-status': typeof ApiFriendsMessageStatusRoute
@@ -289,11 +333,13 @@ export interface FileRoutesById {
   '/api/places/leave': typeof ApiPlacesLeaveRoute
   '/api/places/nearby': typeof ApiPlacesNearbyRoute
   '/api/places/preview': typeof ApiPlacesPreviewRoute
+  '/api/places/profile': typeof ApiPlacesProfileRoute
   '/api/places/push-token': typeof ApiPlacesPushTokenRoute
   '/api/places/ready': typeof ApiPlacesReadyRoute
   '/api/places/scan-connect': typeof ApiPlacesScanConnectRoute
   '/api/places/scan-join-connect': typeof ApiPlacesScanJoinConnectRoute
   '/api/places/scan-preview': typeof ApiPlacesScanPreviewRoute
+  '/api/places/spot': typeof ApiPlacesSpotRoute
   '/api/places/state': typeof ApiPlacesStateRoute
   '/api/places/update-profile': typeof ApiPlacesUpdateProfileRoute
   '/api/places/upload-photo': typeof ApiPlacesUploadPhotoRoute
@@ -306,7 +352,10 @@ export interface FileRouteTypes {
     | '/signup'
     | '/api/auth/$'
     | '/api/auth/check-email'
+    | '/api/auth/check-session'
     | '/api/auth/send-otp'
+    | '/api/auth/sign-in-single'
+    | '/api/auth/signup-with-profile'
     | '/api/auth/verify-otp'
     | '/api/friends/list'
     | '/api/friends/message-status'
@@ -324,11 +373,13 @@ export interface FileRouteTypes {
     | '/api/places/leave'
     | '/api/places/nearby'
     | '/api/places/preview'
+    | '/api/places/profile'
     | '/api/places/push-token'
     | '/api/places/ready'
     | '/api/places/scan-connect'
     | '/api/places/scan-join-connect'
     | '/api/places/scan-preview'
+    | '/api/places/spot'
     | '/api/places/state'
     | '/api/places/update-profile'
     | '/api/places/upload-photo'
@@ -339,7 +390,10 @@ export interface FileRouteTypes {
     | '/signup'
     | '/api/auth/$'
     | '/api/auth/check-email'
+    | '/api/auth/check-session'
     | '/api/auth/send-otp'
+    | '/api/auth/sign-in-single'
+    | '/api/auth/signup-with-profile'
     | '/api/auth/verify-otp'
     | '/api/friends/list'
     | '/api/friends/message-status'
@@ -357,11 +411,13 @@ export interface FileRouteTypes {
     | '/api/places/leave'
     | '/api/places/nearby'
     | '/api/places/preview'
+    | '/api/places/profile'
     | '/api/places/push-token'
     | '/api/places/ready'
     | '/api/places/scan-connect'
     | '/api/places/scan-join-connect'
     | '/api/places/scan-preview'
+    | '/api/places/spot'
     | '/api/places/state'
     | '/api/places/update-profile'
     | '/api/places/upload-photo'
@@ -372,7 +428,10 @@ export interface FileRouteTypes {
     | '/signup'
     | '/api/auth/$'
     | '/api/auth/check-email'
+    | '/api/auth/check-session'
     | '/api/auth/send-otp'
+    | '/api/auth/sign-in-single'
+    | '/api/auth/signup-with-profile'
     | '/api/auth/verify-otp'
     | '/api/friends/list'
     | '/api/friends/message-status'
@@ -390,11 +449,13 @@ export interface FileRouteTypes {
     | '/api/places/leave'
     | '/api/places/nearby'
     | '/api/places/preview'
+    | '/api/places/profile'
     | '/api/places/push-token'
     | '/api/places/ready'
     | '/api/places/scan-connect'
     | '/api/places/scan-join-connect'
     | '/api/places/scan-preview'
+    | '/api/places/spot'
     | '/api/places/state'
     | '/api/places/update-profile'
     | '/api/places/upload-photo'
@@ -406,7 +467,10 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiAuthCheckEmailRoute: typeof ApiAuthCheckEmailRoute
+  ApiAuthCheckSessionRoute: typeof ApiAuthCheckSessionRoute
   ApiAuthSendOtpRoute: typeof ApiAuthSendOtpRoute
+  ApiAuthSignInSingleRoute: typeof ApiAuthSignInSingleRoute
+  ApiAuthSignupWithProfileRoute: typeof ApiAuthSignupWithProfileRoute
   ApiAuthVerifyOtpRoute: typeof ApiAuthVerifyOtpRoute
   ApiFriendsListRoute: typeof ApiFriendsListRoute
   ApiFriendsMessageStatusRoute: typeof ApiFriendsMessageStatusRoute
@@ -424,11 +488,13 @@ export interface RootRouteChildren {
   ApiPlacesLeaveRoute: typeof ApiPlacesLeaveRoute
   ApiPlacesNearbyRoute: typeof ApiPlacesNearbyRoute
   ApiPlacesPreviewRoute: typeof ApiPlacesPreviewRoute
+  ApiPlacesProfileRoute: typeof ApiPlacesProfileRoute
   ApiPlacesPushTokenRoute: typeof ApiPlacesPushTokenRoute
   ApiPlacesReadyRoute: typeof ApiPlacesReadyRoute
   ApiPlacesScanConnectRoute: typeof ApiPlacesScanConnectRoute
   ApiPlacesScanJoinConnectRoute: typeof ApiPlacesScanJoinConnectRoute
   ApiPlacesScanPreviewRoute: typeof ApiPlacesScanPreviewRoute
+  ApiPlacesSpotRoute: typeof ApiPlacesSpotRoute
   ApiPlacesStateRoute: typeof ApiPlacesStateRoute
   ApiPlacesUpdateProfileRoute: typeof ApiPlacesUpdateProfileRoute
   ApiPlacesUploadPhotoRoute: typeof ApiPlacesUploadPhotoRoute
@@ -478,6 +544,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPlacesStateRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/places/spot': {
+      id: '/api/places/spot'
+      path: '/api/places/spot'
+      fullPath: '/api/places/spot'
+      preLoaderRoute: typeof ApiPlacesSpotRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/places/scan-preview': {
       id: '/api/places/scan-preview'
       path: '/api/places/scan-preview'
@@ -511,6 +584,13 @@ declare module '@tanstack/react-router' {
       path: '/api/places/push-token'
       fullPath: '/api/places/push-token'
       preLoaderRoute: typeof ApiPlacesPushTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/places/profile': {
+      id: '/api/places/profile'
+      path: '/api/places/profile'
+      fullPath: '/api/places/profile'
+      preLoaderRoute: typeof ApiPlacesProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/places/preview': {
@@ -632,11 +712,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthVerifyOtpRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/signup-with-profile': {
+      id: '/api/auth/signup-with-profile'
+      path: '/api/auth/signup-with-profile'
+      fullPath: '/api/auth/signup-with-profile'
+      preLoaderRoute: typeof ApiAuthSignupWithProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/sign-in-single': {
+      id: '/api/auth/sign-in-single'
+      path: '/api/auth/sign-in-single'
+      fullPath: '/api/auth/sign-in-single'
+      preLoaderRoute: typeof ApiAuthSignInSingleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/send-otp': {
       id: '/api/auth/send-otp'
       path: '/api/auth/send-otp'
       fullPath: '/api/auth/send-otp'
       preLoaderRoute: typeof ApiAuthSendOtpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/check-session': {
+      id: '/api/auth/check-session'
+      path: '/api/auth/check-session'
+      fullPath: '/api/auth/check-session'
+      preLoaderRoute: typeof ApiAuthCheckSessionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/check-email': {
@@ -662,7 +763,10 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiAuthCheckEmailRoute: ApiAuthCheckEmailRoute,
+  ApiAuthCheckSessionRoute: ApiAuthCheckSessionRoute,
   ApiAuthSendOtpRoute: ApiAuthSendOtpRoute,
+  ApiAuthSignInSingleRoute: ApiAuthSignInSingleRoute,
+  ApiAuthSignupWithProfileRoute: ApiAuthSignupWithProfileRoute,
   ApiAuthVerifyOtpRoute: ApiAuthVerifyOtpRoute,
   ApiFriendsListRoute: ApiFriendsListRoute,
   ApiFriendsMessageStatusRoute: ApiFriendsMessageStatusRoute,
@@ -680,11 +784,13 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPlacesLeaveRoute: ApiPlacesLeaveRoute,
   ApiPlacesNearbyRoute: ApiPlacesNearbyRoute,
   ApiPlacesPreviewRoute: ApiPlacesPreviewRoute,
+  ApiPlacesProfileRoute: ApiPlacesProfileRoute,
   ApiPlacesPushTokenRoute: ApiPlacesPushTokenRoute,
   ApiPlacesReadyRoute: ApiPlacesReadyRoute,
   ApiPlacesScanConnectRoute: ApiPlacesScanConnectRoute,
   ApiPlacesScanJoinConnectRoute: ApiPlacesScanJoinConnectRoute,
   ApiPlacesScanPreviewRoute: ApiPlacesScanPreviewRoute,
+  ApiPlacesSpotRoute: ApiPlacesSpotRoute,
   ApiPlacesStateRoute: ApiPlacesStateRoute,
   ApiPlacesUpdateProfileRoute: ApiPlacesUpdateProfileRoute,
   ApiPlacesUploadPhotoRoute: ApiPlacesUploadPhotoRoute,
