@@ -16,7 +16,7 @@ export async function signIn(username: string, password: string) {
 }
 
 export async function signUp(email: string, username: string, password: string, dob?: string, gender?: string) {
-  const res = await fetch(`${BASE_URL}/api/auth/sign-up/email`, {
+  const res = await fetch(`${BASE_URL}/api/auth/signup-with-profile`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Origin': BASE_URL },
     body: JSON.stringify({ email, username, password, name: username, dob, gender }),
@@ -91,7 +91,6 @@ export async function getSession() {
 
 export async function signOut() {
   const token = await getStoredSessionToken()
-  await AsyncStorage.removeItem(SESSION_TOKEN_KEY)
   try {
     await fetch(`${BASE_URL}/api/auth/sign-out`, {
       method: 'POST',
@@ -103,4 +102,5 @@ export async function signOut() {
       body: JSON.stringify({}),
     })
   } catch {}
+  await AsyncStorage.removeItem(SESSION_TOKEN_KEY)
 }
