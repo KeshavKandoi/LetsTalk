@@ -73,6 +73,7 @@ function mapUserProfile(
     status: profileRecord.status as PresenceStatus,
     currentPlaceId: profileRecord.currentPlaceId,
     isFindable: profileRecord.isFindable,
+    isVerifiedOnSite: profileRecord.isVerifiedOnSite,
     locationHint: profileRecord.locationHint,
     pingRequestedAt: profileRecord.pingRequestedAt,
     pingRequestedByUserId: profileRecord.pingRequestedByUserId,
@@ -98,6 +99,64 @@ function mapPlace(
     lng: record.lng,
     readyCount,
   }
+}
+
+function distanceMeters(
+  a: { latitude: number; longitude: number },
+  b: { latitude: number; longitude: number },
+) {
+  const toRad = (value: number) => (value * Math.PI) / 180
+  const earthRadiusMeters = 6371000
+  const dLat = toRad(b.latitude - a.latitude)
+  const dLng = toRad(b.longitude - a.longitude)
+  const lat1 = toRad(a.latitude)
+  const lat2 = toRad(b.latitude)
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2
+  return 2 * earthRadiusMeters * Math.asin(Math.sqrt(h))
+}
+
+function assertCoordinates(input: { latitude?: number; longitude?: number }) {
+  if (!Number.isFinite(input.latitude) || !Number.isFinite(input.longitude)) {
+    throw new Error('A valid location is required.')
+  }
+  return { latitude: input.latitude as number, longitude: input.longitude as number }
+}
+
+async function endConnectionsForLocationExit(userId: string, now: Date) {
+  const activeConnections = await db
+    .select()
+    .from(handoffConnection)
+    .where(
+      and(
+        eq(handoffConnection.status, 'accepted'),
+        or(eq(handoffConnection.requesterUserId, userId), eq(handoffConnection.recipientUserId, userId)),
+      ),
+    )
+
+  const participantUserIds = new Set<string>()
+  const placeIds = new Set<string>()
+
+  for (const connection of activeConnections) {
+    placeIds.add(connection.placeId)
+    participantUserIds.add(connection.requesterUserId)
+    participantUserIds.add(connection.recipientUserId)
+    await db
+      .update(handoffConnection)
+      .set({ status: 'left_verified_location', updatedAt: now })
+      .where(eq(handoffConnection.id, connection.id))
+
+    const otherUserId = connection.requesterUserId === userId
+      ? connection.recipientUserId
+      : connection.requesterUserId
+    await db
+      .update(userProfile)
+      .set({ status: 'ready', isFindable: false, updatedAt: now })
+      .where(and(eq(userProfile.userId, otherUserId), eq(userProfile.status, 'in_conversation')))
+  }
+
+  return { participantUserIds: [...participantUserIds], placeIds: [...placeIds] }
 }
 
 function getDisplayUsername(record: typeof user.$inferSelect) {
@@ -346,8 +405,12 @@ async function getRecentConnectionEventsForUser(userId: string) {
             ),
           ),
           and(
-            eq(handoffConnection.status, 'declined'),
+            inArray(handoffConnection.status, ['declined', 'left_verified_location']),
             eq(handoffConnection.requesterUserId, userId),
+          ),
+          and(
+            eq(handoffConnection.status, 'left_verified_location'),
+            eq(handoffConnection.recipientUserId, userId),
           ),
         ),
       ),
@@ -385,6 +448,9 @@ async function getRecentConnectionEventsForUser(userId: string) {
         username: otherUser?.username || otherUser?.fallbackUsername || otherUser?.fallbackName || 'Someone nearby',
       }
     })(),
+    message: row.status === 'left_verified_location'
+      ? 'Your connection has left the verified location and is no longer available.'
+      : undefined,
   }))
 }
 
@@ -478,6 +544,7 @@ function mapUserProfileStateFromAgent(
     status: state.status,
     currentPlaceId: state.currentPlaceId,
     isFindable: state.isFindable,
+    isVerifiedOnSite: state.isVerifiedOnSite ?? false,
     locationHint: state.locationHint,
     pingRequestedAt: state.pingRequestedAt,
     pingRequestedByUserId: state.pingRequestedByUserId,
@@ -550,6 +617,7 @@ export async function getAppState(): Promise<AppState> {
           and(
             eq(userProfile.currentPlaceId, profileRecord.currentPlaceId),
             eq(userProfile.status, 'ready'),
+            eq(userProfile.isVerifiedOnSite, true),
           ),
         )
 
@@ -592,10 +660,103 @@ export async function saveUserProfile(input: {
   return mapUserProfileStateFromAgent(nextState, intentText)
 }
 
-export async function setReadyState(input: { ready: boolean }) {
+export async function setReadyState(input: { ready: boolean; latitude?: number; longitude?: number }) {
   const session = await requireCurrentSession()
+  if (input.ready) {
+    const currentLocation = assertCoordinates(input)
+    const [profileRecord] = await db
+      .select()
+      .from(userProfile)
+      .where(eq(userProfile.userId, session.user.id))
+      .limit(1)
+    if (!profileRecord?.currentPlaceId) {
+      throw new Error('Pick your current place before setting yourself ready.')
+    }
+    const [placeRecord] = await db
+      .select()
+      .from(place)
+      .where(eq(place.placeId, profileRecord.currentPlaceId))
+      .limit(1)
+    if (!placeRecord) {
+      throw new Error('That place is no longer available.')
+    }
+    const placeLocation = {
+      latitude: placeRecord.lat,
+      longitude: placeRecord.lng,
+    }
+    if (distanceMeters(currentLocation, placeLocation) > 100) {
+      throw new Error('You are outside 100 meters of this location.')
+    }
+  }
   const agent = await getUserAgent(session.user.id)
   await agent.setReady(input)
+  await db
+    .update(userProfile)
+    .set({ isVerifiedOnSite: input.ready, updatedAt: new Date() })
+    .where(eq(userProfile.userId, session.user.id))
+}
+
+export async function verifyOnSiteLocation(input: { latitude?: number; longitude?: number }) {
+  const session = await requireCurrentSession()
+  const currentLocation = assertCoordinates(input)
+  const [profileRecord] = await db
+    .select()
+    .from(userProfile)
+    .where(eq(userProfile.userId, session.user.id))
+    .limit(1)
+
+  if (!profileRecord?.currentPlaceId) return { success: true, verified: false }
+
+  const [placeRecord] = await db
+    .select()
+    .from(place)
+    .where(eq(place.placeId, profileRecord.currentPlaceId))
+    .limit(1)
+  if (!placeRecord) return { success: true, verified: false }
+
+  const placeLocation = {
+    latitude: placeRecord.lat,
+    longitude: placeRecord.lng,
+  }
+  const isWithinRange = distanceMeters(currentLocation, placeLocation) <= 100
+
+  if (isWithinRange) {
+    await db
+      .update(userProfile)
+      .set({ isVerifiedOnSite: true, updatedAt: new Date() })
+      .where(eq(userProfile.userId, session.user.id))
+    return { success: true, verified: true }
+  }
+
+  const now = new Date()
+  const ended = await endConnectionsForLocationExit(session.user.id, now)
+  await db
+    .update(userProfile)
+    .set({
+      status: 'present',
+      isFindable: false,
+      isVerifiedOnSite: false,
+      locationHint: null,
+      pingRequestedAt: null,
+      pingRequestedByUserId: null,
+      pingRequestedByUsername: null,
+      updatedAt: now,
+    })
+    .where(eq(userProfile.userId, session.user.id))
+
+  for (const placeId of new Set([profileRecord.currentPlaceId, ...ended.placeIds])) {
+    await import('./agents/place-agent').then(({ broadcastPlaceUpdate }) => broadcastPlaceUpdate(placeId))
+  }
+  for (const userId of ended.participantUserIds.filter((id) => id !== session.user.id)) {
+    await new UserAgent(userId).refresh()
+  }
+
+  return {
+    success: true,
+    verified: false,
+    deactivated: true,
+    message: 'You are out of 100 meters. Your availability has been deactivated.',
+  }
 }
 
 export async function saveFinderProfile(input: {
@@ -678,6 +839,9 @@ export async function connectFromScan(input: { token: string }) {
   if (targetProfile.status !== 'ready') {
     throw new Error('They are not marked ready right now.')
   }
+  if (!viewerProfile.isVerifiedOnSite || !targetProfile.isVerifiedOnSite) {
+    throw new Error('Both people need verified on-site status before connecting.')
+  }
 
   const existingConnection = await getActiveConnectionForUser(session.user.id)
   if (existingConnection) {
@@ -740,6 +904,9 @@ export async function sendConnectRequest(input: {
   }
   if (targetProfile.status !== 'ready') {
     throw new Error('They are not marked ready right now.')
+  }
+  if (!viewerProfile.isVerifiedOnSite || !targetProfile.isVerifiedOnSite) {
+    throw new Error('Both people need verified on-site status before connecting.')
   }
 
   const existingViewerConnection = await getActiveConnectionForUser(session.user.id)
@@ -863,6 +1030,9 @@ export async function respondToConnectRequest(input: {
   }
   if (requesterProfile.status === 'in_conversation' || recipientProfile.status === 'in_conversation') {
     throw new Error('One of you is already connected.')
+  }
+  if (!requesterProfile.isVerifiedOnSite || !recipientProfile.isVerifiedOnSite) {
+    throw new Error('Both people need verified on-site status before connecting.')
   }
 
   await db
@@ -1390,7 +1560,16 @@ export async function searchNearbyPlacesForLocation(input: {
           updatedAt: now,
         })),
       )
-      .onConflictDoNothing()
+      .onConflictDoUpdate({
+        target: place.placeId,
+        set: {
+          name: sql`excluded.name`,
+          address: sql`excluded.address`,
+          lat: sql`excluded.lat`,
+          lng: sql`excluded.lng`,
+          updatedAt: now,
+        },
+      })
   }
 
   if (places.length === 0) {
@@ -1460,14 +1639,15 @@ export async function getNearbyPlacePreview(input: {
   const presentStatuses = ['present', 'ready', 'in_conversation'] as const
   const [{ readyCount, checkedInCount }] = await db
     .select({
-      readyCount: sql<number>`count(case when ${userProfile.status} = 'ready' then 1 end)`,
-      checkedInCount: sql<number>`count(*)`,
+      readyCount: sql<number>`count(case when ${userProfile.status} = 'ready' and ${userProfile.isVerifiedOnSite} = true then 1 end)`,
+      checkedInCount: sql<number>`count(case when ${userProfile.isVerifiedOnSite} = true then 1 end)`,
     })
     .from(userProfile)
     .where(
       and(
         eq(userProfile.currentPlaceId, placeId),
         inArray(userProfile.status, presentStatuses),
+        or(eq(userProfile.isVerifiedOnSite, true), input.viewerUserId ? eq(userProfile.userId, input.viewerUserId) : sql`false`),
       ),
     )
 
@@ -1482,6 +1662,7 @@ export async function getNearbyPlacePreview(input: {
       intentSummary: userProfile.intentSummary,
       status: userProfile.status,
       isFindable: userProfile.isFindable,
+      isVerifiedOnSite: userProfile.isVerifiedOnSite,
       locationHint: userProfile.locationHint,
       age: userProfile.age,
       gender: userProfile.gender,
@@ -1497,6 +1678,7 @@ export async function getNearbyPlacePreview(input: {
       and(
         eq(userProfile.currentPlaceId, placeId),
         inArray(userProfile.status, presentStatuses),
+        or(eq(userProfile.isVerifiedOnSite, true), input.viewerUserId ? eq(userProfile.userId, input.viewerUserId) : sql`false`),
       ),
     )
     .orderBy(desc(userProfile.updatedAt))
@@ -1538,6 +1720,7 @@ export async function getNearbyPlacePreview(input: {
         intentSummary: record.intentSummary,
         status: record.status as NearbyPlacePreviewState['participants'][number]['status'],
         isFindable: record.isFindable ?? false,
+        isVerifiedOnSite: record.isVerifiedOnSite ?? false,
         locationHint: record.locationHint ?? null,
         age: record.age ?? null,
         gender: record.gender ?? null,
