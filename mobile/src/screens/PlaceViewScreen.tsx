@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   View, Text, StyleSheet, SafeAreaView, TouchableOpacity,
-  ScrollView, ActivityIndicator, RefreshControl, Alert, Modal, Image, AppState, BackHandler,
+  ScrollView, ActivityIndicator, RefreshControl, Alert, Modal, Image, AppState, BackHandler, TextInput,
 } from 'react-native'
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
 import { VideoView, useVideoPlayer } from 'expo-video'
@@ -95,11 +95,14 @@ function VideoBackground({ style }: { style: any }) {
   const player = useVideoPlayer(require('../video/animation.mp4'), (p) => {
     p.loop = true
     p.muted = true
-    p.play()
+    try { p.play() } catch {}
   })
   useFocusEffect(
     useCallback(() => {
-      try { player.replay() } catch { try { player.play() } catch {} }
+      const t = setTimeout(() => {
+        try { player.replay() } catch { try { player.play() } catch {} }
+      }, 300)
+      return () => clearTimeout(t)
     }, [player])
   )
   return (
@@ -134,6 +137,9 @@ export default function PlaceViewScreen() {
   const [selectedPerson, setSelectedPerson] = useState<Participant | null>(null)
   const [notice, setNotice] = useState('')
   const [myPhotoUrl, setMyPhotoUrl] = useState<string | null>(null)
+  const [spotModalVisible, setSpotModalVisible] = useState(false)
+  const [customSpot, setCustomSpot] = useState('')
+  const [selectedHint, setSelectedHint] = useState<string | null>(null)
   const [myUsername, setMyUsername] = useState<string>('')
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const photoLoadedRef = useRef(false)
@@ -284,15 +290,15 @@ export default function PlaceViewScreen() {
 
   const handleSelectHint = async (hint: string) => {
     if (!state?.profile) return
-    setFinderLoading(true)
+    // Optimistic update for instant UI feedback
+    setState(prev => prev ? { ...prev, profile: prev.profile ? { ...prev.profile, isFindable: true, locationHint: hint } : prev.profile } : prev)
     try {
       await apiFetch('/api/places/finder', {
-        isFindable: state.profile.isFindable,
+        isFindable: true,
         locationHint: hint,
       })
       await loadState(true)
     } catch (e: any) { setError(e.message) }
-    finally { setFinderLoading(false) }
   }
 
   const handleSendConnectRequest = async (participant: Participant) => {
@@ -405,23 +411,52 @@ export default function PlaceViewScreen() {
         {/* Connected User */}
         {activeConnection && (
           <View style={s.connectionBanner}>
-            <Text style={s.connectedSectionTitle}>Connected User</Text>
-            <View style={s.connectedPeopleRow}>
-              <View style={s.connectedPerson}>
+            {/* Header */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#4ade80', marginRight: 8 }} />
+              <Text style={{ color: '#4ade80', fontWeight: '700', fontSize: 13, letterSpacing: 1 }}>CONNECTED</Text>
+            </View>
+
+            {/* Avatars Row */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+              <View style={{ flex: 1, alignItems: 'center' }}>
                 {renderConnectionAvatar({
                   username: myDisplayName,
                   photoUrl: myPhotoUrl || state?.profile?.photoUrl || currentParticipant?.photoUrl,
-                }, 58)}
-                <Text style={s.connectedName} numberOfLines={1}>{myDisplayName}</Text>
-                <Text style={s.connectedMood} numberOfLines={2}></Text>
+                }, 56)}
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13, marginTop: 6 }} numberOfLines={1}>{myDisplayName}</Text>
+                {profile?.locationHint ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, backgroundColor: 'rgba(232,130,74,0.15)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
+                    <Text style={{ fontSize: 10 }}>📍</Text>
+                    <Text style={{ color: '#e8824a', fontSize: 11, fontWeight: '600', marginLeft: 3 }} numberOfLines={1}>{profile.locationHint}</Text>
+                  </View>
+                ) : (
+                  <Text style={{ color: '#555', fontSize: 11, marginTop: 4 }}>No spot shared</Text>
+                )}
               </View>
-              <Text style={s.connectedLink}>↔</Text>
-              <View style={s.connectedPerson}>
-                {renderConnectionAvatar(activeConnection.counterpart, 58)}
-                <Text style={s.connectedName} numberOfLines={1}>{activeConnection.counterpart.username}</Text>
-                <Text style={s.connectedMood} numberOfLines={2}></Text>
+
+              <View style={{ paddingHorizontal: 12 }}>
+                <Text style={{ color: '#e8824a', fontSize: 20 }}>↔</Text>
+              </View>
+
+              <View style={{ flex: 1, alignItems: 'center' }}>
+                {renderConnectionAvatar(activeConnection.counterpart, 56)}
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13, marginTop: 6 }} numberOfLines={1}>{activeConnection.counterpart.username}</Text>
+                {activeConnection.counterpart.spotLabel ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, backgroundColor: 'rgba(232,130,74,0.15)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
+                    <Text style={{ fontSize: 10 }}>📍</Text>
+                    <Text style={{ color: '#e8824a', fontSize: 11, fontWeight: '600', marginLeft: 3 }} numberOfLines={1}>{activeConnection.counterpart.spotLabel}</Text>
+                  </View>
+                ) : (
+                  <Text style={{ color: '#555', fontSize: 11, marginTop: 4 }}>No spot shared</Text>
+                )}
               </View>
             </View>
+
+            {/* Divider */}
+            <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.07)', marginBottom: 14 }} />
+
+            {/* QR Section */}
             {qrVerified ? (
               <View style={s.qrVerifiedBox}>
                 <Text style={s.qrVerifiedText}>✓ Connected & Verified</Text>
@@ -436,7 +471,8 @@ export default function PlaceViewScreen() {
                 </TouchableOpacity>
               </View>
             )}
-            <Text style={s.connectionHint}>You are connected. New requests are paused until this conversation ends.</Text>
+
+            <Text style={[s.connectionHint, { marginTop: 12 }]}>New requests are paused until this conversation ends.</Text>
             <TouchableOpacity style={s.endBtn} onPress={handleEndConversation} disabled={endingConversation}>
               {endingConversation ? <ActivityIndicator color="white" /> : <Text style={s.endBtnText}>I'm free again</Text>}
             </TouchableOpacity>
@@ -556,11 +592,12 @@ export default function PlaceViewScreen() {
                     </View>
                   </View>
                   {!isMe && (
+                    <View>
                     <View style={s.personBtns}>
                       <TouchableOpacity style={s.viewProfileBtn} onPress={() => setSelectedPerson(p)}>
                         <Text style={s.viewProfileBtnText}>View Profile</Text>
                       </TouchableOpacity>
-                      <View style={s.personActionColumn}>
+
                         {isConnectedPerson ? (
                           <View style={[s.connectBtn, s.personActionButton, s.connectedBtn]}>
                             <Text style={s.connectBtnText}>✓ Connected</Text>
@@ -596,16 +633,11 @@ export default function PlaceViewScreen() {
                               : <Text style={s.connectBtnText}>Connect</Text>}
                           </TouchableOpacity>
                         ) : (
-                          <>
                             <View style={[s.connectBtn, s.personActionButton, s.connectBtnDisabled]}>
                               <Text style={s.connectBtnTextDisabled}>Connect</Text>
                             </View>
-                            {!isReady && !activeConnection ? (
-                              <Text style={s.connectDisabledHint}>Set yourself ready to connect</Text>
-                            ) : null}
-                          </>
                         )}
-                      </View>
+                    </View>
                     </View>
                   )}
                 </View>
@@ -627,22 +659,43 @@ export default function PlaceViewScreen() {
             {FINDER_HINTS.map((hint) => (
               <TouchableOpacity
                 key={hint}
-                style={[s.hintChip, profile.locationHint === hint && s.hintChipActive]}
-                onPress={() => handleSelectHint(hint)}
-                disabled={finderLoading || (!isReady && !profile.isFindable) || isInConversation}
+                style={[s.hintChip, (selectedHint ?? profile.locationHint) === hint && s.hintChipActive]}
+                onPress={() => { setSelectedHint(hint); setCustomSpot('') }}
+                disabled={false}
               >
-                <Text style={[s.hintChipText, profile.locationHint === hint && s.hintChipTextActive]}>{hint}</Text>
+                <Text style={[s.hintChipText, (selectedHint ?? profile.locationHint) === hint && s.hintChipTextActive]}>{hint}</Text>
               </TouchableOpacity>
             ))}
           </View>
+          {/* Custom spot write-up */}
+          <View style={{ marginBottom: 12 }}>
+            <TextInput
+              placeholder="Describe your spot..."
+              placeholderTextColor="#666"
+              value={customSpot}
+              onChangeText={(text) => { setCustomSpot(text); if (text) setSelectedHint(null) }}
+              style={{ backgroundColor: '#1a1a1a', color: '#fff', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, borderWidth: 1, borderColor: 'rgba(232,130,74,0.3)' }}
+              editable={true}
+            />
+          </View>
           <TouchableOpacity
-            style={[s.primaryBtn, profile.isFindable && s.primaryBtnOutline]}
-            onPress={handleFinderToggle}
-            disabled={finderLoading || !isReady || isInConversation}
+            style={{ backgroundColor: profile.isFindable ? 'rgba(220,38,38,0.15)' : '#e8824a', borderRadius: 12, padding: 14, alignItems: 'center', borderWidth: profile.isFindable ? 1 : 0, borderColor: 'rgba(220,38,38,0.4)' }}
+            onPress={async () => {
+              if (!profile.isFindable) {
+                const hintToShare = customSpot.trim() || selectedHint
+                if (!hintToShare) { setError('Pick a spot or describe your location first.'); return }
+                await handleSelectHint(hintToShare)
+                setCustomSpot('')
+                setSelectedHint(null)
+              } else {
+                await handleFinderToggle()
+              }
+            }}
+            disabled={finderLoading}
           >
             {finderLoading
               ? <ActivityIndicator color="white" />
-              : <Text style={[s.primaryBtnText, profile.isFindable && s.primaryBtnTextOutline]}>
+              : <Text style={{ color: profile.isFindable ? '#ff6b6b' : '#fff', fontWeight: '700', fontSize: 15 }}>
                   {profile.isFindable ? 'Stop sharing my spot' : 'Share My Spot'}
                 </Text>}
           </TouchableOpacity>
@@ -671,6 +724,54 @@ export default function PlaceViewScreen() {
         </TouchableOpacity>
       </Modal>
 
+      {/* Spot Modal */}
+      <Modal visible={spotModalVisible} transparent animationType="slide" onRequestClose={() => setSpotModalVisible(false)}>
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' }}>
+          <View style={{ backgroundColor: '#1a1a1a', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24 }}>
+            <Text style={{ color: '#fff', fontSize: 17, fontWeight: '700', marginBottom: 16 }}>Where are you sitting?</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+              {FINDER_HINTS.map(hint => (
+                <TouchableOpacity
+                  key={hint}
+                  style={{ backgroundColor: profile?.locationHint === hint ? '#e8824a' : '#333', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8 }}
+                  onPress={async () => {
+                    setSpotModalVisible(false)
+                    await handleSelectHint(hint)
+                  }}
+                >
+                  <Text style={{ color: profile?.locationHint === hint ? '#fff' : '#ccc', fontWeight: '600' }}>{hint}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={{ marginTop: 16, flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+              <TextInput
+                placeholder="Describe your spot..."
+                placeholderTextColor="#666"
+                value={customSpot}
+                onChangeText={setCustomSpot}
+                style={{ flex: 1, backgroundColor: '#2a2a2a', color: '#fff', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14 }}
+              />
+              <TouchableOpacity
+                style={{ backgroundColor: '#e8824a', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 }}
+                onPress={async () => {
+                  if (!customSpot.trim()) return
+                  setSpotModalVisible(false)
+                  await handleSelectHint(customSpot.trim())
+                  setCustomSpot('')
+                }}
+              >
+                <Text style={{ color: '#fff', fontWeight: '700' }}>Set</Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              style={{ marginTop: 16, padding: 14, alignItems: 'center' }}
+              onPress={() => setSpotModalVisible(false)}
+            >
+              <Text style={{ color: '#888' }}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
       {/* Scanner Modal */}
       {scannerVisible && (
         <ScannerModal
@@ -843,32 +944,32 @@ const s = StyleSheet.create({
   acceptBtnText: { color: '#ffffff', fontSize: 12, fontWeight: '800' },
   declineBtn: { backgroundColor: '#1a1a1a', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8, marginLeft: 6, borderWidth: 1, borderColor: 'rgba(220,38,38,0.5)' },
   declineBtnText: { color: '#ffffff', fontSize: 12, fontWeight: '800' },
-  personCard: { backgroundColor: 'rgba(26,16,8,0.75)', borderRadius: 24, padding: 16, marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 1 }, elevation: 1, borderWidth: 1, borderColor: 'rgba(232,130,74,0.12)' },
-  personCardTop: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
+  personCard: { backgroundColor: '#000000', borderRadius: 20, padding: 14, marginBottom: 10, borderWidth: 1.5, borderColor: 'rgba(232,180,74,0.35)' },
+  personCardTop: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10 },
   avatarPlaceholder: { backgroundColor: 'rgba(0,107,44,0.12)', justifyContent: 'center', alignItems: 'center' },
   avatarInitials: { color: '#ffffff', fontWeight: '800', fontSize: 18 },
-  personNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4, flexWrap: 'wrap' },
-  personName: { fontSize: 17, fontWeight: '900', color: '#ffffff' },
+  personNameRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4, justifyContent: 'space-between', width: '100%' },
+  personName: { fontSize: 18, fontWeight: '800', color: '#ffffff', flex: 1, textAlign: 'center' },
   youBadge: { backgroundColor: 'rgba(37,99,235,0.6)', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 },
   youBadgeText: { fontSize: 10, color: 'white', fontWeight: '700' },
-  statusBadge: { backgroundColor: AMBER, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
-  statusBadgeActive: { backgroundColor: AMBER },
-  statusBadgeText: { fontSize: 11, color: '#0a0704', fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5 },
-  statusBadgeTextActive: { color: '#0a0704' },
+  statusBadge: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1, borderWidth: 1, borderColor: '#4CAF50', backgroundColor: 'transparent', marginTop: 2 },
+  statusBadgeActive: { backgroundColor: 'transparent', borderColor: '#4CAF50' },
+  statusBadgeText: { fontSize: 11, color: '#4CAF50', fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5 },
+  statusBadgeTextActive: { color: '#4CAF50' },
   personMood: { fontSize: 13, color: '#ffffff', lineHeight: 18 },
   locationHint: { fontSize: 12, color: 'rgba(255,255,255,0.7)', fontWeight: '600', marginTop: 3 },
-  personBtns: { flexDirection: 'row', gap: 8 },
-  viewProfileBtn: { paddingVertical: 7, paddingHorizontal: 12, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', alignSelf: 'flex-start' },
-  viewProfileBtnText: { fontSize: 14, fontWeight: '600', color: '#ffffff' },
-  personActionColumn: { flex: 1, alignItems: 'stretch' },
-  personActionButton: { flex: 0, width: '100%' },
-  connectBtn: { paddingVertical: 7, paddingHorizontal: 12, borderRadius: 10, backgroundColor: '#2563eb', alignItems: 'center', alignSelf: 'flex-end', shadowColor: '#2563eb', shadowOpacity: 0.25, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
+  personBtns: { flexDirection: 'row', gap: 8, marginTop: 2 },
+  viewProfileBtn: { flex: 1, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 12, borderWidth: 1.5, borderColor: AMBER, backgroundColor: 'transparent', alignItems: 'center' },
+  viewProfileBtnText: { fontSize: 13, fontWeight: '700', color: AMBER },
+  personActionColumn: {},
+  personActionButton: {},
+  connectBtn: { flex: 1, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 12, backgroundColor: 'transparent', borderWidth: 1.5, borderColor: '#64B5F6', alignItems: 'center' },
   connectBtnDisabled: { backgroundColor: 'rgba(37,99,235,0.5)', shadowOpacity: 0 },
   connectDisabledHint: { marginTop: 5, color: '#ffffff', fontSize: 11, fontWeight: '600', textAlign: 'center', lineHeight: 14 },
   cancelRequestBtn: { backgroundColor: '#1a1a1a', borderWidth: 1, borderColor: AMBER, shadowOpacity: 0 },
   cancelRequestBtnText: { fontSize: 14, fontWeight: '700', color: '#ffffff' },
   connectedBtn: { backgroundColor: '#0f3320', shadowOpacity: 0 },
-  connectBtnText: { fontSize: 14, fontWeight: '700', color: 'white' },
+  connectBtnText: { fontSize: 13, fontWeight: '700', color: '#64B5F6' },
   connectBtnTextDisabled: { fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.6)' },
   emptyPeople: { backgroundColor: 'rgba(26,16,8,0.75)', borderRadius: 24, padding: 28, alignItems: 'center', gap: 6 },
   emptyEmoji: { fontSize: 32 },
@@ -879,7 +980,7 @@ const s = StyleSheet.create({
   finderCard: { backgroundColor: 'rgba(130,245,193,0.15)', borderRadius: 24, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(130,245,193,0.5)' },
   hintRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
   hintChip: { borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)', backgroundColor: '#1a1a1a' },
-  hintChipActive: { backgroundColor: GREEN, borderColor: GREEN },
+  hintChipActive: { backgroundColor: '#e8824a', borderColor: '#e8824a' },
   hintChipText: { fontSize: 13, color: 'rgba(255,255,255,0.7)', fontWeight: '500' },
   hintChipTextActive: { color: 'white' },
 
