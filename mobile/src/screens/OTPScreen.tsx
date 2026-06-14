@@ -62,7 +62,7 @@ export default function OTPScreen() {
       if (password) {
         try { await signIn(email, password) } catch {}
       }
-      navigation.reset({ index: 0, routes: [{ name: 'Onboarding' }] })
+      navigation.reset({ index: 0, routes: [{ name: 'Landing' }] })
     } catch (e: any) {
       setError(e.message || 'Invalid OTP')
     } finally {
