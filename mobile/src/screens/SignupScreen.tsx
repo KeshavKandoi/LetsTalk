@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigation } from '@react-navigation/native'
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform, Animated, Dimensions, FlatList
+  ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform, Animated, Dimensions
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { MaterialIcons, Ionicons } from '@expo/vector-icons'
@@ -207,88 +207,67 @@ export default function SignupScreen() {
 
             <Text style={styles.label}>DATE OF BIRTH</Text>
             <View style={styles.dobRow}>
-              <TouchableOpacity style={styles.dobBtn} onPress={() => setShowMonthDrop(!showMonthDrop)}>
+              <TouchableOpacity style={styles.dobBtn} onPress={() => { setShowMonthDrop(!showMonthDrop); setShowDayDrop(false); setShowYearDrop(false); setShowGenderDrop(false) }}>
                 <Text style={{ color: dobMonth ? '#121414' : '#999' }}>{dobMonth || 'Mon'}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.dobBtn} onPress={() => setShowDayDrop(!showDayDrop)}>
+              <TouchableOpacity style={styles.dobBtn} onPress={() => { setShowDayDrop(!showDayDrop); setShowMonthDrop(false); setShowYearDrop(false); setShowGenderDrop(false) }}>
                 <Text style={{ color: dobDay ? '#121414' : '#999' }}>{dobDay || 'DD'}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.dobBtn} onPress={() => setShowYearDrop(!showYearDrop)}>
+              <TouchableOpacity style={styles.dobBtn} onPress={() => { setShowYearDrop(!showYearDrop); setShowMonthDrop(false); setShowDayDrop(false); setShowGenderDrop(false) }}>
                 <Text style={{ color: dobYear ? '#121414' : '#999' }}>{dobYear || 'YYYY'}</Text>
               </TouchableOpacity>
             </View>
 
-            {/* showMonthDrop && (
-              <FlatList
-                nestedScrollEnabled
-                data={['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']}
-                keyExtractor={(m) => m}
-                scrollEnabled={true}
-                style={styles.dropdownList}
-                renderItem={({ item: m }) => (
+            {showMonthDrop && (
+              <ScrollView nestedScrollEnabled style={styles.dropdownList}>
+                {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m) => (
                   <TouchableOpacity
+                    key={m}
                     style={styles.dropdownItem}
-                    onPress={() => {
-                      setDobMonth(m)
-                      setShowMonthDrop(false)
-                    }}
+                    onPress={() => { setDobMonth(m); setShowMonthDrop(false) }}
                   >
                     <Text style={dobMonth === m ? styles.selectedText : styles.dropdownText}>{m}</Text>
                   </TouchableOpacity>
-                )}
-              />
-            )*/ }
+                ))}
+              </ScrollView>
+            )}
 
-            {/* showDayDrop && (
-              <FlatList
-                nestedScrollEnabled
-                data={Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, '0'))}
-                keyExtractor={(d) => d}
-                scrollEnabled={true}
-                style={styles.dropdownList}
-                renderItem={({ item: d }) => (
+            {showDayDrop && (
+              <ScrollView nestedScrollEnabled style={styles.dropdownList}>
+                {Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, '0')).map((d) => (
                   <TouchableOpacity
+                    key={d}
                     style={styles.dropdownItem}
-                    onPress={() => {
-                      setDobDay(d)
-                      setShowDayDrop(false)
-                    }}
+                    onPress={() => { setDobDay(d); setShowDayDrop(false) }}
                   >
                     <Text style={dobDay === d ? styles.selectedText : styles.dropdownText}>{d}</Text>
                   </TouchableOpacity>
-                )}
-              />
-            )*/ }
+                ))}
+              </ScrollView>
+            )}
 
-            {/* showYearDrop && (
-              <FlatList
-                nestedScrollEnabled
-                data={Array.from({ length: 80 }, (_, i) => String(new Date().getFullYear() - 18 - i))}
-                keyExtractor={(y) => y}
-                scrollEnabled={true}
-                style={styles.dropdownList}
-                renderItem={({ item: y }) => (
+            {showYearDrop && (
+              <ScrollView nestedScrollEnabled style={styles.dropdownList}>
+                {Array.from({ length: 80 }, (_, i) => String(new Date().getFullYear() - 18 - i)).map((y) => (
                   <TouchableOpacity
+                    key={y}
                     style={styles.dropdownItem}
-                    onPress={() => {
-                      setDobYear(y)
-                      setShowYearDrop(false)
-                    }}
+                    onPress={() => { setDobYear(y); setShowYearDrop(false) }}
                   >
                     <Text style={dobYear === y ? styles.selectedText : styles.dropdownText}>{y}</Text>
                   </TouchableOpacity>
-                )}
-              />
-            )*/ }
+                ))}
+              </ScrollView>
+            )}
 
             <Text style={styles.label}>GENDER</Text>
-            <TouchableOpacity style={styles.genderButton} onPress={() => setShowGenderDrop(!showGenderDrop)}>
+            <TouchableOpacity style={styles.genderButton} onPress={() => { setShowGenderDrop(!showGenderDrop); setShowMonthDrop(false); setShowDayDrop(false); setShowYearDrop(false) }}>
               <Text style={{ color: gender ? '#121414' : '#999', fontSize: 14 }}>
                 {gender || 'Select gender'}
               </Text>
             </TouchableOpacity>
 
-            {/* showGenderDrop && (
+            {showGenderDrop && (
               <View style={styles.dropdownList}>
                 {['Male', 'Female', 'Other'].map((g) => (
                   <TouchableOpacity
@@ -303,7 +282,7 @@ export default function SignupScreen() {
                   </TouchableOpacity>
                 ))}
               </View>
-            )*/ }
+            )}
 
             <TouchableOpacity style={styles.checkboxRow} onPress={() => setAgreedToTerms(!agreedToTerms)}>
               <View style={[styles.checkbox, agreedToTerms && styles.checkboxChecked]}>
@@ -529,7 +508,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 179, 179, 0.2)',
     marginBottom: 12,
-    maxHeight: 150,
+    maxHeight: 160,
   },
   dropdownItem: {
     paddingVertical: 10,
@@ -634,6 +613,9 @@ const styles = StyleSheet.create({
     color: '#00e3fd',
     letterSpacing: 0.6,
     textTransform: 'uppercase',
+  },
+  cardContent: {
+    zIndex: 5,
   },
   accentBars: {
     flexDirection: 'row',
