@@ -87,10 +87,11 @@ export default function LoginScreen() {
     if (!isConnected) { setError('No internet connection. Please check your network.'); return }
     if (!email || !password) { setError('Please fill in all fields'); return }
     try {
+      const currentToken = await AsyncStorage.getItem('session_token')
       const res = await fetch(`${BASE_URL}/api/auth/check-session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, currentToken }),
       })
       const { hasSession } = await res.json()
       if (hasSession) {
