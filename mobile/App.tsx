@@ -34,7 +34,7 @@ export default function App() {
         const session = await getSession()
         // ✅ Only auto-login if session exists AND email is verified
         if (session?.session && session?.user?.emailVerified) {
-          setInitialRoute('Landing')
+          setInitialRoute('Onboarding')
         } else {
           await signOut()
           setInitialRoute('Landing')
