@@ -71,7 +71,7 @@ export default function SignupScreen() {
       }
       const dob = `${dobYear}-${dobMonth}-${dobDay}`
       await signUp(email, username, password, dob, gender)
-      navigation.navigate('OTP', { email })
+      navigation.navigate('OTP', { email, password })
     } catch (e: any) {
       setError(e.message || 'Signup failed')
     } finally {
