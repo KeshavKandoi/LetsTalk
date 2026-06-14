@@ -1,26 +1,34 @@
 import { useState, useRef, useEffect } from 'react'
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  SafeAreaView, ActivityIndicator, KeyboardAvoidingView, Platform
+  ActivityIndicator, KeyboardAvoidingView, Platform, Animated, Dimensions
 } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import { MaterialIcons } from '@expo/vector-icons'
 import { verifyOTP, sendOTP, signIn } from '../lib/auth'
+
+const { height } = Dimensions.get('window')
 
 export default function OTPScreen() {
   const navigation = useNavigation<any>()
   const route = useRoute<any>()
   const { email, password } = route.params || {}
-
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [loading, setLoading] = useState(false)
   const [resending, setResending] = useState(false)
   const [error, setError] = useState('')
   const [countdown, setCountdown] = useState(60)
   const inputs = useRef<any[]>([])
+  const embersAnim = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
-    // Send OTP when screen first loads
+    Animated.loop(
+      Animated.timing(embersAnim, { toValue: 1, duration: 8000, useNativeDriver: true })
+    ).start()
+  }, [])
+
+  useEffect(() => {
     sendOTP(email).catch(() => {})
   }, [])
 
@@ -79,88 +87,142 @@ export default function OTPScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <View style={styles.scroll}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-            <MaterialIcons name="arrow-back" size={20} color="#813400" />
-            <Text style={styles.backText}>Back</Text>
+      <View style={styles.bgContainer}>
+        <View style={[styles.bgGradient, { backgroundColor: '#121414' }]} />
+        <View style={[styles.bgGradient, { backgroundColor: '#D84315', opacity: 0.85 }]} />
+      </View>
+      <View pointerEvents="none" style={styles.embersContainer}>
+        {[...Array(15)].map((_, i) => (
+          <Animated.View
+            key={i}
+            style={[styles.ember, {
+              left: `${Math.random() * 100}%`,
+              opacity: embersAnim.interpolate({ inputRange: [0, 0.2, 0.8, 1], outputRange: [0, 0.8, 0.8, 0] }),
+              transform: [{ translateY: embersAnim.interpolate({ inputRange: [0, 1], outputRange: [height, -height] }) }],
+            }]}
+          />
+        ))}
+      </View>
+
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
+        <View style={styles.inner}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <MaterialIcons name="chevron-left" size={28} color="#ff525f" />
           </TouchableOpacity>
-          <View style={styles.brandRow}>
-            <MaterialIcons name="forum" size={26} color="#813400" />
-            <Text style={styles.brandName}>Let's Talk</Text>
+
+          <View style={styles.headerSection}>
+            <Text style={styles.badgeText}>EMAIL VERIFICATION</Text>
+            <Text style={styles.mainTitle}>Check{'\n'}your{'\n'}email</Text>
           </View>
-          <View style={styles.card}>
-            <View style={styles.iconCircle}>
-              <MaterialIcons name="mark-email-unread" size={36} color="#405e98" />
-            </View>
-            <Text style={styles.title}>Check your email</Text>
-            <Text style={styles.subtitle}>We sent a 6-digit verification code to</Text>
-            <Text style={styles.email}>{email}</Text>
-            {error ? (
-              <View style={styles.errorBox}>
-                <MaterialIcons name="error-outline" size={16} color="#93000a" />
-                <Text style={styles.errorText}>{error}</Text>
+
+          <View style={styles.formCard}>
+            <View style={styles.formContent}>
+              <Text style={styles.subtitle}>We sent a 6-digit code to</Text>
+              <Text style={styles.emailText}>{email}</Text>
+
+              {error ? (
+                <View style={styles.errorBox}>
+                  <MaterialIcons name="error-outline" size={16} color="#ff5555" />
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              ) : null}
+
+              <Text style={styles.fieldLabel}>VERIFICATION CODE</Text>
+              <View style={styles.otpRow}>
+                {otp.map((digit, index) => (
+                  <TextInput
+                    key={index}
+                    ref={(r) => (inputs.current[index] = r)}
+                    style={[styles.otpBox, digit ? styles.otpBoxFilled : null]}
+                    value={digit}
+                    onChangeText={(t) => handleChange(t.slice(-1), index)}
+                    onKeyPress={(e) => handleKeyPress(e, index)}
+                    keyboardType="numeric"
+                    maxLength={1}
+                    selectTextOnFocus
+                  />
+                ))}
               </View>
-            ) : null}
-            <View style={styles.otpRow}>
-              {otp.map((digit, index) => (
-                <TextInput
-                  key={index}
-                  ref={(r) => (inputs.current[index] = r)}
-                  style={[styles.otpBox, digit ? styles.otpBoxFilled : null]}
-                  value={digit}
-                  onChangeText={(t) => handleChange(t.slice(-1), index)}
-                  onKeyPress={(e) => handleKeyPress(e, index)}
-                  keyboardType="numeric"
-                  maxLength={1}
-                  selectTextOnFocus
-                />
-              ))}
+
+              <TouchableOpacity
+                style={[styles.verifyButton, { transform: [{ skewX: '12deg' }] }]}
+                onPress={handleVerify}
+                disabled={loading}
+              >
+                <View style={[styles.buttonShade, { position: 'absolute', left: -15, backgroundColor: '#ff525f' }]} />
+                {loading ? (
+                  <ActivityIndicator color="#121414" size="small" />
+                ) : (
+                  <View style={styles.buttonContent}>
+                    <Text style={styles.buttonText}>Verify Email</Text>
+                    <MaterialIcons name="verified" size={18} color="#121414" style={{ marginLeft: 12 }} />
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              <View style={styles.dividerLine} />
+
+              <View style={styles.resendRow}>
+                <Text style={styles.resendLabel}>DIDN'T RECEIVE CODE? </Text>
+                {countdown > 0 ? (
+                  <Text style={styles.countdown}>RESEND IN {countdown}S</Text>
+                ) : (
+                  <TouchableOpacity onPress={handleResend} disabled={resending}>
+                    <Text style={styles.resendLink}>{resending ? 'SENDING...' : 'RESEND'}</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
-            <TouchableOpacity style={styles.primaryBtn} onPress={handleVerify} disabled={loading}>
-              {loading
-                ? <ActivityIndicator color="white" />
-                : <><Text style={styles.primaryText}>Verify Email</Text><MaterialIcons name="verified" size={20} color="white" style={{ marginLeft: 8 }} /></>
-              }
-            </TouchableOpacity>
-            <View style={styles.resendRow}>
-              <Text style={styles.resendLabel}>Didn't receive the code? </Text>
-              {countdown > 0 ? (
-                <Text style={styles.countdown}>Resend in {countdown}s</Text>
-              ) : (
-                <TouchableOpacity onPress={handleResend} disabled={resending}>
-                  <Text style={styles.resendLink}>{resending ? 'Sending...' : 'Resend'}</Text>
-                </TouchableOpacity>
-              )}
-            </View>
+          </View>
+
+          <View style={[styles.accentBars, { transform: [{ skewX: '-12deg' }] }]}>
+            <View style={[styles.bar, { width: '20%', backgroundColor: '#ff525f' }]} />
+            <View style={[styles.bar, { width: '8%', backgroundColor: '#00e3fd' }]} />
+            <View style={[styles.bar, { width: '40%', backgroundColor: 'rgba(255,255,255,0.08)' }]} />
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      <View style={styles.bottomStatus}>
+        <Text style={styles.statusText}>UPLINK: ACTIVE [99.2%]</Text>
+      </View>
     </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#E9DFC9' },
-  scroll: { flex: 1, padding: 24 },
-  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, marginBottom: 20 },
-  backText: { color: '#813400', fontWeight: '600', fontSize: 16 },
-  brandRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 24 },
-  brandName: { fontSize: 22, fontWeight: '800', color: '#813400', letterSpacing: -0.3 },
-  card: { backgroundColor: 'rgba(253,243,220,0.88)', borderRadius: 24, padding: 28, borderWidth: 1, borderColor: 'rgba(255,255,255,0.45)', alignItems: 'center' },
-  iconCircle: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#e8eeff', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
-  title: { fontSize: 24, fontWeight: '700', color: '#201b0e', marginBottom: 8, letterSpacing: -0.3 },
-  subtitle: { fontSize: 14, color: '#55433a', textAlign: 'center' },
-  email: { fontSize: 15, fontWeight: '700', color: '#405e98', marginBottom: 24, textAlign: 'center' },
-  errorBox: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#ffdad6', borderRadius: 12, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: '#ffb4ab', alignSelf: 'stretch' },
-  errorText: { color: '#93000a', fontSize: 13, flex: 1 },
-  otpRow: { flexDirection: 'row', gap: 10, marginBottom: 28 },
-  otpBox: { width: 46, height: 56, borderRadius: 14, borderWidth: 2, borderColor: 'rgba(220,193,181,0.6)', backgroundColor: '#fdf3dc', textAlign: 'center', fontSize: 22, fontWeight: '700', color: '#201b0e' },
-  otpBoxFilled: { borderColor: '#405e98', backgroundColor: '#e8eeff' },
-  primaryBtn: { backgroundColor: '#405e98', borderRadius: 50, paddingVertical: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', alignSelf: 'stretch', shadowColor: '#405e98', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 4 },
-  primaryText: { color: 'white', fontWeight: '700', fontSize: 16 },
-  resendRow: { flexDirection: 'row', alignItems: 'center', marginTop: 20 },
-  resendLabel: { fontSize: 13, color: '#55433a' },
-  countdown: { fontSize: 13, color: '#897268', fontWeight: '600' },
-  resendLink: { fontSize: 13, color: '#813400', fontWeight: '700' },
+  container: { flex: 1, backgroundColor: '#121414', overflow: 'hidden' },
+  bgContainer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0 },
+  bgGradient: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  embersContainer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1 },
+  ember: { position: 'absolute', width: 2, height: 2, backgroundColor: '#ff525f', borderRadius: 1 },
+  flex: { flex: 1, zIndex: 5 },
+  inner: { flex: 1, paddingHorizontal: 16, paddingTop: 60, paddingBottom: 20 },
+  backButton: { position: 'absolute', top: 16, left: 16, width: 44, height: 44, justifyContent: 'center', alignItems: 'flex-start', zIndex: 20 },
+  headerSection: { marginBottom: 40, paddingTop: 8, paddingLeft: 12 },
+  badgeText: { fontSize: 16, fontWeight: '900', color: '#ff525f', letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 12 },
+  mainTitle: { fontSize: 52, fontWeight: '900', color: '#e2e2e2', letterSpacing: -2, textTransform: 'uppercase', lineHeight: 56, fontStyle: 'italic', marginBottom: -35, zIndex: 200 },
+  formCard: { backgroundColor: 'rgba(18,20,20,0.85)', borderWidth: 1, marginTop: -30, zIndex: 1, borderColor: 'rgba(255,179,179,0.15)', padding: 28, marginBottom: 28, transform: [{ rotateZ: '-4deg' }, { translateX: -8 }] },
+  formContent: { transform: [{ rotateZ: '4deg' }] },
+  subtitle: { fontSize: 13, color: '#ae8787', marginBottom: 4 },
+  emailText: { fontSize: 14, fontWeight: '700', color: '#ff525f', marginBottom: 24, letterSpacing: 0.3 },
+  errorBox: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,82,95,0.12)', borderLeftWidth: 4, borderLeftColor: '#ff525f', padding: 12, marginBottom: 20 },
+  errorText: { fontSize: 12, color: '#ff9999', fontWeight: '600', flex: 1, textTransform: 'uppercase' },
+  fieldLabel: { fontSize: 11, fontWeight: '800', color: '#ae8787', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 12 },
+  otpRow: { flexDirection: 'row', gap: 8, marginBottom: 28 },
+  otpBox: { flex: 1, height: 56, borderWidth: 2, borderColor: 'rgba(255,179,179,0.3)', backgroundColor: '#1a1a1a', textAlign: 'center', fontSize: 22, fontWeight: '700', color: '#e2e2e2' },
+  otpBoxFilled: { borderColor: '#ff525f', backgroundColor: '#2a1a1a' },
+  verifyButton: { backgroundColor: '#e2e2e2', paddingVertical: 16, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 24, position: 'relative', overflow: 'visible' },
+  buttonShade: { top: 0, height: '100%', width: 12, zIndex: -1 },
+  buttonContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  buttonText: { color: '#121414', fontWeight: '900', fontSize: 15, letterSpacing: 1.2, textTransform: 'uppercase' },
+  dividerLine: { height: 1, backgroundColor: 'rgba(255,255,255,0.12)', marginVertical: 16 },
+  resendRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  resendLabel: { fontSize: 11, color: '#ae8787', fontWeight: '600' },
+  countdown: { fontSize: 11, color: '#ae8787', fontWeight: '700' },
+  resendLink: { fontSize: 11, color: '#00e3fd', fontWeight: '800', letterSpacing: 0.5 },
+  accentBars: { flexDirection: 'row', gap: 8 },
+  bar: { height: 3, borderRadius: 1.5 },
+  bottomStatus: { position: 'absolute', bottom: 20, right: 20, zIndex: 10 },
+  statusText: { fontSize: 10, color: '#ff525f', fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', fontFamily: 'monospace' },
 })
