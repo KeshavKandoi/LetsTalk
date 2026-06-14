@@ -296,11 +296,12 @@ const styles = StyleSheet.create({
   flex: { flex: 1, zIndex: 5 },
   scrollContent: { paddingHorizontal: 16, paddingTop: 60, paddingBottom: 20 },
   backButton: { position: 'absolute', top: 16, left: 16, width: 44, height: 44, justifyContent: 'center', alignItems: 'flex-start', zIndex: 20, marginBottom: 0 },
-  headerSection: { marginBottom: 40, paddingTop: 8, paddingLeft: 12 },
+  headerSection: { marginBottom: 40, paddingTop: 8, paddingLeft: 12, position: 'relative', zIndex: 100 },
 
   authBadgeText: { fontSize: 12, fontWeight: '900', color: '#ff525f', letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 12 },
-  mainTitle: { fontSize: 56, fontWeight: '900', color: '#e2e2e2', letterSpacing: -2, textTransform: 'uppercase', lineHeight: 60, fontStyle: 'italic' },
-  formCard: { backgroundColor: 'rgba(18, 20, 20, 0.85)', borderWidth: 1, borderColor: 'rgba(255, 179, 179, 0.15)', padding: 28, marginBottom: 28, transform: [{ rotateZ: '-4deg' },{ translateX: -8 },], },formContent: {
+  mainTitle: { fontSize: 56, fontWeight: '900', color: '#e2e2e2', letterSpacing: -2, textTransform: 'uppercase', lineHeight: 60, fontStyle: 'italic', marginBottom: -35, zIndex: 200 },
+  formCard: { backgroundColor: 'rgba(18, 20, 20, 0.85)', borderWidth: 1, marginTop: -30, zIndex: 1, borderColor: 'rgba(255, 179, 179, 0.15)', padding: 28, marginBottom: 28, transform: [{ rotateZ: '-4deg' },{ translateX: -8 }] },
+  formContent: {
   transform: [{ rotateZ: '4deg' }],
 },
   errorBox: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255, 82, 95, 0.12)', borderLeftWidth: 4, borderLeftColor: '#ff525f', padding: 12, marginBottom: 28 },
