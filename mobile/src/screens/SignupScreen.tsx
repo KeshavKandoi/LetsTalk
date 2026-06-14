@@ -6,6 +6,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { MaterialIcons, Ionicons } from '@expo/vector-icons'
+import { signUp } from '../lib/auth'
 
 const { width, height } = Dimensions.get('window')
 
@@ -57,6 +58,19 @@ export default function SignupScreen() {
     setLoading(true)
     setError('')
     try {
+      const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.29.59:3000'
+      const checkRes = await fetch(`${BASE_URL}/api/auth/check-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      const { exists } = await checkRes.json()
+      if (exists) {
+        setError('An account with this email already exists. Please log in.')
+        return
+      }
+      const dob = `${dobYear}-${dobMonth}-${dobDay}`
+      await signUp(email, username, password, dob, gender)
       navigation.navigate('OTP', { email })
     } catch (e: any) {
       setError(e.message || 'Signup failed')
