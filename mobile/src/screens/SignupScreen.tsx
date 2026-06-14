@@ -101,9 +101,7 @@ export default function SignupScreen() {
         ))}
       </View>
 
-      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-        <MaterialIcons name="chevron-left" size={28} color="#ff525f" />
-      </TouchableOpacity>
+
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -116,6 +114,10 @@ export default function SignupScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          <TouchableOpacity style={styles.backButtonScroll} onPress={() => navigation.goBack()}>
+            <MaterialIcons name="chevron-left" size={28} color="#ff525f" />
+          </TouchableOpacity>
+
           <View style={styles.header}>
             <Text style={styles.badgeText}>IDENTITY CREATION</Text>
             <Text style={styles.titleText}>CREATE{'\n'}IDENTITY</Text>
@@ -399,6 +401,14 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     zIndex: 20,
   },
+  backButtonScroll: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    marginBottom: 2,
+    marginTop: -35,
+  },
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 40,
@@ -407,18 +417,19 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 30,
-    paddingTop: 15,
+    paddingTop: 0,
     paddingLeft: 8,
     zIndex: 100,
   elevation: 100,
   },
   badgeText: {
-    fontSize: 11,
+    fontSize: 16,
     fontWeight: '900',
     color: '#ff525f',
-    letterSpacing: 2,
+    letterSpacing: 3,
     textTransform: 'uppercase',
-    marginBottom: 19,
+    marginBottom: 16,
+    fontStyle: 'italic',
   },
   titleText: {
     fontSize: 52,
