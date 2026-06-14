@@ -5,12 +5,12 @@ import {
 } from 'react-native'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import { MaterialIcons } from '@expo/vector-icons'
-import { verifyOTP, sendOTP } from '../lib/auth'
+import { verifyOTP, sendOTP, signIn } from '../lib/auth'
 
 export default function OTPScreen() {
   const navigation = useNavigation<any>()
   const route = useRoute<any>()
-  const { email } = route.params || {}
+  const { email, password } = route.params || {}
 
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [loading, setLoading] = useState(false)
@@ -51,6 +51,9 @@ export default function OTPScreen() {
     setError('')
     try {
       await verifyOTP(email, code)
+      if (password) {
+        try { await signIn(email, password) } catch {}
+      }
       navigation.reset({ index: 0, routes: [{ name: 'Onboarding' }] })
     } catch (e: any) {
       setError(e.message || 'Invalid OTP')
