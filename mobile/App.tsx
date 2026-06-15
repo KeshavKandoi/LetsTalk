@@ -20,12 +20,14 @@ import FriendsScreen from './src/screens/FriendsScreen'
 import ConversationScreen from './src/screens/ConversationScreen'
 import OTPScreen from './src/screens/OTPScreen'
 import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen'
+import SplashScreen from './src/screens/SplashScreen'
 
 const Stack = createNativeStackNavigator()
 
 export default function App() {
   const [loading, setLoading] = useState(true)
   const [initialRoute, setInitialRoute] = useState('Landing')
+  const [showSplash, setShowSplash] = useState(true)
 
   const isConnected = useNetworkCheck()
   useEffect(() => {
@@ -47,6 +49,15 @@ export default function App() {
     }
     init()
   }, [])
+
+  if (showSplash) {
+    return (
+      <SplashScreen
+        onComplete={() => setShowSplash(false)}
+        duration={3000}
+      />
+    )
+  }
 
   if (loading) {
     return (
