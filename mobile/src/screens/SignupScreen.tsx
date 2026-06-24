@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   header: {
-    marginBottom: 30,
+    marginBottom: 10,
     paddingTop: 0,
     paddingLeft: 8,
     zIndex: 100,
