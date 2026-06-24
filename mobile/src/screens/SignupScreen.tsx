@@ -399,8 +399,8 @@ const styles = StyleSheet.create({
     height: 44,
     justifyContent: 'center',
     alignItems: 'flex-start',
-    marginBottom: 2,
-    marginTop: -35,
+    marginBottom: 8,
+    marginTop: 8,
   },
   scrollContent: {
     paddingHorizontal: 16,
@@ -440,14 +440,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 179, 179, 0.15)',
     padding: 24,
-    zIndex: 50,
-     marginTop: -50,  
-  paddingTop: 50,   
     marginBottom: 40,
-    transform: [
-    { rotateZ: '-4deg' },
-    { translateX: 2},
-  ],
+    zIndex: 50,
   },
   genderButton: {
   height: 48,
