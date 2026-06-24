@@ -83,7 +83,7 @@ export default function SignupScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.bgContainer}>
         <View style={[styles.bgGradient, { backgroundColor: '#121414' }]} />
-        <View style={[styles.bgGradient, { backgroundColor: '#D84315', opacity: 0.85 }]} />
+        <View style={[styles.bgGradient, { backgroundColor: '#000000', opacity: 0.95 }]} />
       </View>
 
       <View
