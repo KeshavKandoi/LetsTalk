@@ -61,6 +61,9 @@ export default function OnboardingScreen() {
   const [intentText, setIntentText] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filteredPlaces, setFilteredPlaces] = useState<NearbyPlace[]>([])
+  const [isSearching, setIsSearching] = useState(false)
   const previewParticipants = preview?.participants ?? preview?.readyParticipants ?? []
 
   const fetchNearbyPlaces = async () => {
@@ -93,6 +96,21 @@ export default function OnboardingScreen() {
     } finally {
       setPlacesLoading(false)
     }
+  }
+
+  const searchPlaces = (query: string) => {
+    setSearchQuery(query)
+    if (!query.trim()) { 
+      setIsSearching(false)
+      setFilteredPlaces([])
+      return 
+    }
+    setIsSearching(true)
+    const filtered = places.filter(place => 
+      place.name.toLowerCase().includes(query.toLowerCase()) ||
+      place.address.toLowerCase().includes(query.toLowerCase())
+    )
+    setFilteredPlaces(filtered)
   }
 
   useEffect(() => { fetchNearbyPlaces() }, [])
@@ -154,12 +172,28 @@ export default function OnboardingScreen() {
 
           {!selectedPlace && (
             <>
-              <TouchableOpacity style={s.primaryBtn} onPress={fetchNearbyPlaces} disabled={placesLoading}>
-                {placesLoading
-                  ? <ActivityIndicator color="white" />
-                  : <Text style={s.primaryBtnText}>📍 Refresh nearby places</Text>}
-              </TouchableOpacity>
-              {places.map((place) => (
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+                <TextInput
+                  style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#fff', borderWidth: 1, borderColor: 'rgba(232,130,74,0.3)' }}
+                  placeholder="Search for a place..."
+                  placeholderTextColor="rgba(255,255,255,0.4)"
+                  value={searchQuery}
+                  onChangeText={searchPlaces}
+                />
+                {searchQuery ? (
+                  <TouchableOpacity style={{ backgroundColor: 'rgba(232,130,74,0.2)', borderRadius: 12, paddingHorizontal: 12, justifyContent: 'center' }} onPress={() => { setSearchQuery(''); setIsSearching(false); setFilteredPlaces([]); fetchNearbyPlaces() }}>
+                    <Text style={{ color: '#e8824a', fontWeight: '700' }}>✕</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+              {!isSearching && (
+                <TouchableOpacity style={s.primaryBtn} onPress={fetchNearbyPlaces} disabled={placesLoading}>
+                  {placesLoading
+                    ? <ActivityIndicator color="white" />
+                    : <Text style={s.primaryBtnText}>📍 Refresh nearby places</Text>}
+                </TouchableOpacity>
+              )}
+              {(isSearching ? filteredPlaces : places).map((place) => (
                 <TouchableOpacity key={place.placeId} style={s.placeCard} onPress={() => setSelectedPlace(place)}>
                   <View style={s.placeCardRow}>
                     <Text style={s.placeName}>{place.name}</Text>
