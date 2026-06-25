@@ -1,6 +1,6 @@
 [build]
 builder = "nixpacks"
-buildCommand = "npm install -g pnpm@9 && export PATH=$PATH:$(npm root -g)/.bin && cd Frontend && pnpm install && pnpm run build"
+buildCommand = "corepack enable && corepack prepare pnpm@9 --activate && cd Frontend && pnpm install && pnpm run build"
 
 [deploy]
 startCommand = "cd Frontend && node dist/server/server.js"
