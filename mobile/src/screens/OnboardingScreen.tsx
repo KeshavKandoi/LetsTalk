@@ -140,8 +140,7 @@ export default function OnboardingScreen() {
               <Text style={s.backBtnText}>‹</Text>
             </TouchableOpacity>
             <Text style={s.headerTitle}>
-              Let's Talk{' '}
-              <Text style={s.headerTitleHighlight}>Real</Text>
+              Lets Talk
             </Text>
             <View style={{ width: 56 }} />
           </View>
@@ -245,7 +244,7 @@ const s = StyleSheet.create({
   overlay: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.65)' },
   scroll: { padding: 20, paddingTop: 12, paddingBottom: 60 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 },
-  headerTitle: { fontSize: 26, fontWeight: '900', color: '#c084fc' },
+  headerTitle: { fontSize: 26, fontWeight: '900', color: '#ffffff' },
   headerTitleHighlight: { fontSize: 26, fontWeight: '900', color: '#e9d5ff' },
   backBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(30,15,5,0.75)', justifyContent: 'center', alignItems: 'center' },
   backBtnText: { color: '#fff', fontWeight: '300', fontSize: 28, lineHeight: 30, marginLeft: -2 },
