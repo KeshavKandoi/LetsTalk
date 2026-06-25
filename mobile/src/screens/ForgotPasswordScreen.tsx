@@ -108,7 +108,7 @@ export default function ForgotPasswordScreen({ route }: any) {
     <SafeAreaView style={styles.safeContainer}>
       <View style={styles.bgContainer}>
         <View style={[styles.bgGradient, { backgroundColor: '#121414' }]} />
-        <View style={[styles.bgGradient, { backgroundColor: '#D84315', opacity: 0.85 }]} />
+        <View style={[styles.bgGradient, { backgroundColor: '#000000', opacity: 0.85 }]} />
       </View>
 
       <View pointerEvents="none" style={styles.embersContainer}>
@@ -163,7 +163,7 @@ export default function ForgotPasswordScreen({ route }: any) {
                   </View>
 
                   <TouchableOpacity
-                    style={[styles.initiateButton, { transform: [{ skewX: '12deg' }] }]}
+                    style={styles.initiateButton}
                     onPress={handleVerifyOTP}
                     disabled={loading}
                   >
@@ -221,7 +221,7 @@ export default function ForgotPasswordScreen({ route }: any) {
                   </View>
 
                   <TouchableOpacity
-                    style={[styles.initiateButton, { transform: [{ skewX: '12deg' }] }]}
+                    style={styles.initiateButton}
                     onPress={handleResetPassword}
                     disabled={loading}
                   >
@@ -238,7 +238,7 @@ export default function ForgotPasswordScreen({ route }: any) {
             </View>
           </View>
 
-          <View style={[styles.accentBars, { transform: [{ skewX: '-12deg' }] }]}>
+          <View style={styles.accentBars}>
             <View style={[styles.bar, { width: '20%', backgroundColor: '#ff525f' }]} />
             <View style={[styles.bar, { width: '8%', backgroundColor: '#00e3fd' }]} />
             <View style={[styles.bar, { width: '40%', backgroundColor: 'rgba(255,255,255,0.08)' }]} />
@@ -265,8 +265,8 @@ const styles = StyleSheet.create({
   headerSection: { marginBottom: 40, paddingTop: 8, paddingLeft: 12 },
   authBadgeText: { fontSize: 16, fontWeight: '900', color: '#ff525f', letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 12 },
   mainTitle: { fontSize: 56, fontWeight: '900', color: '#e2e2e2', letterSpacing: -2, textTransform: 'uppercase', lineHeight: 60, fontStyle: 'italic', marginBottom: -20, zIndex: 200 },
-  formCard: { backgroundColor: 'rgba(18, 20, 20, 0.85)', borderWidth: 1, marginTop: -30, zIndex: 1, borderColor: 'rgba(255, 179, 179, 0.15)', padding: 28, marginBottom: 28, transform: [{ rotateZ: '-4deg' }, { translateX: -8 }] },
-  formContent: { transform: [{ rotateZ: '4deg' }] },
+  formCard: { backgroundColor: 'rgba(18, 20, 20, 0.85)', borderWidth: 1, marginTop: -30, zIndex: 1, borderColor: 'rgba(255, 179, 179, 0.15)', padding: 28, marginBottom: 28, transform: [{ translateX: -8 }] },
+  formContent: {},
   subtitle: { fontSize: 12, color: '#ae8787', fontWeight: '600', letterSpacing: 0.5, marginBottom: 28, marginTop: 12, textTransform: 'uppercase' },
   errorBox: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255, 82, 95, 0.12)', borderLeftWidth: 4, borderLeftColor: '#ff525f', padding: 12, marginBottom: 20 },
   errorText: { fontSize: 12, color: '#ff9999', fontWeight: '600', flex: 1, textTransform: 'uppercase' },
