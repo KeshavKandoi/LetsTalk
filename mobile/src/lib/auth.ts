@@ -11,7 +11,10 @@ export async function signIn(username: string, password: string) {
   })
   const data = await res.json()
   if (!res.ok || data.code || data.error) throw new Error(data.message || data.error?.message || 'Login failed')
-  if (data.token) await AsyncStorage.setItem(SESSION_TOKEN_KEY, data.token)
+  const setCookie = res.headers.get('set-cookie') || ''
+  const cookieMatch = setCookie.match(/better-auth\.session_token=([^;]+)/)
+  if (cookieMatch) await AsyncStorage.setItem(SESSION_TOKEN_KEY, decodeURIComponent(cookieMatch[1]))
+  else if (data.token) await AsyncStorage.setItem(SESSION_TOKEN_KEY, data.token)
   return data
 }
 
@@ -82,7 +85,7 @@ export async function getSession() {
   const token = await getStoredSessionToken()
   if (!token) return null
   const res = await fetch(`${BASE_URL}/api/auth/get-session`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { Cookie: `better-auth.session_token=${token}` },
   })
   if (!res.ok) return null
   const data = await res.json()
