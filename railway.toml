@@ -1,7 +1,7 @@
 [build]
 builder = "nixpacks"
-buildCommand = "cd Frontend && pnpm install && pnpm run build"
+buildCommand = "npm install -g pnpm && cd Frontend && pnpm install && pnpm run build"
 
 [deploy]
-startCommand = "cd Frontend && pnpm run preview"
+startCommand = "cd Frontend && node .output/server/index.mjs"
 restartPolicyType = "ON_FAILURE"
