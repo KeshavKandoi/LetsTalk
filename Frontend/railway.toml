@@ -5,3 +5,6 @@ buildCommand = "pnpm install && pnpm run build"
 [deploy]
 startCommand = "pnpm run preview"
 restartPolicyType = "ON_FAILURE"
+
+[build.nixpacksPlan.phases.setup]
+nixPkgs = ["nodejs_20", "pnpm-9_x", "openssl"]
