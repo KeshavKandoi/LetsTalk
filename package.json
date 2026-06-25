@@ -1,0 +1,11 @@
+{
+  "name": "letstalk-root",
+  "private": true,
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "build": "cd Frontend && npm install -g pnpm && pnpm install && pnpm run build",
+    "start": "cd Frontend && node dist/server/server.js"
+  }
+}
