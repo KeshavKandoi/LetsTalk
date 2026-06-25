@@ -83,7 +83,7 @@ export default function SignupScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.bgContainer}>
         <View style={[styles.bgGradient, { backgroundColor: '#121414' }]} />
-        <View style={[styles.bgGradient, { backgroundColor: '#000000', opacity: 0.95 }]} />
+        <View style={[styles.bgGradient, { backgroundColor: '#D84315', opacity: 0.85 }]} />
       </View>
 
       <View
@@ -399,8 +399,8 @@ const styles = StyleSheet.create({
     height: 44,
     justifyContent: 'center',
     alignItems: 'flex-start',
-    marginBottom: 8,
-    marginTop: 8,
+    marginBottom: 2,
+    marginTop: -35,
   },
   scrollContent: {
     paddingHorizontal: 16,
@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   header: {
-    marginBottom: 10,
+    marginBottom: 30,
     paddingTop: 0,
     paddingLeft: 8,
     zIndex: 100,
@@ -440,8 +440,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 179, 179, 0.15)',
     padding: 24,
-    marginBottom: 40,
     zIndex: 50,
+     marginTop: -50,  
+  paddingTop: 50,   
+    marginBottom: 40,
+    transform: [
+    { rotateZ: '-4deg' },
+    { translateX: 2},
+  ],
   },
   genderButton: {
   height: 48,
