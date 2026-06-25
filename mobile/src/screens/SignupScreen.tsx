@@ -68,9 +68,13 @@ export default function SignupScreen() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       })
-      const { exists } = await checkRes.json()
-      if (exists) {
+      const { exists, emailVerified } = await checkRes.json()
+      if (exists && emailVerified) {
         setError('An account with this email already exists. Please log in.')
+        return
+      }
+      if (exists && !emailVerified) {
+        navigation.navigate('OTP', { email, password })
         return
       }
       const dob = `${dobYear}-${dobMonth}-${dobDay}`
