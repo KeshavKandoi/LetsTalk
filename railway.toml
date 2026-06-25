@@ -1,0 +1,7 @@
+[build]
+builder = "nixpacks"
+buildCommand = "cd Frontend && pnpm install && pnpm run build"
+
+[deploy]
+startCommand = "cd Frontend && pnpm run preview"
+restartPolicyType = "ON_FAILURE"
