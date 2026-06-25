@@ -752,7 +752,14 @@ export default function PlaceViewScreen() {
               <TouchableOpacity
                 key={hint}
                 style={[s.hintChip, (selectedHint ?? profile.locationHint) === hint && s.hintChipActive]}
-                onPress={() => { setSelectedHint(hint); setCustomSpot('') }}
+                onPress={() => { 
+                  if ((selectedHint ?? profile.locationHint) === hint) {
+                    setSelectedHint(null)
+                  } else {
+                    setSelectedHint(hint)
+                    setCustomSpot('')
+                  }
+                }}
                 disabled={false}
               >
                 <Text style={[s.hintChipText, (selectedHint ?? profile.locationHint) === hint && s.hintChipTextActive]}>{hint}</Text>
