@@ -3,5 +3,5 @@ builder = "nixpacks"
 buildCommand = "corepack enable && corepack prepare pnpm@9 --activate && cd Backend && pnpm install && cd ../Frontend && pnpm install && pnpm run build"
 
 [deploy]
-startCommand = "cd Frontend && pnpm exec vite preview --port 8080 --host 0.0.0.0"
+startCommand = "cd Frontend && node start-server.mjs"
 restartPolicyType = "ON_FAILURE"
