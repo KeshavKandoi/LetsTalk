@@ -684,7 +684,7 @@ export async function setReadyState(input: { ready: boolean; latitude?: number; 
       latitude: placeRecord.lat,
       longitude: placeRecord.lng,
     }
-    if (distanceMeters(currentLocation, placeLocation) > 100) {
+    if (distanceMeters(currentLocation, placeLocation) > 200) {
       throw new Error('You are outside 100 meters of this location.')
     }
   }
@@ -718,7 +718,7 @@ export async function verifyOnSiteLocation(input: { latitude?: number; longitude
     latitude: placeRecord.lat,
     longitude: placeRecord.lng,
   }
-  const isWithinRange = distanceMeters(currentLocation, placeLocation) <= 100
+  const isWithinRange = distanceMeters(currentLocation, placeLocation) <= 200
 
   if (isWithinRange) {
     await db
@@ -1525,7 +1525,7 @@ export async function searchNearbyPlacesForLocation(input: {
               latitude: input.latitude,
               longitude: input.longitude,
             },
-            radius: 120,
+            radius: 200,
           },
         },
       }),
