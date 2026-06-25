@@ -8,7 +8,7 @@ export async function apiFetch(path: string, body: object) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(token ? { Cookie: `better-auth.session_token=${token}` } : {}),
     },
     body: JSON.stringify(body),
   })
