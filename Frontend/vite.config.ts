@@ -6,6 +6,9 @@ import viteReact from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
+  preview: {
+    allowedHosts: ['letstalks.app', 'letstalk-production-cd3a.up.railway.app'],
+  },
   publicDir: 'public',
   plugins: [
     devtools(),
