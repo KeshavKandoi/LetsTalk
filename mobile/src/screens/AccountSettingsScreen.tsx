@@ -32,10 +32,10 @@ export default function AccountSettingsScreen() {
       const userEmail = session?.user?.email || ''
       if (!userEmail) { Alert.alert('Error', 'Could not find your email.'); setLoading(false); return }
       setEmail(userEmail)
-      const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.29.59:3000'
+      const BASE_URL = process.env.EXPO_PUBLIC_API_URL
       const res = await fetch(`${BASE_URL}/api/auth/email-otp/send-verification-otp`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Origin': 'http://192.168.29.59:3000' },
+        headers: { 'Content-Type': 'application/json', 'Origin': 'https://letstalks.app' },
         body: JSON.stringify({ email: userEmail, type: 'forget-password' }),
       })
       const data = await res.json()
@@ -59,10 +59,10 @@ export default function AccountSettingsScreen() {
     if (newPassword.length < 8) { Alert.alert('Too short', 'Password must be at least 8 characters.'); return }
     setLoading(true)
     try {
-      const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.29.59:3000'
+      const BASE_URL = process.env.EXPO_PUBLIC_API_URL
       const res = await fetch(`${BASE_URL}/api/auth/email-otp/reset-password`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Origin': 'http://192.168.29.59:3000' },
+        headers: { 'Content-Type': 'application/json', 'Origin': 'https://letstalks.app' },
         body: JSON.stringify({ email, otp, password: newPassword }),
       })
       const data = await res.json()
