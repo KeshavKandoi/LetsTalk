@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.29.59:3000'
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL
 
 export async function apiFetch(path: string, body: object) {
   const token = await AsyncStorage.getItem('session_token')
