@@ -1,0 +1,41 @@
+{
+  "cli": {
+    "version": ">= 20.4.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://letstalks.app",
+        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyDS46VSl7BfPncdn9aIIHGKsppZP3ycNF0",
+        "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "70674819769-059gic0oago8rj4i49oqdn45dlelmlb4.apps.googleusercontent.com",
+        "GOOGLE_MAPS_MAP_ID": "e7a8d5a188f080c433d573a5"
+      }
+    },
+    "preview": {
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://letstalks.app",
+        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyDS46VSl7BfPncdn9aIIHGKsppZP3ycNF0",
+        "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "70674819769-059gic0oago8rj4i49oqdn45dlelmlb4.apps.googleusercontent.com",
+        "GOOGLE_MAPS_MAP_ID": "e7a8d5a188f080c433d573a5"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://letstalks.app",
+        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyDS46VSl7BfPncdn9aIIHGKsppZP3ycNF0",
+        "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "70674819769-059gic0oago8rj4i49oqdn45dlelmlb4.apps.googleusercontent.com",
+        "GOOGLE_MAPS_MAP_ID": "e7a8d5a188f080c433d573a5"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
