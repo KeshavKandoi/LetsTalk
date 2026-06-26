@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.29.59:3000'
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL
 const SESSION_TOKEN_KEY = 'session_token'
 
 export async function signIn(username: string, password: string) {
