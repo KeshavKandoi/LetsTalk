@@ -23,10 +23,14 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.CAMERA"
       ],
       "package": "com.letstalk.app",
-      "googleMapsApiKey": "AIzaSyDS46VSl7BfPncdn9aIIHGKsppZP3ycNF0"
+      "googleMapsApiKey": "AIzaSyDS46VSl7BfPncdn9aIIHGKsppZP3ycNF0",
+      "usesCleartextTraffic": true
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -38,7 +42,6 @@
           "locationAlwaysAndWhenInUsePermission": "LetsTalk needs your location to find nearby places."
         }
       ],
-      "expo-barcode-scanner",
       "expo-web-browser",
       "expo-image",
       [
@@ -46,8 +49,14 @@
         {
           "googleMapsApiKey": "AIzaSyDS46VSl7BfPncdn9aIIHGKsppZP3ycNF0"
         }
-      ]
+      ],
+      "expo-video"
     ],
-    "scheme": "com.letstalk.app"
+    "scheme": "com.letstalk.app",
+    "extra": {
+      "eas": {
+        "projectId": "3d1274e5-092e-4a11-a215-b81f7e905ce1"
+      }
+    }
   }
 }
