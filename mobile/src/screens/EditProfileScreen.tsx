@@ -14,7 +14,7 @@ import { apiFetch } from '../lib/api'
 import { getSession, getStoredSessionToken } from '../lib/auth'
 
 const DARK = '#151515'
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.29.59:3000'
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL
 
 export default function EditProfileScreen() {
   const navigation = useNavigation<any>()
