@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { MaterialIcons, Ionicons } from '@expo/vector-icons'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.29.59:3000'
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL
 const { width, height } = Dimensions.get('window')
 
 export default function ForgotPasswordScreen({ route }: any) {
