@@ -62,7 +62,7 @@ export default function SignupScreen() {
     setLoading(true)
     setError('')
     try {
-      const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.29.59:3000'
+      const BASE_URL = process.env.EXPO_PUBLIC_API_URL
       const checkRes = await fetch(`${BASE_URL}/api/auth/check-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
