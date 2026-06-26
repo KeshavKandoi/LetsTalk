@@ -14,7 +14,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 
 WebBrowser.maybeCompleteAuthSession()
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.29.59:3000'
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL
 const ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || ''
 const WEB_CLIENT_ID = '70674819769-vu8ecco5ri04c4ob9b64jnn64eujrnpk.apps.googleusercontent.com'
 const { width, height } = Dimensions.get('window')
