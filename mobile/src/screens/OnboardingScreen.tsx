@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback } from 'react'
+import { VideoView, useVideoPlayer } from 'expo-video'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, ActivityIndicator, TextInput,
@@ -6,7 +7,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
 import * as Location from 'expo-location'
-import { VideoView, useVideoPlayer } from 'expo-video'
 import { apiFetch } from '../lib/api'
 
 const MOOD_OPTIONS = ['🙂', '😌', '☕', '🤝', '💬', '🌿']
@@ -28,17 +28,14 @@ interface PlacePreview {
   readyParticipants?: { userId: string; username: string; moodEmoji: string; intentSummary: string | null }[]
 }
 
+
+
 function VideoBackground({ style }: { style: any }) {
   const player = useVideoPlayer(require('../video/animation.mp4'), (p) => {
     p.loop = true
     p.muted = true
     p.play()
   })
-  useFocusEffect(
-    useCallback(() => {
-      try { player.replay() } catch { try { player.play() } catch {} }
-    }, [player])
-  )
   return (
     <VideoView
       style={style}
