@@ -288,24 +288,6 @@ export default function LandingScreen() {
         </View>
 
         {/* ── QUOTE ── */}
-        <View style={s.quoteSect}>
-          <MaterialIcons name="format-quote" size={40} color={AMBER} style={{ marginBottom: 8 }} />
-          <Text style={s.quoteText}>I walked into a cafe alone and left with three new friends. I didn't even need to say hi first — the app broke the ice for me.</Text>
-          <View style={s.quoteAuthorRow}>
-            <View style={[s.quoteAvatar, { backgroundColor: '#5b8dee' }]}>
-              <Text style={s.quoteAvatarTxt}>P</Text>
-            </View>
-            <View>
-              <Text style={s.quoteAuthorName}>Priya, 24</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                <MaterialIcons name="place" size={11} color={MUTED} />
-                <Text style={s.quoteAuthorSub}>Bangalore · Deep Talk</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* ── FINAL CTA ── */}
         <View style={s.finalSect}>
           <View style={s.finalGlow} />
           <MaterialIcons name="location-on" size={36} color={AMBER} style={{ marginBottom: 16 }} />
@@ -458,7 +440,7 @@ const s = StyleSheet.create({
   stepsWrap: { paddingHorizontal: 18, gap: 14, marginBottom: 14 },
   stepCard: { backgroundColor: 'rgba(12,8,4,0.92)', borderRadius: 26, padding: 24, borderWidth: 1, borderColor: 'rgba(232,130,74,0.13)' },
   stepTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 },
-  stepNum: { fontSize: 52, fontWeight: '900', color: 'rgba(232,130,74,0.1)', lineHeight: 56 },
+  stepNum: { fontSize: 52, fontWeight: '900', color: 'rgba(232,130,74,0.35)', lineHeight: 56 },
   stepIconBox: { width: 54, height: 54, borderRadius: 18, backgroundColor: 'rgba(232,130,74,0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)' },
   stepTitle: { fontSize: 22, fontWeight: '800', color: '#fff', marginBottom: 8 },
   stepDesc: { fontSize: 14, color: MUTED, lineHeight: 22, marginBottom: 16 },
@@ -476,13 +458,6 @@ const s = StyleSheet.create({
   whyCardDesc: { fontSize: 12, color: MUTED, lineHeight: 18 },
 
   // QUOTE
-  quoteSect: { marginHorizontal: 18, marginBottom: 14, backgroundColor: 'rgba(12,8,4,0.92)', borderRadius: 26, padding: 26, borderWidth: 1, borderColor: 'rgba(232,130,74,0.15)', borderLeftWidth: 4, borderLeftColor: AMBER },
-  quoteText: { fontSize: 16, color: '#fff', lineHeight: 28, fontStyle: 'italic', marginBottom: 20 },
-  quoteAuthorRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  quoteAvatar: { width: 42, height: 42, borderRadius: 21, justifyContent: 'center', alignItems: 'center' },
-  quoteAvatarTxt: { fontSize: 16, fontWeight: '900', color: '#fff' },
-  quoteAuthorName: { fontSize: 14, fontWeight: '700', color: '#fff' },
-  quoteAuthorSub: { fontSize: 11, color: MUTED },
 
   // FINAL CTA
   finalSect: { margin: 18, backgroundColor: 'rgba(12,8,4,0.95)', borderRadius: 28, padding: 30, borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)', alignItems: 'center', overflow: 'hidden', marginBottom: 20 },
