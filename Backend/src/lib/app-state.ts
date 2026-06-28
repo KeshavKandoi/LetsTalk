@@ -1589,6 +1589,7 @@ export async function searchNearbyPlacesForLocation(input: {
           places.map((nearbyPlace) => nearbyPlace.placeId),
         ),
         eq(userProfile.status, 'ready'),
+        eq(userProfile.isVerifiedOnSite, true),
       ),
     )
     .groupBy(userProfile.currentPlaceId)
