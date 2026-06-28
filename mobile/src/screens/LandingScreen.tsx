@@ -11,6 +11,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { MaterialIcons } from '@expo/vector-icons'
 import { VideoView, useVideoPlayer } from 'expo-video'
 
+
+
 export default function LandingScreen() {
   const navigation = useNavigation<any>()
   const isConnected = useNetworkCheck()
@@ -20,27 +22,13 @@ export default function LandingScreen() {
   const [profile, setProfile] = useState<any>(null)
   const [profileLoading, setProfileLoading] = useState(false)
 
-  const videoSource = require('../video/animation.mp4')
-  const player = useVideoPlayer(videoSource, (player) => {
-    player.loop = true
-    player.muted = true
-    player.playbackRate = 1.0
+  const player = useVideoPlayer(require('../video/animation.mp4'), (p) => {
+    p.loop = true
+    p.muted = true
+    p.play()
   })
 
-  useEffect(() => {
-    player.play()
-    const sub1 = player.addListener('playingChange', (isPlaying) => {
-      if (!isPlaying) {
-        try { player.play() } catch {}
-      }
-    })
-    const sub2 = player.addListener('statusChange', (status) => {
-      if (status === 'idle' || status === 'error') {
-        try { player.replay() } catch { try { player.play() } catch {} }
-      }
-    })
-    return () => { sub1.remove(); sub2.remove() }
-  }, [player])
+
 
 
   
