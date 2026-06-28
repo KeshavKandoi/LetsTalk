@@ -357,10 +357,10 @@ export default function LandingScreen() {
       {/* Bottom nav */}
       <View style={[s.bottomNav, { paddingBottom: insets.bottom + 8 }]}>
         {[
-          { icon: 'explore', label: 'Explore', active: true, guard: false },
-          { icon: 'near-me', label: 'Nearby', active: false, guard: true },
-          { icon: 'chat-bubble-outline', label: 'Chats', active: false, guard: true },
-          { icon: 'person-outline', label: 'Profile', active: false, guard: false },
+          { icon: 'explore', label: 'Explore', active: true, guard: false, badge: 0 },
+          { icon: 'near-me', label: 'Nearby', active: false, guard: true, badge: 0 },
+          { icon: 'chat-bubble-outline', label: 'Chats', active: false, guard: true, badge: 0 },
+          { icon: 'person-outline', label: 'Profile', active: false, guard: false, badge: 0 },
         ].map(item => (
           <TouchableOpacity
             key={item.label}
