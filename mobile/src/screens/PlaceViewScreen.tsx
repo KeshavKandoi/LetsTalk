@@ -1,10 +1,10 @@
+import { VideoView, useVideoPlayer } from 'expo-video'
 import { useEffect, useRef, useState } from 'react'
 import {
   View, Text, StyleSheet, SafeAreaView, TouchableOpacity,
   ScrollView, ActivityIndicator, RefreshControl, Alert, Modal, Image, AppState, BackHandler, TextInput,
 } from 'react-native'
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
-import { VideoView, useVideoPlayer } from 'expo-video'
 import * as Location from 'expo-location'
 import { useCallback } from 'react'
 import QRCode from 'react-native-qrcode-svg'
@@ -13,7 +13,7 @@ import { apiFetch } from '../lib/api'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
 const FINDER_HINTS = ['By the window', 'Near the counter', 'At the bar', 'Corner table', 'Outside area', 'Near entrance']
-const GPS_LIMIT_METERS = 100
+const GPS_LIMIT_METERS = 200
 
 function distanceMeters(
   a: { latitude: number; longitude: number },
@@ -114,20 +114,14 @@ interface PlaceViewState {
 }
 
 
+
+
 function VideoBackground({ style }: { style: any }) {
   const player = useVideoPlayer(require('../video/animation.mp4'), (p) => {
     p.loop = true
     p.muted = true
-    try { p.play() } catch {}
+    p.play()
   })
-  useFocusEffect(
-    useCallback(() => {
-      const t = setTimeout(() => {
-        try { player.replay() } catch { try { player.play() } catch {} }
-      }, 300)
-      return () => clearTimeout(t)
-    }, [player])
-  )
   return (
     <VideoView
       style={style}
@@ -197,14 +191,14 @@ export default function PlaceViewScreen() {
     if (distanceMeters(currentLocation, currentPlaceLocation) > GPS_LIMIT_METERS) {
       const result = await apiFetch('/api/places/verify-location', currentLocation)
       setQrVerified(false)
-      setNotice(result.message || 'You are out of 100 meters. Your availability has been deactivated.')
+      setNotice(result.message || 'You are out of 200 meters. Your availability has been deactivated.')
       await loadState(true)
       return
     }
     const result = await apiFetch('/api/places/verify-location', currentLocation)
     if (result.deactivated) {
       setQrVerified(false)
-      setNotice(result.message || 'You are out of 100 meters. Your availability has been deactivated.')
+      setNotice(result.message || 'You are out of 200 meters. Your availability has been deactivated.')
       await loadState(true)
     } else if (!silent) {
       await loadState(true)
@@ -334,7 +328,7 @@ export default function PlaceViewScreen() {
         if (!currentPlaceLocation) throw new Error('This place is missing GPS coordinates.')
         const currentLocation = await getCurrentGpsLocation()
         if (distanceMeters(currentLocation, currentPlaceLocation) > GPS_LIMIT_METERS) {
-          throw new Error('You are outside 100 meters of this location.')
+          throw new Error('You are outside 200 meters of this location.')
         }
         await apiFetch('/api/places/ready', { ready: true, ...currentLocation })
       } else {
