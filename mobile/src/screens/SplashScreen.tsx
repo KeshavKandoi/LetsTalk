@@ -77,15 +77,15 @@ export default function SplashScreen({ onComplete, duration = 4000 }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0a1628', justifyContent: 'center', alignItems: 'center' },
+  container: { flex: 1, backgroundColor: '#000000', justifyContent: 'center', alignItems: 'center' },
   scene: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', height: 280, marginBottom: 80, position: 'relative' },
   figure: { alignItems: 'center', marginHorizontal: 30 },
   head: { width: 40, height: 40, borderRadius: 20, marginBottom: 8 },
-  headLeft: { backgroundColor: '#ff5c7a' },
-  headRight: { backgroundColor: '#00c8ff' },
+  headLeft: { backgroundColor: '#ffffff' },
+  headRight: { backgroundColor: '#ffffff' },
   body: { width: 32, height: 60, borderRadius: 6, marginBottom: 8 },
-  bodyLeft: { backgroundColor: '#ff5c7a' },
-  bodyRight: { backgroundColor: '#00c8ff' },
+  bodyLeft: { backgroundColor: '#ffffff' },
+  bodyRight: { backgroundColor: '#ffffff' },
   arm: { position: 'absolute', width: 8, height: 50, borderRadius: 4, top: 50 },
   armLeft: { left: -12, backgroundColor: '#ff5c7a' },
   armRight: { right: -12, backgroundColor: '#00c8ff' },
@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
   legLeftRight: { marginLeft: 8 },
   legRight: { marginLeft: 8 },
   legRightRight: { marginRight: 8 },
-  glow: { position: 'absolute', width: 100, height: 100, borderRadius: 50, backgroundColor: '#1a8fff', shadowColor: '#1a8fff', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 1, shadowRadius: 40, elevation: 15 },
+  glow: { position: 'absolute', width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(255,255,255,0.3)', shadowColor: '#ffffff', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 1, shadowRadius: 40, elevation: 15 },
   title: { fontSize: 32, fontWeight: '800', color: '#ffffff', textAlign: 'center', marginBottom: 8 },
-  subtitle: { fontSize: 12, color: '#00c8ff', textAlign: 'center', letterSpacing: 1.5 },
+  subtitle: { fontSize: 12, color: '#ffffff', textAlign: 'center', letterSpacing: 1.5 },
 })
