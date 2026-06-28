@@ -1,3 +1,4 @@
+import { VideoView, useVideoPlayer } from 'expo-video'
 import { useEffect, useState, useRef } from 'react'
 import {
   Image, Modal,
@@ -5,7 +6,6 @@ import {
   ActivityIndicator, ScrollView, RefreshControl, Animated,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { VideoView, useVideoPlayer } from 'expo-video'
 import { useNavigation } from '@react-navigation/native'
 import { apiFetch } from '../lib/api'
 
@@ -36,6 +36,26 @@ function Avatar({ user, onPress }: { user: FriendUser; onPress?: () => void }) {
   )
 }
 
+
+
+
+function VideoBackground({ style }: { style: any }) {
+  const player = useVideoPlayer(require('../video/animation.mp4'), (p) => {
+    p.loop = true
+    p.muted = true
+    p.play()
+  })
+  return (
+    <VideoView
+      style={style}
+      player={player}
+      allowsFullscreen={false}
+      nativeControls={false}
+      contentFit="cover"
+    />
+  )
+}
+
 export default function FriendsScreen() {
   const navigation = useNavigation<any>()
   const [tab, setTab] = useState<'friends' | 'requests'>('friends')
@@ -47,12 +67,6 @@ export default function FriendsScreen() {
   const [busyId, setBusyId] = useState<string | null>(null)
   const [photoModal, setPhotoModal] = useState<{ url: string; username: string } | null>(null)
 
-  const videoSource = require('../video/animation.mp4')
-  const player = useVideoPlayer(videoSource, (player) => {
-    player.loop = true
-    player.muted = true
-    player.play()
-  })
 
   const fadeAnim = useRef(new Animated.Value(0)).current
   const slideAnim = useRef(new Animated.Value(30)).current
@@ -135,13 +149,7 @@ export default function FriendsScreen() {
 
   return (
     <SafeAreaView style={s.root} edges={['top']}>
-      <VideoView
-        style={s.videoBackground}
-        player={player}
-        allowsFullscreen={false}
-        nativeControls={false}
-        contentFit="cover"
-      />
+      <VideoBackground style={s.videoBackground} />
       <View style={s.overlay} />
 
       <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
