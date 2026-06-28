@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
-import { useNavigation } from '@react-navigation/native'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { useNavigation, useFocusEffect } from '@react-navigation/native'
 import { useNetworkCheck } from '../hooks/useNetworkCheck'
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
@@ -37,6 +37,17 @@ export default function LoginScreen() {
     ).start()
   }, [])
 
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        setEmail('')
+        setPassword('')
+        setError('')
+        setShowPassword(false)
+      }
+    }, [])
+  )
+
   const [request, response, promptAsync] = Google.useAuthRequest({
     androidClientId: ANDROID_CLIENT_ID,
     webClientId: WEB_CLIENT_ID,
@@ -61,7 +72,7 @@ export default function LoginScreen() {
         const data = await res.json()
         if (!res.ok) throw new Error(data.message || 'Google login failed')
         if (data.token) await AsyncStorage.setItem('session_token', data.token)
-        navigation.navigate('Landing')
+        navigation.reset({ index: 0, routes: [{ name: 'Landing' }] })
       }
     } catch (e: any) {
       setError(e.message || 'Google login failed')
@@ -75,7 +86,7 @@ export default function LoginScreen() {
     setError('')
     try {
       await signIn(email, password)
-      navigation.navigate('Landing')
+      navigation.reset({ index: 0, routes: [{ name: 'Landing' }] })
     } catch (e: any) {
       setError(e.message || 'Login failed')
     } finally {
