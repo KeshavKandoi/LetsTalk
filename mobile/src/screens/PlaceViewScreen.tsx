@@ -1,19 +1,22 @@
-import { VideoView, useVideoPlayer } from 'expo-video'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
+import { useFocusEffect } from '@react-navigation/native'
 import {
-  View, Text, StyleSheet, SafeAreaView, TouchableOpacity,
+  View, Text, StyleSheet, TouchableOpacity,
   ScrollView, ActivityIndicator, RefreshControl, Alert, Modal, Image, AppState, BackHandler, TextInput,
 } from 'react-native'
-import { useNavigation, useFocusEffect } from '@react-navigation/native'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { useNavigation } from '@react-navigation/native'
 import * as Location from 'expo-location'
-import { useCallback } from 'react'
 import QRCode from 'react-native-qrcode-svg'
 import ScannerModal from './ScannerModal'
 import { apiFetch } from '../lib/api'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { MaterialIcons } from '@expo/vector-icons'
 
 const FINDER_HINTS = ['By the window', 'Near the counter', 'At the bar', 'Corner table', 'Outside area', 'Near entrance']
 const GPS_LIMIT_METERS = 200
+const AMBER = '#e8824a'
+const AMBER_LIGHT = 'rgba(232,130,74,0.7)'
 
 function distanceMeters(
   a: { latitude: number; longitude: number },
@@ -25,9 +28,7 @@ function distanceMeters(
   const dLng = toRad(b.longitude - a.longitude)
   const lat1 = toRad(a.latitude)
   const lat2 = toRad(b.latitude)
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2
   return 2 * earthRadiusMeters * Math.asin(Math.sqrt(h))
 }
 
@@ -58,52 +59,26 @@ interface Participant {
   isFindable: boolean
   isVerifiedOnSite: boolean
   locationHint: string | null
-  age: string | null
-  gender: string | null
-  photoUrl: string | null
-  about: string | null
-  updatedAt?: string | null
+  photoUrl?: string | null
+  updatedAt?: string
+  gender?: string
+  age?: string
+  about?: string
 }
 interface ActiveConnection {
-  id: string
-  placeId: string
-  createdAt: string
-  counterpart: {
-    userId: string
-    username: string
-    moodEmoji: string
-    intentSummary: string | null
-    photoUrl?: string | null
-    spotLabel?: string | null
-  }
+  counterpart: { userId: string; username: string; photoUrl?: string | null; spotLabel?: string | null; intentText?: string | null }
 }
+interface QrHandoff { url: string }
 interface PendingConnectionRequest {
   id: string
-  requesterUserId: string
-  recipientUserId: string
   direction: 'incoming' | 'outgoing'
-  user: {
-    userId: string
-    username: string
-    moodEmoji: string | null
-    intentSummary: string | null
-    photoUrl: string | null
-  }
+  user: { userId: string; username: string; photoUrl?: string | null; intentSummary?: string | null }
 }
 interface ConnectionEvent {
   id: string
   status: string
-  direction: 'incoming' | 'outgoing'
+  user: { username: string }
   message?: string
-  user: {
-    userId: string
-    username: string
-  }
-}
-interface QrHandoff {
-  token: string
-  url: string
-  isActive: boolean
 }
 interface PlaceViewState {
   profile: Profile | null
@@ -111,26 +86,6 @@ interface PlaceViewState {
   activeConnection: ActiveConnection | null
   qrHandoff: QrHandoff | null
   session: { user: { id: string; name?: string; username?: string } } | null
-}
-
-
-
-
-function VideoBackground({ style }: { style: any }) {
-  const player = useVideoPlayer(require('../video/animation.mp4'), (p) => {
-    p.loop = true
-    p.muted = true
-    p.play()
-  })
-  return (
-    <VideoView
-      style={style}
-      player={player}
-      allowsFullscreen={false}
-      nativeControls={false}
-      contentFit="cover"
-    />
-  )
 }
 
 export default function PlaceViewScreen() {
@@ -154,7 +109,6 @@ export default function PlaceViewScreen() {
   const [selectedPerson, setSelectedPerson] = useState<Participant | null>(null)
   const [notice, setNotice] = useState('')
   const [myPhotoUrl, setMyPhotoUrl] = useState<string | null>(null)
-  const [spotModalVisible, setSpotModalVisible] = useState(false)
   const [customSpot, setCustomSpot] = useState('')
   const [selectedHint, setSelectedHint] = useState<string | null>(null)
   const [myUsername, setMyUsername] = useState<string>('')
@@ -165,14 +119,9 @@ export default function PlaceViewScreen() {
 
   const getCurrentGpsLocation = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync()
-    if (status !== 'granted') {
-      throw new Error('Location permission denied. Please enable location access to set yourself ready.')
-    }
+    if (status !== 'granted') throw new Error('Location permission denied.')
     const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High })
-    return {
-      latitude: position.coords.latitude,
-      longitude: position.coords.longitude,
-    }
+    return { latitude: position.coords.latitude, longitude: position.coords.longitude }
   }
 
   const getCurrentPlaceLocation = () => {
@@ -214,7 +163,6 @@ export default function PlaceViewScreen() {
         return
       }
       setState(data)
-      // Photo will be set from participants list (more accurate)
       if (!myUsername) {
         if (data.session?.user?.username) setMyUsername(data.session.user.username)
         else if (data.session?.user?.name) setMyUsername(data.session.user.name)
@@ -231,13 +179,9 @@ export default function PlaceViewScreen() {
         for (const event of (preview.connectionEvents ?? []) as ConnectionEvent[]) {
           if (seenConnectionEventIdsRef.current.has(event.id)) continue
           seenConnectionEventIdsRef.current.add(event.id)
-          if (event.status === 'declined') {
-            setNotice(`${event.user.username} declined your connection request.`)
-          } else if (event.status === 'accepted') {
-            setNotice(`You and ${event.user.username} are now connected. QR verification is unlocked.`)
-          } else if (event.status === 'left_verified_location') {
-            setNotice(event.message || 'Your connection has left the verified location and is no longer available.')
-          }
+          if (event.status === 'declined') setNotice(`${event.user.username} declined your connection request.`)
+          else if (event.status === 'accepted') setNotice(`You and ${event.user.username} are now connected.`)
+          else if (event.status === 'left_verified_location') setNotice(event.message || 'Your connection has left.')
         }
         if (!photoLoadedRef.current) {
           const me = allParticipants.find((p: any) => p.userId === data.session?.user?.id)
@@ -252,9 +196,7 @@ export default function PlaceViewScreen() {
       }
       if (data.profile?.pingRequestedAt && data.profile?.pingRequestedByUsername) {
         const pingTime = new Date(data.profile.pingRequestedAt).getTime()
-        if (Date.now() - pingTime < 30000) {
-          setNotice(`👋 ${data.profile.pingRequestedByUsername} is looking for you nearby!`)
-        }
+        if (Date.now() - pingTime < 30000) setNotice(`👋 ${data.profile.pingRequestedByUsername} is looking for you nearby!`)
       }
     } catch (e: any) {
       setError(e.message || 'Could not load place.')
@@ -279,39 +221,24 @@ export default function PlaceViewScreen() {
   }, [])
 
   useEffect(() => {
-    if (gpsVerifyRef.current) {
-      clearInterval(gpsVerifyRef.current)
-      gpsVerifyRef.current = null
-    }
+    if (gpsVerifyRef.current) { clearInterval(gpsVerifyRef.current); gpsVerifyRef.current = null }
     if (!state?.profile || !['ready', 'in_conversation'].includes(state.profile.status)) return
     gpsVerifyRef.current = setInterval(() => {
-      verifyCurrentGpsLocation(true).catch((e: any) => setError(e.message || 'Could not verify your location.'))
+      verifyCurrentGpsLocation(true).catch((e: any) => setError(e.message || 'Could not verify location.'))
     }, 30000)
-    return () => {
-      if (gpsVerifyRef.current) {
-        clearInterval(gpsVerifyRef.current)
-        gpsVerifyRef.current = null
-      }
-    }
+    return () => { if (gpsVerifyRef.current) { clearInterval(gpsVerifyRef.current); gpsVerifyRef.current = null } }
   }, [state?.profile?.status, state?.currentPlace?.place?.placeId])
-
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      Alert.alert(
-        'Leave Place?',
-        'You must leave the place before going back.',
-        [
-          { text: 'Stay', style: 'cancel' },
-          { text: 'Leave', style: 'destructive', onPress: async () => {
-            setLeaving(true)
-            try {
-              await apiFetch('/api/places/leave', {})
-              navigation.reset({ index: 0, routes: [{ name: 'Onboarding' }] })
-            } catch (e: any) { setError(e.message); setLeaving(false) }
-          }},
-        ]
-      )
+      Alert.alert('Leave Place?', 'You must leave before going back.', [
+        { text: 'Stay', style: 'cancel' },
+        { text: 'Leave', style: 'destructive', onPress: async () => {
+          setLeaving(true)
+          try { await apiFetch('/api/places/leave', {}); navigation.reset({ index: 0, routes: [{ name: 'Onboarding' }] }) }
+          catch (e: any) { setError(e.message); setLeaving(false) }
+        }},
+      ])
       return true
     })
     return () => backHandler.remove()
@@ -319,17 +246,14 @@ export default function PlaceViewScreen() {
 
   const toggleReady = async () => {
     if (!state?.profile) return
-    setTogglingReady(true)
-    setError('')
+    setTogglingReady(true); setError('')
     try {
       const isReady = state.profile.status === 'ready'
       if (!isReady) {
         const currentPlaceLocation = getCurrentPlaceLocation()
         if (!currentPlaceLocation) throw new Error('This place is missing GPS coordinates.')
         const currentLocation = await getCurrentGpsLocation()
-        if (distanceMeters(currentLocation, currentPlaceLocation) > GPS_LIMIT_METERS) {
-          throw new Error('You are outside 200 meters of this location.')
-        }
+        if (distanceMeters(currentLocation, currentPlaceLocation) > GPS_LIMIT_METERS) throw new Error('You are outside 200 meters of this location.')
         await apiFetch('/api/places/ready', { ready: true, ...currentLocation })
       } else {
         await apiFetch('/api/places/ready', { ready: false })
@@ -341,21 +265,18 @@ export default function PlaceViewScreen() {
   }
 
   const handleLeave = () => {
-    Alert.alert('Leave place', 'Are you sure you want to leave?', [
+    Alert.alert('Leave place', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Leave', style: 'destructive', onPress: async () => {
         setLeaving(true)
-        try {
-          await apiFetch('/api/places/leave', {})
-          navigation.reset({ index: 0, routes: [{ name: 'Onboarding' }] })
-        } catch (e: any) { setError(e.message); setLeaving(false) }
+        try { await apiFetch('/api/places/leave', {}); navigation.reset({ index: 0, routes: [{ name: 'Onboarding' }] }) }
+        catch (e: any) { setError(e.message); setLeaving(false) }
       }}
     ])
   }
 
   const handleEndConversation = async () => {
-    setEndingConversation(true)
-    setError('')
+    setEndingConversation(true); setError('')
     try {
       await apiFetch('/api/places/end-connection', {})
       setQrVerified(false)
@@ -367,13 +288,9 @@ export default function PlaceViewScreen() {
 
   const handleFinderToggle = async () => {
     if (!state?.profile) return
-    setFinderLoading(true)
-    setError('')
+    setFinderLoading(true); setError('')
     try {
-      await apiFetch('/api/places/finder', {
-        isFindable: !state.profile.isFindable,
-        locationHint: state.profile.locationHint,
-      })
+      await apiFetch('/api/places/finder', { isFindable: !state.profile.isFindable, locationHint: state.profile.locationHint })
       await loadState(true)
     } catch (e: any) { setError(e.message) }
     finally { setFinderLoading(false) }
@@ -381,88 +298,59 @@ export default function PlaceViewScreen() {
 
   const handleSelectHint = async (hint: string) => {
     if (!state?.profile) return
-    // Optimistic update for instant UI feedback
     setState(prev => prev ? { ...prev, profile: prev.profile ? { ...prev.profile, isFindable: true, locationHint: hint } : prev.profile } : prev)
     try {
-      await apiFetch('/api/places/finder', {
-        isFindable: true,
-        locationHint: hint,
-      })
+      await apiFetch('/api/places/finder', { isFindable: true, locationHint: hint })
       await loadState(true)
     } catch (e: any) { setError(e.message) }
   }
 
   const handleSendConnectRequest = async (participant: Participant) => {
-    setConnectionActionId(participant.userId)
-    setError('')
+    setConnectionActionId(participant.userId); setError('')
     try {
-      await apiFetch('/api/places/connect-request', {
-        action: 'send',
-        targetUserId: participant.userId,
-      })
+      await apiFetch('/api/places/connect-request', { action: 'send', targetUserId: participant.userId })
       setNotice(`Connection request sent to ${participant.username}.`)
       await loadState(true)
     } catch (e: any) { setError(e.message || 'Could not send request.') }
     finally { setConnectionActionId(null) }
   }
 
-  const handleRespondToRequest = async (
-    request: PendingConnectionRequest,
-    action: 'accept' | 'decline' | 'cancel',
-  ) => {
-    setConnectionActionId(request.id)
-    setError('')
+  const handleRespondToRequest = async (request: PendingConnectionRequest, action: 'accept' | 'decline' | 'cancel') => {
+    setConnectionActionId(request.id); setError('')
     try {
-      await apiFetch('/api/places/connect-request', {
-        action,
-        requestId: request.id,
-      })
-      if (action === 'accept') setNotice(`You and ${request.user.username} are now connected. QR verification is unlocked.`)
+      await apiFetch('/api/places/connect-request', { action, requestId: request.id })
+      if (action === 'accept') setNotice(`You and ${request.user.username} are now connected.`)
       else if (action === 'decline') setNotice(`Request from ${request.user.username} declined.`)
-      else setNotice(`Request to ${request.user.username} canceled.`)
+      else setNotice(`Request canceled.`)
       await loadState(true)
     } catch (e: any) { setError(e.message || 'Could not update request.') }
     finally { setConnectionActionId(null) }
   }
 
-  const renderAvatar = (p: Participant, size = 52) => {
-    const initials = (p.username || '?').slice(0, 2).toUpperCase()
-    return p.photoUrl
-      ? <Image source={{ uri: p.photoUrl + (p.updatedAt ? '?t=' + new Date(p.updatedAt).getTime() : '') }} style={{ width: size, height: size, borderRadius: size / 2 }} />
+  const renderAvatar = (p: Participant | { username: string; photoUrl?: string | null }, size = 48) => {
+    const initials = ((p as any).username || '?').slice(0, 2).toUpperCase()
+    const photoUrl = (p as any).photoUrl
+    const updatedAt = (p as any).updatedAt
+    return photoUrl
+      ? <Image source={{ uri: photoUrl + (updatedAt ? '?t=' + new Date(updatedAt).getTime() : '') }} style={{ width: size, height: size, borderRadius: size / 2 }} />
       : <View style={[s.avatarPlaceholder, { width: size, height: size, borderRadius: size / 2 }]}>
-          <Text style={s.avatarInitials}>{initials}</Text>
-        </View>
-  }
-
-  const renderConnectionAvatar = (
-    person: { username: string; photoUrl?: string | null },
-    size = 52,
-  ) => {
-    const initials = (person.username || '?').slice(0, 2).toUpperCase()
-    return person.photoUrl
-      ? <Image source={{ uri: person.photoUrl }} style={{ width: size, height: size, borderRadius: size / 2 }} />
-      : <View style={[s.avatarPlaceholder, { width: size, height: size, borderRadius: size / 2 }]}>
-          <Text style={s.avatarInitials}>{initials}</Text>
+          <Text style={[s.avatarInitials, { fontSize: size * 0.35 }]}>{initials}</Text>
         </View>
   }
 
   if (loading) return (
-    <SafeAreaView style={s.container}>
-      <VideoBackground style={s.videoBackground} />
-      <View style={s.overlay} />
-      <View style={s.centered}><ActivityIndicator size="large" color="#000000" /></View>
-    </SafeAreaView>
+    <View style={s.root}>
+      <View style={s.centered}><ActivityIndicator size="large" color={AMBER} /></View>
+    </View>
   )
 
   if (!state?.profile || !state.currentPlace) return (
-    <SafeAreaView style={s.container}>
-      
-      <View style={s.overlay} />
+    <View style={s.root}>
       <View style={s.centered}>
-        <ActivityIndicator size="large" color="#000000" />
-        <Text style={{ color: '#ffffff', marginTop: 12, fontSize: 14 }}>Loading place...</Text>
+        <ActivityIndicator size="large" color={AMBER} />
+        <Text style={{ color: 'rgba(255,255,255,0.5)', marginTop: 12, fontSize: 14 }}>Loading place...</Text>
       </View>
-    </SafeAreaView>
+    </View>
   )
 
   const { profile, currentPlace, activeConnection, qrHandoff } = state
@@ -471,400 +359,330 @@ export default function PlaceViewScreen() {
   const myUserId = state.session?.user.id
   const myDisplayName = myUsername || state.session?.user.username || state.session?.user.name || 'You'
   const availableParticipants = participants.filter((p) => p.status !== 'in_conversation' && (p.isVerifiedOnSite || p.userId === myUserId))
-  const incomingRequests = pendingRequests.filter((request) => request.direction === 'incoming')
-  const requestByUserId = new Map(pendingRequests.map((request) => [request.user.userId, request]))
+  const incomingRequests = pendingRequests.filter((r) => r.direction === 'incoming')
+  const requestByUserId = new Map(pendingRequests.map((r) => [r.user.userId, r]))
   const currentParticipant = participants.find((p) => p.userId === myUserId)
 
   return (
-    <SafeAreaView style={s.container}>
-      <VideoBackground style={s.videoBackground} />
-      <View style={s.overlay} />
-      <View style={s.header}>
-        <TouchableOpacity style={s.leaveBtn} onPress={handleLeave} disabled={leaving}>
-          {leaving ? <ActivityIndicator color="#dc2626" size="small" /> : <Text style={s.leaveText}>Leave Place</Text>}
-        </TouchableOpacity>
-        <Text style={s.logo}>Let's Talk</Text>
-        <View style={{ width: 90 }} />
-      </View>
-      <ScrollView
-        contentContainerStyle={s.scroll}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadState() }} tintColor="#ffffff" />}
-      >
+    <View style={s.root}>
+      {/* Decorative background circles */}
+      <View style={s.bgCircle1} />
+      <View style={s.bgCircle2} />
 
-        {error ? <View style={s.errorBox}><Text style={s.errorText}>{error}</Text></View> : null}
-        {notice ? (
-          <TouchableOpacity style={s.noticeBox} onPress={() => setNotice('')}>
-            <Text style={s.noticeText}>{notice}</Text>
-            <Text style={s.noticeDismiss}>Tap to dismiss</Text>
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        {/* Header */}
+        <View style={s.header}>
+          <TouchableOpacity style={s.leaveBtn} onPress={handleLeave} disabled={leaving}>
+            {leaving
+              ? <ActivityIndicator color="#ef4444" size="small" />
+              : <Text style={s.leaveText}>Leave Place</Text>}
           </TouchableOpacity>
-        ) : null}
-
-        {/* Connected User */}
-        {activeConnection && (
-          <View style={s.connectionBanner}>
-            {/* Header */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#4ade80', marginRight: 8 }} />
-              <Text style={{ color: '#4ade80', fontWeight: '700', fontSize: 13, letterSpacing: 1 }}>CONNECTED</Text>
-            </View>
-
-            {/* Avatars Row */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-              <View style={{ flex: 1, alignItems: 'center' }}>
-                {renderConnectionAvatar({
-                  username: myDisplayName,
-                  photoUrl: myPhotoUrl || state?.profile?.photoUrl || currentParticipant?.photoUrl,
-                }, 56)}
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13, marginTop: 6 }} numberOfLines={1}>{myDisplayName}</Text>
-                {profile?.locationHint ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, backgroundColor: 'rgba(232,130,74,0.15)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
-                    <Text style={{ fontSize: 10 }}>📍</Text>
-                    <Text style={{ color: '#e8824a', fontSize: 11, fontWeight: '600', marginLeft: 3 }} numberOfLines={1}>{profile.locationHint}</Text>
-                  </View>
-                ) : (
-                  <Text style={{ color: '#555', fontSize: 11, marginTop: 4 }}>No spot shared</Text>
-                )}
-              </View>
-
-              <View style={{ paddingHorizontal: 12 }}>
-                <Text style={{ color: '#e8824a', fontSize: 20 }}>↔</Text>
-              </View>
-
-              <View style={{ flex: 1, alignItems: 'center' }}>
-                {renderConnectionAvatar(activeConnection.counterpart, 56)}
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13, marginTop: 6 }} numberOfLines={1}>{activeConnection.counterpart.username}</Text>
-                {activeConnection.counterpart.spotLabel ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, backgroundColor: 'rgba(232,130,74,0.15)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
-                    <Text style={{ fontSize: 10 }}>📍</Text>
-                    <Text style={{ color: '#e8824a', fontSize: 11, fontWeight: '600', marginLeft: 3 }} numberOfLines={1}>{activeConnection.counterpart.spotLabel}</Text>
-                  </View>
-                ) : (
-                  <Text style={{ color: '#555', fontSize: 11, marginTop: 4 }}>No spot shared</Text>
-                )}
-              </View>
-            </View>
-
-            {/* Divider */}
-            <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.07)', marginBottom: 14 }} />
-
-            {/* QR Section */}
-            {qrVerified ? (
-              <View style={s.qrVerifiedBox}>
-                <Text style={s.qrVerifiedText}>✓ Connected & Verified</Text>
-              </View>
-            ) : (
-              <View style={s.qrBtnRow}>
-                <TouchableOpacity style={[s.unlockQrBtn, { flex: 1, marginRight: 8 }]} onPress={() => setQrVisible(true)}>
-                  <Text style={s.unlockQrBtnText}>Show My QR</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[s.scanQrBtn, { flex: 1 }]} onPress={() => setScannerVisible(true)}>
-                  <Text style={s.scanQrBtnText}>Scan QR</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            <Text style={[s.connectionHint, { marginTop: 12 }]}>New requests are paused until this conversation ends.</Text>
-            <TouchableOpacity style={s.endBtn} onPress={handleEndConversation} disabled={endingConversation}>
-              {endingConversation ? <ActivityIndicator color="white" /> : <Text style={s.endBtnText}>I'm free again</Text>}
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Place Card */}
-        <View style={s.placeCard}>
-          <View style={s.livePill}>
-            <View style={s.liveDot} />
-            <Text style={s.liveText}>Live Place</Text>
-          </View>
-          <Text style={s.placeName}>{currentPlace.place.name}</Text>
-          <Text style={s.placeAddress}>{currentPlace.place.address}</Text>
-          <View style={s.divider} />
-          <View style={s.statsRow}>
-            <View style={s.statBox}>
-              <Text style={s.statValueGreen}>{currentPlace.readyCount}</Text>
-              <Text style={s.statLabel}>Available</Text>
-            </View>
-            <View style={[s.statBox, s.statBorderX]}>
-              <Text style={s.statValueDark}>{checkedInCount}</Text>
-              <Text style={s.statLabel}>Here Now</Text>
-            </View>
-            <View style={s.statBox}>
-              <Text style={s.statValueSecondary}>{activeConversationCount}</Text>
-              <Text style={s.statLabel}>Talking</Text>
-            </View>
-          </View>
+          <Text style={s.logo}>Let's Talk</Text>
+          <View style={{ width: 90 }} />
         </View>
 
-        {/* Your Status */}
-        <View style={s.card}>
-          <Text style={s.cardTitle}>Your Status</Text>
-          <Text style={s.cardHint}>
-            {isInConversation
-              ? `You're talking with ${activeConnection?.counterpart.username ?? 'someone'}.`
-              : isReady
-              ? "You're visible in the ready count for this place."
-              : "When you're ready people nearby can discover and connect with you."}
-          </Text>
-          {!isInConversation && (
-            <TouchableOpacity
-              style={[s.primaryBtn, isReady && s.primaryBtnOutline]}
-              onPress={toggleReady}
-              disabled={togglingReady}
-            >
-              {togglingReady
-                ? <ActivityIndicator color={isReady ? '#ffffff' : 'white'} />
-                : <Text style={[s.primaryBtnText, isReady && s.primaryBtnTextOutline]}>
-                    {isReady ? '✓ Leave ready pool' : '👋 Set me ready'}
-                  </Text>}
+        <ScrollView
+          contentContainerStyle={s.scroll}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadState() }} tintColor={AMBER} />}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Error / Notice */}
+          {error ? (
+            <TouchableOpacity style={s.errorBox} onPress={() => setError('')}>
+              <MaterialIcons name="error-outline" size={15} color="#ff6b6b" style={{ marginRight: 6 }} />
+              <Text style={s.errorText}>{error}</Text>
             </TouchableOpacity>
+          ) : null}
+          {notice ? (
+            <TouchableOpacity style={s.noticeBox} onPress={() => setNotice('')}>
+              <Text style={s.noticeText}>{notice}</Text>
+              <Text style={s.noticeDismiss}>Tap to dismiss</Text>
+            </TouchableOpacity>
+          ) : null}
+
+          {/* Active Connection Banner */}
+          {activeConnection && (
+            <View style={s.connectionBanner}>
+              <View style={s.connectionHeader}>
+                <View style={s.connectedDot} />
+                <Text style={s.connectedLabel}>CONNECTED</Text>
+              </View>
+              <View style={s.connectionAvatarRow}>
+                <View style={s.connectionPerson}>
+                  {renderAvatar({ username: myDisplayName, photoUrl: myPhotoUrl || profile?.photoUrl || currentParticipant?.photoUrl }, 52)}
+                  <Text style={s.connectionName} numberOfLines={1}>{myDisplayName}</Text>
+                  {profile?.locationHint
+                    ? <View style={s.spotChip}><Text style={s.spotChipText}>📍 {profile.locationHint}</Text></View>
+                    : <Text style={s.noSpot}>No spot shared</Text>}
+                </View>
+                <MaterialIcons name="swap-horiz" size={24} color={AMBER} style={{ marginTop: 16 }} />
+                <View style={s.connectionPerson}>
+                  {renderAvatar(activeConnection.counterpart, 52)}
+                  <Text style={s.connectionName} numberOfLines={1}>{activeConnection.counterpart.username}</Text>
+                  {activeConnection.counterpart.spotLabel
+                    ? <View style={s.spotChip}><Text style={s.spotChipText}>📍 {activeConnection.counterpart.spotLabel}</Text></View>
+                    : <Text style={s.noSpot}>No spot shared</Text>}
+                </View>
+              </View>
+
+              <View style={s.divider} />
+
+              {qrVerified ? (
+                <View style={s.qrVerifiedBox}>
+                  <MaterialIcons name="verified" size={16} color="#4ade80" style={{ marginRight: 6 }} />
+                  <Text style={s.qrVerifiedText}>Connected & Verified</Text>
+                </View>
+              ) : (
+                <View style={s.qrBtnRow}>
+                  <TouchableOpacity style={[s.qrBtn, { marginRight: 8 }]} onPress={() => setQrVisible(true)}>
+                    <MaterialIcons name="qr-code" size={15} color="#fff" style={{ marginRight: 6 }} />
+                    <Text style={s.qrBtnText}>Show My QR</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={s.qrBtn} onPress={() => setScannerVisible(true)}>
+                    <MaterialIcons name="qr-code-scanner" size={15} color="#fff" style={{ marginRight: 6 }} />
+                    <Text style={s.qrBtnText}>Scan QR</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              <TouchableOpacity style={s.endBtn} onPress={handleEndConversation} disabled={endingConversation}>
+                {endingConversation
+                  ? <ActivityIndicator color="rgba(255,255,255,0.7)" size="small" />
+                  : <Text style={s.endBtnText}>I'm free again</Text>}
+              </TouchableOpacity>
+            </View>
           )}
-        </View>
 
+          {/* Place Card */}
+          <View style={s.placeCard}>
+            <View style={s.livePill}>
+              <View style={s.liveDot} />
+              <Text style={s.liveText}>Live Place</Text>
+            </View>
+            <Text style={s.placeName}>{currentPlace.place.name}</Text>
+            <Text style={s.placeAddress} numberOfLines={2}>{currentPlace.place.address}</Text>
+            <View style={s.statsRow}>
+              {[
+                { val: currentPlace.readyCount, label: 'Available' },
+                { val: checkedInCount, label: 'Here Now' },
+                { val: activeConversationCount, label: 'Talking' },
+              ].map((item, i) => (
+                <View key={item.label} style={[s.statBox, i > 0 && s.statBorderLeft]}>
+                  <Text style={s.statVal}>{item.val}</Text>
+                  <Text style={s.statLabel}>{item.label}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
 
+          {/* Your Status */}
+          <View style={s.card}>
+            <Text style={s.cardTitle}>Your Status</Text>
+            <Text style={s.cardHint}>
+              {isInConversation
+                ? `You're talking with ${activeConnection?.counterpart.username ?? 'someone'}.`
+                : isReady
+                ? "You're visible. People nearby can connect with you."
+                : "Set yourself ready and let people nearby discover you."}
+            </Text>
+            {!isInConversation && (
+              <TouchableOpacity
+                style={[s.readyBtn, isReady && s.readyBtnActive]}
+                onPress={toggleReady}
+                disabled={togglingReady}
+              >
+                {togglingReady
+                  ? <ActivityIndicator color={isReady ? AMBER : '#0a0704'} size="small" />
+                  : <Text style={[s.readyBtnText, isReady && s.readyBtnTextActive]}>
+                      {isReady ? '✓ Leave ready pool' : '👋 Set me ready'}
+                    </Text>}
+              </TouchableOpacity>
+            )}
+          </View>
 
-        {/* People Nearby */}
-        <View style={s.section}>
+          {/* People Nearby */}
           <Text style={s.sectionTitle}>People Nearby</Text>
-          {incomingRequests.length > 0 && !activeConnection ? (
+
+          {/* Incoming Requests */}
+          {incomingRequests.length > 0 && !activeConnection && (
             <View style={s.requestsBox}>
               <Text style={s.requestsTitle}>Incoming Requests</Text>
               {incomingRequests.map((request) => (
                 <View key={request.id} style={s.requestRow}>
-                  {renderConnectionAvatar(request.user, 44)}
+                  {renderAvatar(request.user, 42)}
                   <View style={{ flex: 1, marginLeft: 10 }}>
                     <Text style={s.requestName}>{request.user.username}</Text>
-                    <Text style={s.requestMood} numberOfLines={1}>{request.user.intentSummary || ''}</Text>
+                    {request.user.intentSummary ? <Text style={s.requestHint} numberOfLines={1}>{request.user.intentSummary}</Text> : null}
                   </View>
-                  <TouchableOpacity
-                    style={s.acceptBtn}
-                    onPress={() => handleRespondToRequest(request, 'accept')}
-                    disabled={connectionActionId === request.id}
-                  >
+                  <TouchableOpacity style={s.acceptBtn} onPress={() => handleRespondToRequest(request, 'accept')} disabled={connectionActionId === request.id}>
                     <Text style={s.acceptBtnText}>Accept</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={s.declineBtn}
-                    onPress={() => handleRespondToRequest(request, 'decline')}
-                    disabled={connectionActionId === request.id}
-                  >
-                    <Text style={s.declineBtnText}>Decline</Text>
+                  <TouchableOpacity style={s.declineBtn} onPress={() => handleRespondToRequest(request, 'decline')} disabled={connectionActionId === request.id}>
+                    <Text style={s.declineBtnText}>✕</Text>
                   </TouchableOpacity>
                 </View>
               ))}
             </View>
-          ) : null}
+          )}
+
+          {/* Participant Cards */}
           {availableParticipants.length > 0
             ? availableParticipants.map((p) => {
                 const request = requestByUserId.get(p.userId)
                 const isMe = myUserId === p.userId
                 const isConnectedPerson = activeConnection?.counterpart.userId === p.userId
                 const actionLoading = connectionActionId === p.userId || (request && connectionActionId === request.id)
-                const canSendConnectRequest = isReady && profile.isVerifiedOnSite && !activeConnection && p.status === 'ready' && p.isVerifiedOnSite
+                const canSendConnectRequest = isReady && (profile.isVerifiedOnSite !== false) && !activeConnection && p.status === 'ready' && p.isVerifiedOnSite
+                if (p.username === 'keshu') console.log('Connect debug:', {isReady, profileVerified: profile.isVerifiedOnSite, hasConnection: !!activeConnection, pStatus: p.status, pVerified: p.isVerifiedOnSite})
                 return (
-                <View key={p.userId} style={[s.personCard, { paddingVertical: 10, paddingHorizontal: 12 }]}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                    {isMe ? <Text style={{ color: '#e8824a', fontSize: 11, fontWeight: '600' }}>you</Text> : <View />}
-                    <Text style={{ color: p.status === 'ready' ? '#e8824a' : '#888', fontSize: 12, fontWeight: '700' }}>
-                      {p.status === 'ready' ? 'Open to Talk' : 'Browsing'}
-                    </Text>
-                  </View>
-                  <View style={s.personCardTop}>
-                    {renderAvatar(p, 52)}
-                    <View style={{ flex: 1, marginLeft: 12, justifyContent: 'center' }}>
-                        <Text style={[s.personName, { textAlign: 'left' }]}>{p.username}</Text>
+                  <View key={p.userId} style={[s.personCard, p.status === 'ready' && s.personCardReady]}>
+                    {/* Header row */}
+                    <View style={s.personCardHeader}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        {isMe && <View style={s.youBadge}><Text style={s.youBadgeText}>YOU</Text></View>}
                         {p.isFindable && p.locationHint ? (
-                          <Text style={s.locationHint}>📍 Near {p.locationHint.toLowerCase()}</Text>
+                          <Text style={s.personHint}>📍 {p.locationHint}</Text>
                         ) : null}
+                      </View>
+                      <View style={[s.statusPill, p.status === 'ready' && s.statusPillActive]}>
+                        <View style={[s.statusDot, p.status === 'ready' && s.statusDotActive]} />
+                        <Text style={[s.statusPillText, p.status === 'ready' && s.statusPillTextActive]}>
+                          {p.status === 'ready' ? 'Open to Talk' : 'Browsing'}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
-                  {!isMe && (
-                    <View>
-                    <View style={s.personBtns}>
-                      <TouchableOpacity style={s.viewProfileBtn} onPress={() => setSelectedPerson(p)}>
-                        <Text style={s.viewProfileBtnText}>View Profile</Text>
-                      </TouchableOpacity>
+
+                    {/* Avatar + info */}
+                    <View style={s.personCardMain}>
+                      <View style={s.personAvatarWrap}>
+                        {renderAvatar(p, 46)}
+                        {p.status === 'ready' && <View style={s.avatarOnline} />}
+                      </View>
+                      <View style={{ flex: 1, marginLeft: 44 }}>
+                        <Text style={s.personName}>{p.username}</Text>
+                        {(p.intentSummary || p.intentText || '').trim().length > 0 ? (
+                          <View style={s.intentBox}>
+                            <Text style={s.intentBoxLabel}>wants to talk about</Text>
+                            <Text style={s.personIntent} numberOfLines={4}>{p.intentSummary || p.intentText}</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                    </View>
+
+                    {/* Divider */}
+                    <View style={s.personDivider} />
+
+                    {/* Action buttons */}
+                    {!isMe ? (
+                      <View style={s.personBtns}>
+                        <TouchableOpacity style={s.viewProfileBtn} onPress={() => setSelectedPerson(p)}>
+                          <Text style={s.viewProfileBtnText}>View Profile</Text>
+                        </TouchableOpacity>
 
                         {isConnectedPerson ? (
-                          <View style={[s.connectBtn, s.personActionButton, s.connectedBtn]}>
-                            <Text style={s.connectBtnText}>✓ Connected</Text>
+                          <View style={[s.actionBtn, s.actionBtnConnected]}>
+                            <Text style={s.actionBtnConnectedText}>✓ Connected</Text>
                           </View>
                         ) : request?.direction === 'outgoing' ? (
-                          <TouchableOpacity
-                            style={[s.connectBtn, s.personActionButton, s.cancelRequestBtn]}
-                            onPress={() => handleRespondToRequest(request, 'cancel')}
-                            disabled={Boolean(actionLoading)}
-                          >
-                            {actionLoading
-                              ? <ActivityIndicator size="small" color={'#ffffff'} />
-                              : <Text style={s.cancelRequestBtnText}>Cancel Request</Text>}
+                          <TouchableOpacity style={[s.actionBtn, s.actionBtnCancel]} onPress={() => handleRespondToRequest(request, 'cancel')} disabled={Boolean(actionLoading)}>
+                            {actionLoading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={s.actionBtnCancelText}>Cancel</Text>}
                           </TouchableOpacity>
                         ) : request?.direction === 'incoming' ? (
-                          <TouchableOpacity
-                            style={[s.connectBtn, s.personActionButton]}
-                            onPress={() => handleRespondToRequest(request, 'accept')}
-                            disabled={Boolean(actionLoading)}
-                          >
-                            {actionLoading
-                              ? <ActivityIndicator size="small" color="white" />
-                              : <Text style={s.connectBtnText}>Accept</Text>}
+                          <TouchableOpacity style={[s.actionBtn, s.actionBtnAccept]} onPress={() => handleRespondToRequest(request, 'accept')} disabled={Boolean(actionLoading)}>
+                            {actionLoading ? <ActivityIndicator size="small" color="#0a0704" /> : <Text style={s.actionBtnAcceptText}>Accept</Text>}
                           </TouchableOpacity>
                         ) : canSendConnectRequest ? (
-                          <TouchableOpacity
-                            style={[s.connectBtn, s.personActionButton]}
-                            onPress={() => handleSendConnectRequest(p)}
-                            disabled={Boolean(actionLoading)}
-                          >
-                            {actionLoading
-                              ? <ActivityIndicator size="small" color="white" />
-                              : <Text style={s.connectBtnText}>Connect</Text>}
+                          <TouchableOpacity style={[s.actionBtn, s.actionBtnConnect]} onPress={() => handleSendConnectRequest(p)} disabled={Boolean(actionLoading)}>
+                            {actionLoading ? <ActivityIndicator size="small" color="#0a0704" /> : <Text style={s.actionBtnConnectText}>Connect</Text>}
                           </TouchableOpacity>
                         ) : (
-                            <View style={[s.connectBtn, s.personActionButton, s.connectBtnDisabled]}>
-                              <Text style={s.connectBtnTextDisabled}>Connect</Text>
-                            </View>
+                          <View style={[s.actionBtn, s.actionBtnDisabled]}>
+                            <Text style={s.actionBtnDisabledText}>Connect</Text>
+                          </View>
                         )}
-                    </View>
-                    </View>
-                  )}
-                </View>
-              )})
+                      </View>
+                    ) : null}
+                  </View>
+                )
+              })
             : (
               <View style={s.emptyPeople}>
                 <Text style={s.emptyEmoji}>👀</Text>
                 <Text style={s.emptyTitle}>No one ready yet</Text>
-                <Text style={s.emptyText}>Mark yourself ready and wait for others.</Text>
+                <Text style={s.emptyHint}>Mark yourself ready and wait for others.</Text>
               </View>
             )}
-        </View>
-
-        {/* Help Someone Find You */}
-        <View style={s.finderCard}>
-          <Text style={s.cardTitle}>Help Someone Find You</Text>
-          <Text style={s.cardHint}>Sharing your spot makes it easier for people to walk up and say hi!</Text>
-          <View style={s.hintRow}>
-            {FINDER_HINTS.map((hint) => (
-              <TouchableOpacity
-                key={hint}
-                style={[s.hintChip, (selectedHint ?? profile.locationHint) === hint && s.hintChipActive]}
-                onPress={() => { 
-                  if ((selectedHint ?? profile.locationHint) === hint) {
-                    setSelectedHint(null)
-                  } else {
-                    setSelectedHint(hint)
-                    setCustomSpot('')
-                  }
-                }}
-                disabled={false}
-              >
-                <Text style={[s.hintChipText, (selectedHint ?? profile.locationHint) === hint && s.hintChipTextActive]}>{hint}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          {/* Custom spot write-up */}
-          <View style={{ marginBottom: 12 }}>
+          {/* Help Someone Find You */}
+          <View style={s.card}>
+            <Text style={s.cardTitle}>Help Someone Find You</Text>
+            <Text style={s.cardHint}>Sharing your spot makes it easier for people to walk up and say hi!</Text>
+            <View style={s.hintRow}>
+              {FINDER_HINTS.map((hint) => (
+                <TouchableOpacity
+                  key={hint}
+                  style={[s.hintChip, (selectedHint ?? profile.locationHint) === hint && s.hintChipActive]}
+                  onPress={() => {
+                    if ((selectedHint ?? profile.locationHint) === hint) { setSelectedHint(null) }
+                    else { setSelectedHint(hint); setCustomSpot('') }
+                  }}
+                >
+                  <Text style={[s.hintChipText, (selectedHint ?? profile.locationHint) === hint && s.hintChipTextActive]}>{hint}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
             <TextInput
-              placeholder="Describe your spot..."
-              placeholderTextColor="#666"
+              placeholder="Or describe your spot..."
+              placeholderTextColor="rgba(255,255,255,0.2)"
               value={customSpot}
               onChangeText={(text) => { setCustomSpot(text); if (text) setSelectedHint(null) }}
-              style={{ backgroundColor: '#1a1a1a', color: '#fff', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, borderWidth: 1, borderColor: 'rgba(232,130,74,0.3)' }}
-              editable={true}
+              style={s.spotInput}
             />
+            <TouchableOpacity
+              style={[s.shareSpotBtn, profile.isFindable && s.shareSpotBtnActive]}
+              onPress={async () => {
+                if (!profile.isFindable) {
+                  const hintToShare = customSpot.trim() || selectedHint
+                  if (!hintToShare) { setError('Pick a spot or describe your location first.'); return }
+                  await handleSelectHint(hintToShare)
+                  setCustomSpot(''); setSelectedHint(null)
+                } else {
+                  await handleFinderToggle()
+                }
+              }}
+              disabled={finderLoading}
+            >
+              {finderLoading
+                ? <ActivityIndicator color={profile.isFindable ? '#ef4444' : '#0a0704'} size="small" />
+                : <Text style={[s.shareSpotBtnText, profile.isFindable && s.shareSpotBtnTextActive]}>
+                    {profile.isFindable ? 'Stop sharing my spot' : 'Share My Spot'}
+                  </Text>}
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            style={{ backgroundColor: profile.isFindable ? 'rgba(220,38,38,0.15)' : '#e8824a', borderRadius: 12, padding: 14, alignItems: 'center', borderWidth: profile.isFindable ? 1 : 0, borderColor: 'rgba(220,38,38,0.4)' }}
-            onPress={async () => {
-              if (!profile.isFindable) {
-                const hintToShare = customSpot.trim() || selectedHint
-                if (!hintToShare) { setError('Pick a spot or describe your location first.'); return }
-                await handleSelectHint(hintToShare)
-                setCustomSpot('')
-                setSelectedHint(null)
-              } else {
-                await handleFinderToggle()
-              }
-            }}
-            disabled={finderLoading}
-          >
-            {finderLoading
-              ? <ActivityIndicator color="white" />
-              : <Text style={{ color: profile.isFindable ? '#ff6b6b' : '#fff', fontWeight: '700', fontSize: 15 }}>
-                  {profile.isFindable ? 'Stop sharing my spot' : 'Share My Spot'}
-                </Text>}
-          </TouchableOpacity>
-        </View>
+        </ScrollView>
+      </SafeAreaView>
 
-
-      </ScrollView>
-
-      {/* QR Fullscreen Modal */}
+      {/* QR Modal */}
       <Modal visible={qrVisible} transparent animationType="fade" onRequestClose={() => setQrVisible(false)}>
         <TouchableOpacity style={s.modalOverlay} activeOpacity={1} onPress={() => setQrVisible(false)}>
           <View style={s.qrModal}>
             <Text style={s.qrModalTitle}>Your QR Code</Text>
-            {qrHandoff && <View style={s.qrModalCode}><QRCode value={qrHandoff.url} size={240} backgroundColor="white" color="#000000" /></View>}
+            {qrHandoff && (
+              <View style={s.qrModalCode}>
+                <QRCode value={qrHandoff.url} size={220} backgroundColor="white" color="#000" />
+              </View>
+            )}
             <Text style={s.qrModalHint}>
               {activeConnection
-                ? `Show this to ${activeConnection.counterpart.username} to verify your connection.`
-                : isReady
-                ? 'Live - people can scan this'
-                : 'Set yourself ready to activate'}
+                ? `Show this to ${activeConnection.counterpart.username} to verify.`
+                : isReady ? 'Live — people can scan this' : 'Set yourself ready to activate'}
             </Text>
-            <TouchableOpacity style={[s.primaryBtn, { backgroundColor: "#000000", borderWidth: 1, borderColor: "rgba(255,255,255,0.2)", width: "100%", paddingVertical: 16 }]} onPress={() => setQrVisible(false)}>
-              <Text style={[s.primaryBtnText, { color: "#ffffff", fontSize: 16 }]}>Close</Text>
+            <TouchableOpacity style={s.qrCloseBtn} onPress={() => setQrVisible(false)}>
+              <Text style={s.qrCloseBtnText}>Close</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
       </Modal>
 
-      {/* Spot Modal */}
-      <Modal visible={spotModalVisible} transparent animationType="slide" onRequestClose={() => setSpotModalVisible(false)}>
-        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' }}>
-          <View style={{ backgroundColor: '#1a1a1a', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24 }}>
-            <Text style={{ color: '#fff', fontSize: 17, fontWeight: '700', marginBottom: 16 }}>Where are you sitting?</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-              {FINDER_HINTS.map(hint => (
-                <TouchableOpacity
-                  key={hint}
-                  style={{ backgroundColor: profile?.locationHint === hint ? '#e8824a' : '#333', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8 }}
-                  onPress={async () => {
-                    setSpotModalVisible(false)
-                    await handleSelectHint(hint)
-                  }}
-                >
-                  <Text style={{ color: profile?.locationHint === hint ? '#fff' : '#ccc', fontWeight: '600' }}>{hint}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <View style={{ marginTop: 16, flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-              <TextInput
-                placeholder="Describe your spot..."
-                placeholderTextColor="#666"
-                value={customSpot}
-                onChangeText={setCustomSpot}
-                style={{ flex: 1, backgroundColor: '#2a2a2a', color: '#fff', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14 }}
-              />
-              <TouchableOpacity
-                style={{ backgroundColor: '#e8824a', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 }}
-                onPress={async () => {
-                  if (!customSpot.trim()) return
-                  setSpotModalVisible(false)
-                  await handleSelectHint(customSpot.trim())
-                  setCustomSpot('')
-                }}
-              >
-                <Text style={{ color: '#fff', fontWeight: '700' }}>Set</Text>
-              </TouchableOpacity>
-            </View>
-            <TouchableOpacity
-              style={{ marginTop: 16, padding: 14, alignItems: 'center' }}
-              onPress={() => setSpotModalVisible(false)}
-            >
-              <Text style={{ color: '#888' }}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
       {/* Scanner Modal */}
       {scannerVisible && (
         <ScannerModal
@@ -881,218 +699,186 @@ export default function PlaceViewScreen() {
       {/* Person Profile Modal */}
       <Modal visible={!!selectedPerson} transparent animationType="slide" onRequestClose={() => setSelectedPerson(null)}>
         <TouchableOpacity style={s.personOverlay} activeOpacity={1} onPress={() => setSelectedPerson(null)}>
-          <TouchableOpacity activeOpacity={1} style={{ backgroundColor: "#1a1a1a", borderRadius: 24, marginHorizontal: 20, overflow: 'hidden' }}>
-            {selectedPerson ? (
+          <TouchableOpacity activeOpacity={1} style={s.personModal}>
+            {selectedPerson && (
               <>
-                <View style={{ height: 100, backgroundColor: '#e8824a' }} />
-                <View style={{ position: 'absolute', top: 40, left: 20, width: 80, height: 80, borderRadius: 40, borderWidth: 3, borderColor: '#1a1a1a', overflow: 'hidden', backgroundColor: 'rgba(232,130,74,0.3)', justifyContent: 'center', alignItems: 'center' }}>
-                  {selectedPerson.photoUrl
-                    ? <Image source={{ uri: selectedPerson.photoUrl }} style={{ width: 80, height: 80 }} />
-                    : <Text style={{ fontSize: 28, fontWeight: '800', color: '#fff' }}>{(selectedPerson.username || '?').slice(0,2).toUpperCase()}</Text>
-                  }
+                <View style={s.personModalBanner} />
+                <View style={s.personModalAvatarWrap}>
+                  {renderAvatar(selectedPerson, 76)}
                 </View>
-                <View style={{ paddingHorizontal: 20, paddingTop: 50, paddingBottom: 24 }}>
-                  <Text style={{ color: '#fff', fontSize: 22, fontWeight: '800', marginBottom: 6 }}>{selectedPerson.username}</Text>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
-                    {selectedPerson.gender ? <View style={{ backgroundColor: 'rgba(232,130,74,0.15)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4 }}><Text style={{ color: '#e8824a', fontSize: 13, fontWeight: '600' }}>{selectedPerson.gender}</Text></View> : null}
-                    {selectedPerson.age ? <View style={{ backgroundColor: 'rgba(232,130,74,0.15)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4 }}><Text style={{ color: '#e8824a', fontSize: 13, fontWeight: '600' }}>{selectedPerson.age}</Text></View> : null}
-                    <View style={{ backgroundColor: 'rgba(232,130,74,0.15)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4 }}><Text style={{ color: '#e8824a', fontSize: 13, fontWeight: '600' }}>{selectedPerson.status === 'ready' ? 'Open to Talk' : 'Browsing'}</Text></View>
+                <View style={s.personModalBody}>
+                  <Text style={s.personModalName}>{selectedPerson.username}</Text>
+                  <View style={s.personTags}>
+                    {selectedPerson.gender ? <View style={s.personTag}><Text style={s.personTagText}>{selectedPerson.gender}</Text></View> : null}
+                    {selectedPerson.age ? <View style={s.personTag}><Text style={s.personTagText}>{selectedPerson.age}</Text></View> : null}
+                    <View style={s.personTag}>
+                      <Text style={s.personTagText}>{selectedPerson.status === 'ready' ? 'Open to Talk' : 'Browsing'}</Text>
+                    </View>
                   </View>
                   {(selectedPerson.intentText || selectedPerson.about || selectedPerson.intentSummary) ? (
-                    <Text style={{ color: '#aaa', fontSize: 14, lineHeight: 22 }}>{selectedPerson.intentText || selectedPerson.about || selectedPerson.intentSummary}</Text>
+                    <Text style={s.personModalAbout}>{selectedPerson.intentText || selectedPerson.about || selectedPerson.intentSummary}</Text>
                   ) : null}
                 </View>
               </>
-            ) : null}
+            )}
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
-    </SafeAreaView>
+    </View>
   )
 }
 
-const GREEN = '#ffffff'
-const AMBER = '#e8824a'
-const AMBER_LIGHT = 'rgba(232,130,74,0.7)'
-const GREEN_DARK = '#1a1a1a'
-const GREEN_MID = '#2d6e3e'
-const BG = '#0a0704'
-
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0a0704' },
-  videoBackground: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' },
-  overlay: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.65)' },
-  scroll: { padding: 20, paddingBottom: 48 },
+  root: { flex: 1, backgroundColor: '#080502' },
+  bgCircle1: { position: 'absolute', top: -100, right: -80, width: 300, height: 300, borderRadius: 150, backgroundColor: 'rgba(232,130,74,0.05)' },
+  bgCircle2: { position: 'absolute', bottom: 60, left: -120, width: 350, height: 350, borderRadius: 175, backgroundColor: 'rgba(232,130,74,0.03)' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  scroll: { padding: 16, paddingBottom: 48 },
 
   // Header
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingTop: 36 },
-  logo: { fontSize: 24, fontWeight: '900', color: '#c084fc', letterSpacing: -0.5, textAlign: 'center' },
-  leaveBtn: { backgroundColor: 'rgba(220,38,38,0.12)', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: 'rgba(220,38,38,0.3)', marginLeft: 16 },
-  leaveText: { color: '#ffffff', fontWeight: '600', fontSize: 13 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(232,130,74,0.1)' },
+  logo: { fontSize: 20, fontWeight: '900', color: AMBER, letterSpacing: -0.5 },
+  leaveBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(239,68,68,0.4)', backgroundColor: 'rgba(239,68,68,0.08)' },
+  leaveText: { color: '#ef4444', fontWeight: '700', fontSize: 13 },
 
   // Alerts
-  errorBox: { backgroundColor: 'rgba(186,26,26,0.15)', borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(186,26,26,0.3)' },
-  errorText: { color: '#ff6b6b', fontSize: 13 },
-  noticeBox: { backgroundColor: 'rgba(232,130,74,0.1)', borderRadius: 16, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)' },
-  noticeText: { color: '#FFD700', fontSize: 14, fontWeight: '600' },
-  noticeDismiss: { color: 'rgba(255,215,0,0.7)', fontSize: 11, marginTop: 4 },
+  errorBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(186,26,26,0.12)', borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(186,26,26,0.25)' },
+  errorText: { color: '#ff6b6b', fontSize: 13, flex: 1 },
+  noticeBox: { backgroundColor: 'rgba(232,130,74,0.1)', borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)' },
+  noticeText: { color: '#ffd700', fontSize: 14, fontWeight: '600' },
+  noticeDismiss: { color: 'rgba(255,215,0,0.5)', fontSize: 11, marginTop: 3 },
 
   // Connection Banner
-  connectionBanner: { backgroundColor: 'rgba(0,107,44,0.1)', borderRadius: 20, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)' },
-  connectionHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 8 },
-  connectionEmoji: { fontSize: 28 },
-  connectionTitle: { fontSize: 15, fontWeight: '700', color: '#ffffff', marginBottom: 3 },
-  connectionMood: { fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 18 },
-  connectionHint: { fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 12 },
-  connectedSectionTitle: { fontSize: 17, fontWeight: '800', color: '#fff', marginBottom: 12 },
-  connectedPeopleRow: { flexDirection: 'row', alignItems: 'stretch', marginBottom: 14 },
-  connectedPerson: { flex: 1, backgroundColor: 'rgba(26,16,8,0.75)', borderRadius: 16, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)' },
-  connectedLink: { width: 34, textAlign: 'center', alignSelf: 'center', color: '#ffffff', fontSize: 20, fontWeight: '800' },
-  connectedName: { marginTop: 8, fontSize: 14, fontWeight: '800', color: '#ffffff', maxWidth: '100%' },
-  connectedMood: { marginTop: 4, fontSize: 12, color: 'rgba(255,255,255,0.7)', lineHeight: 16, textAlign: 'center' },
-  qrVerifiedBox: { backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 12, paddingVertical: 12, alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: 'rgba(255,200,0,0.4)' },
-  qrVerifiedText: { color: '#FFD700', fontWeight: '800', fontSize: 16 },
-  qrBtnRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
-  scanQrBtn: { backgroundColor: '#000000', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 16, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
-  scanQrBtnText: { color: '#ffffff', fontWeight: '800', fontSize: 14 },
-  unlockQrBtn: { backgroundColor: '#000000', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 16, alignItems: 'center', marginBottom: 0, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' },
-  unlockQrBtnText: { color: 'white', fontWeight: '800', fontSize: 15 },
-  endBtn: { backgroundColor: '#000000', borderRadius: 50, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
-  endBtnText: { color: 'white', fontWeight: '700', fontSize: 15 },
+  connectionBanner: { backgroundColor: 'rgba(20,12,6,0.95)', borderRadius: 20, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(74,222,128,0.2)' },
+  connectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  connectedDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#4ade80', marginRight: 8 },
+  connectedLabel: { color: '#4ade80', fontWeight: '800', fontSize: 12, letterSpacing: 1.2 },
+  connectionAvatarRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 },
+  connectionPerson: { flex: 1, alignItems: 'center', gap: 6 },
+  connectionName: { color: '#fff', fontWeight: '700', fontSize: 13, textAlign: 'center' },
+  spotChip: { backgroundColor: 'rgba(232,130,74,0.12)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+  spotChipText: { color: AMBER, fontSize: 11, fontWeight: '600' },
+  noSpot: { color: 'rgba(255,255,255,0.3)', fontSize: 11 },
+  divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginBottom: 14 },
+  qrVerifiedBox: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(74,222,128,0.08)', borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(74,222,128,0.2)' },
+  qrVerifiedText: { color: '#4ade80', fontWeight: '700', fontSize: 14 },
+  qrBtnRow: { flexDirection: 'row', marginBottom: 12 },
+  qrBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12, paddingVertical: 11, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  qrBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  endBtn: { borderRadius: 50, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', backgroundColor: 'rgba(255,255,255,0.04)' },
+  endBtnText: { color: 'rgba(255,255,255,0.7)', fontWeight: '700', fontSize: 14 },
 
   // Place Card
-  placeCard: { backgroundColor: 'rgba(26,16,8,0.75)', borderRadius: 24, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
-  livePill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(0,135,58,0.12)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start', marginBottom: 10 },
-  liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#00873a' },
-  liveText: { fontSize: 11, color: '#00873a', fontWeight: '700', letterSpacing: 0.5 },
+  placeCard: { backgroundColor: 'rgba(20,12,6,0.95)', borderRadius: 20, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(232,130,74,0.15)' },
+  livePill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(0,180,80,0.1)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start', marginBottom: 10 },
+  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#00b050' },
+  liveText: { fontSize: 11, color: '#00b050', fontWeight: '700', letterSpacing: 0.5 },
   placeName: { fontSize: 20, fontWeight: '800', color: '#fff', marginBottom: 4 },
-  placeAddress: { fontSize: 12, color: 'rgba(255,255,255,0.45)', lineHeight: 17, marginBottom: 14 },
-  divider: { height: 1, backgroundColor: 'rgba(0,107,44,0.1)', marginBottom: 14 },
-  statsRow: { flexDirection: 'row' },
-  statBox: { flex: 1, alignItems: 'center', paddingVertical: 4 },
-  statBorderX: { borderLeftWidth: 1, borderRightWidth: 1, borderColor: 'rgba(232,130,74,0.15)' },
-  statValueGreen: { fontSize: 22, fontWeight: '900', color: AMBER },
-  statValueDark: { fontSize: 22, fontWeight: '900', color: AMBER },
-  statValueSecondary: { fontSize: 22, fontWeight: '900', color: AMBER },
+  placeAddress: { fontSize: 12, color: 'rgba(255,255,255,0.4)', lineHeight: 17, marginBottom: 14 },
+  statsRow: { flexDirection: 'row', backgroundColor: 'rgba(232,130,74,0.05)', borderRadius: 14, paddingVertical: 12 },
+  statBox: { flex: 1, alignItems: 'center' },
+  statBorderLeft: { borderLeftWidth: 1, borderLeftColor: 'rgba(232,130,74,0.12)' },
+  statVal: { fontSize: 22, fontWeight: '900', color: AMBER },
   statLabel: { fontSize: 11, color: AMBER_LIGHT, fontWeight: '600', marginTop: 2 },
 
-  // Cards
-  card: { backgroundColor: 'rgba(26,16,8,0.75)', borderRadius: 24, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: '#fff', marginBottom: 6 },
-  cardHint: { fontSize: 13, color: 'rgba(255,255,255,0.5)', lineHeight: 19, marginBottom: 14 },
-  cardLabelSmall: { fontSize: 11, fontWeight: '700', color: '#6e7b6c', letterSpacing: 1.2, marginBottom: 12 },
+  // Card
+  card: { backgroundColor: 'rgba(20,12,6,0.95)', borderRadius: 20, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(232,130,74,0.12)' },
+  cardTitle: { fontSize: 16, fontWeight: '800', color: '#fff', marginBottom: 6 },
+  cardHint: { fontSize: 13, color: 'rgba(255,255,255,0.45)', lineHeight: 19, marginBottom: 14 },
 
-  // Profile Preview
-  profilePreviewRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  profileAvatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(0,107,44,0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: GREEN },
-  profileAvatarEmoji: { fontSize: 26 },
-  profilePreviewName: { fontSize: 18, fontWeight: '800', color: '#fff', marginBottom: 4 },
-  profilePreviewMood: { fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 18 },
-
-  // Buttons
-  primaryBtn: { backgroundColor: AMBER, borderRadius: 50, paddingVertical: 14, alignItems: 'center', marginTop: 4 },
-  primaryBtnOutline: { backgroundColor: '#1a1a1a', borderWidth: 2, borderColor: AMBER },
-  primaryBtnText: { color: '#0a0704', fontWeight: '800', fontSize: 15 },
-  primaryBtnTextOutline: { color: '#ffffff' },
-
-  // People Section
-  section: { marginBottom: 12 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#fff', marginBottom: 12, paddingHorizontal: 2 },
-  requestsBox: { backgroundColor: 'rgba(0,107,44,0.08)', borderRadius: 20, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)' },
-  requestsTitle: { fontSize: 14, fontWeight: '800', color: '#ffffff', marginBottom: 10 },
-  requestRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(26,16,8,0.75)', borderRadius: 16, padding: 10, marginBottom: 8 },
-  requestName: { fontSize: 14, fontWeight: '800', color: '#ffffff' },
-  requestMood: { fontSize: 12, color: '#ffffff', marginTop: 2 },
-  acceptBtn: { backgroundColor: '#1a1a1a', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8, marginLeft: 6, borderWidth: 1, borderColor: AMBER },
-  acceptBtnText: { color: '#ffffff', fontSize: 12, fontWeight: '800' },
-  declineBtn: { backgroundColor: '#1a1a1a', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8, marginLeft: 6, borderWidth: 1, borderColor: 'rgba(220,38,38,0.5)' },
-  declineBtnText: { color: '#ffffff', fontSize: 12, fontWeight: '800' },
-  personCard: { backgroundColor: '#000000', borderRadius: 20, padding: 14, marginBottom: 10, borderWidth: 1.5, borderColor: 'rgba(232,180,74,0.35)' },
-  personCardTop: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10 },
-  avatarPlaceholder: { backgroundColor: 'rgba(0,107,44,0.12)', justifyContent: 'center', alignItems: 'center' },
-  avatarInitials: { color: '#ffffff', fontWeight: '800', fontSize: 18 },
-  personNameRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4, justifyContent: 'space-between', width: '100%' },
-  personName: { fontSize: 18, fontWeight: '800', color: '#ffffff', flex: 1, textAlign: 'center' },
-  youBadge: { backgroundColor: 'rgba(37,99,235,0.6)', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 },
-  youBadgeText: { fontSize: 10, color: 'white', fontWeight: '700' },
-  statusBadge: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1, borderWidth: 1, borderColor: '#4CAF50', backgroundColor: 'transparent', marginTop: 2 },
-  statusBadgeActive: { backgroundColor: 'transparent', borderColor: '#4CAF50' },
-  statusBadgeText: { fontSize: 11, color: '#4CAF50', fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5 },
-  statusBadgeTextActive: { color: '#4CAF50' },
-  verifiedBadge: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1, borderWidth: 1, borderColor: '#FFD700', backgroundColor: 'rgba(255,215,0,0.08)', marginTop: 2 },
-  verifiedBadgeText: { fontSize: 11, color: '#FFD700', fontWeight: '900' },
-  personMood: { fontSize: 13, color: '#ffffff', lineHeight: 18 },
-  locationHint: { fontSize: 12, color: 'rgba(255,255,255,0.7)', fontWeight: '600', marginTop: 3 },
-  personBtns: { flexDirection: 'row', gap: 8, marginTop: 2 },
-  viewProfileBtn: { flex: 1, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 12, borderWidth: 1.5, borderColor: AMBER, backgroundColor: 'transparent', alignItems: 'center' },
-  viewProfileBtnText: { fontSize: 13, fontWeight: '700', color: AMBER },
-  personActionColumn: {},
-  personActionButton: {},
-  connectBtn: { flex: 1, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 12, backgroundColor: 'transparent', borderWidth: 1.5, borderColor: '#64B5F6', alignItems: 'center' },
-  connectBtnDisabled: { backgroundColor: 'rgba(37,99,235,0.5)', shadowOpacity: 0 },
-  connectDisabledHint: { marginTop: 5, color: '#ffffff', fontSize: 11, fontWeight: '600', textAlign: 'center', lineHeight: 14 },
-  cancelRequestBtn: { backgroundColor: '#1a1a1a', borderWidth: 1, borderColor: AMBER, shadowOpacity: 0 },
-  cancelRequestBtnText: { fontSize: 14, fontWeight: '700', color: '#ffffff' },
-  connectedBtn: { backgroundColor: '#0f3320', shadowOpacity: 0 },
-  connectBtnText: { fontSize: 13, fontWeight: '700', color: '#64B5F6' },
-  connectBtnTextDisabled: { fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.6)' },
-  emptyPeople: { backgroundColor: 'rgba(26,16,8,0.75)', borderRadius: 24, padding: 28, alignItems: 'center', gap: 6 },
-  emptyEmoji: { fontSize: 32 },
-  emptyTitle: { fontSize: 15, fontWeight: '700', color: '#ffffff' },
-  emptyText: { fontSize: 13, color: '#6e7b6c', textAlign: 'center' },
+  // Ready Button
+  readyBtn: { backgroundColor: AMBER, borderRadius: 50, paddingVertical: 14, alignItems: 'center' },
+  readyBtnActive: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.5)' },
+  readyBtnText: { color: '#0a0704', fontWeight: '800', fontSize: 15 },
+  readyBtnTextActive: { color: 'rgba(255,255,255,0.7)' },
 
   // Finder
-  finderCard: { backgroundColor: 'rgba(130,245,193,0.15)', borderRadius: 24, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(130,245,193,0.5)' },
-  hintRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
-  hintChip: { borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)', backgroundColor: '#1a1a1a' },
-  hintChipActive: { backgroundColor: '#e8824a', borderColor: '#e8824a' },
-  hintChipText: { fontSize: 13, color: 'rgba(255,255,255,0.7)', fontWeight: '500' },
-  hintChipTextActive: { color: 'white' },
+  hintRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+  hintChip: { borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.04)' },
+  hintChipActive: { backgroundColor: 'rgba(232,130,74,0.15)', borderColor: AMBER },
+  hintChipText: { fontSize: 12, color: 'rgba(255,255,255,0.45)', fontWeight: '600' },
+  hintChipTextActive: { color: AMBER },
+  spotInput: { backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: '#fff', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', marginBottom: 12 },
+  shareSpotBtn: { borderRadius: 50, paddingVertical: 13, alignItems: 'center', backgroundColor: AMBER },
+  shareSpotBtnActive: { backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)' },
+  shareSpotBtnText: { color: '#0a0704', fontWeight: '800', fontSize: 14 },
+  shareSpotBtnTextActive: { color: '#ef4444' },
 
-  // QR
-  qrContainer: { alignItems: 'center', paddingVertical: 12 },
-  qrWrapper: { padding: 14, backgroundColor: 'rgba(26,16,8,0.75)', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)', marginBottom: 10 },
-  qrWrapperDim: { opacity: 0.35 },
-  qrInactive: { opacity: 0.4 },
-  qrStatus: { backgroundColor: 'rgba(148,163,184,0.15)', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6, marginBottom: 6 },
-  qrStatusActive: { backgroundColor: 'rgba(0,107,44,0.1)' },
-  qrStatusText: { fontSize: 12, color: '#64748b', fontWeight: '600' },
-  qrStatusTextActive: { color: '#ffffff' },
-  qrTap: { fontSize: 11, color: 'rgba(255,255,255,0.6)' },
-  qrPlaceholder: { height: 100, justifyContent: 'center', alignItems: 'center' },
-  qrPlaceholderText: { color: 'rgba(255,255,255,0.6)', fontSize: 13 },
-  qrLocked: { minHeight: 132, borderRadius: 20, backgroundColor: 'rgba(148,163,184,0.12)', borderWidth: 1, borderColor: 'rgba(100,116,139,0.2)', justifyContent: 'center', alignItems: 'center', padding: 18 },
-  qrLockIcon: { fontSize: 28, marginBottom: 8 },
-  qrLockedTitle: { color: '#64748b', fontSize: 14, fontWeight: '800', textAlign: 'center', lineHeight: 20 },
+  // People
+  sectionTitle: { fontSize: 18, fontWeight: '800', color: '#fff', marginBottom: 12, paddingHorizontal: 2 },
+  requestsBox: { backgroundColor: 'rgba(20,12,6,0.95)', borderRadius: 16, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)' },
+  requestsTitle: { fontSize: 13, fontWeight: '800', color: AMBER, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.8 },
+  requestRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  requestName: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  requestHint: { fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 2 },
+  acceptBtn: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, backgroundColor: 'rgba(232,130,74,0.15)', borderWidth: 1, borderColor: AMBER, marginLeft: 8 },
+  acceptBtnText: { color: AMBER, fontSize: 12, fontWeight: '700' },
+  declineBtn: { paddingHorizontal: 10, paddingVertical: 7, borderRadius: 10, backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)', marginLeft: 6 },
+  declineBtnText: { color: '#ef4444', fontSize: 13, fontWeight: '700' },
 
-  // Scan
-  scanBtn: { backgroundColor: GREEN, borderRadius: 50, paddingVertical: 16, alignItems: 'center', marginBottom: 8, shadowColor: GREEN, shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } },
-  scanBtnDisabled: { opacity: 0.5 },
-  scanBtnText: { color: 'white', fontWeight: '700', fontSize: 16 },
+  // Person Card
+  personCard: { backgroundColor: 'rgba(18,10,4,0.98)', borderRadius: 16, paddingHorizontal: 12, paddingTop: 6, paddingBottom: 0, marginBottom: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.5)' },
+  personCardReady: { borderColor: 'rgba(255,255,255,0.35)', backgroundColor: 'rgba(232,130,74,0.04)' },
+  personCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  personDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginBottom: 8 },
+  personIntentEmpty: { fontSize: 12, color: 'rgba(255,255,255,0.2)', fontStyle: 'italic', marginTop: 3 },
+  itsYouText: { fontSize: 12, color: 'rgba(255,255,255,0.3)', textAlign: 'center', paddingVertical: 4 },
+  youBadge: { backgroundColor: 'rgba(99,102,241,0.2)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: 'rgba(99,102,241,0.4)' },
+  youBadgeText: { color: '#818cf8', fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
+  statusPill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
+  statusPillActive: { backgroundColor: 'rgba(232,130,74,0.1)', borderColor: 'rgba(232,130,74,0.3)' },
+  statusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.3)' },
+  statusDotActive: { backgroundColor: AMBER },
+  statusPillText: { fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: '700' },
+  statusPillTextActive: { color: AMBER },
+  personCardMain: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 4 },
+  personAvatarWrap: { position: 'relative' },
+  avatarOnline: { position: 'absolute', bottom: 1, right: 1, width: 11, height: 11, borderRadius: 6, backgroundColor: '#4ade80', borderWidth: 2, borderColor: '#080502' },
+  avatarPlaceholder: { backgroundColor: 'rgba(232,130,74,0.12)', justifyContent: 'center', alignItems: 'center' },
+  avatarInitials: { color: '#fff', fontWeight: '800' },
+  personName: { fontSize: 15, fontWeight: '800', color: '#fff', marginBottom: 6 },
+  intentBox: { marginTop: 2, backgroundColor: 'rgba(232,130,74,0.07)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, borderLeftWidth: 2, borderLeftColor: 'rgba(232,130,74,0.5)', alignSelf: 'flex-start', maxWidth: 200 },
+  intentBoxLabel: { fontSize: 9, color: 'rgba(232,130,74,0.6)', fontWeight: '600', marginBottom: 1 },
+  personIntentLabel: { fontSize: 9, fontWeight: '700', color: 'rgba(232,130,74,0.7)', letterSpacing: 1, marginBottom: 5, marginTop: 6, textTransform: 'uppercase' },
+  personIntent: { fontSize: 12, color: 'rgba(255,255,255,0.7)', lineHeight: 16, marginBottom: 0 },
+  personHint: { fontSize: 12, color: AMBER_LIGHT, fontWeight: '600' },
+  personBtns: { flexDirection: 'row', gap: 8 },
+  viewProfileBtn: { flex: 1, paddingVertical: 9, borderRadius: 12, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.15)', alignItems: 'center' },
+  viewProfileBtnText: { fontSize: 13, fontWeight: '700', color: 'rgba(255,255,255,0.6)' },
+  actionBtn: { flex: 1, paddingVertical: 9, borderRadius: 12, alignItems: 'center' },
+  actionBtnConnect: { backgroundColor: AMBER },
+  actionBtnConnectText: { color: '#0a0704', fontWeight: '800', fontSize: 13 },
+  actionBtnConnected: { backgroundColor: 'rgba(74,222,128,0.08)', borderWidth: 1, borderColor: 'rgba(74,222,128,0.25)' },
+  actionBtnConnectedText: { color: '#4ade80', fontWeight: '700', fontSize: 13 },
+  actionBtnCancel: { backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  actionBtnCancelText: { color: 'rgba(255,255,255,0.5)', fontWeight: '700', fontSize: 13 },
+  actionBtnAccept: { backgroundColor: AMBER },
+  actionBtnAcceptText: { color: '#0a0704', fontWeight: '800', fontSize: 13 },
+  actionBtnDisabled: { backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
+  actionBtnDisabledText: { color: 'rgba(255,255,255,0.2)', fontWeight: '700', fontSize: 13 },
+
+  emptyPeople: { backgroundColor: 'rgba(20,12,6,0.95)', borderRadius: 18, padding: 32, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(232,130,74,0.08)' },
+  emptyEmoji: { fontSize: 32, marginBottom: 8 },
+  emptyTitle: { fontSize: 15, fontWeight: '700', color: '#fff', marginBottom: 4 },
+  emptyHint: { fontSize: 13, color: 'rgba(255,255,255,0.35)', textAlign: 'center' },
 
   // Modals
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(15,51,32,0.6)', justifyContent: 'center', alignItems: 'center' },
-  qrModal: { backgroundColor: '#1a1a1a', borderRadius: 28, padding: 28, alignItems: 'center', width: '85%' },
-  qrModalTitle: { fontSize: 18, fontWeight: '800', color: '#ffffff', marginBottom: 20 },
-  qrModalCode: { padding: 16, backgroundColor: 'rgba(26,16,8,0.75)', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)', marginBottom: 16 },
-  qrModalHint: { fontSize: 13, color: 'rgba(255,255,255,0.6)', marginBottom: 20, textAlign: 'center' },
-  personOverlay: { flex: 1, backgroundColor: 'rgba(15,51,32,0.45)', justifyContent: 'center' },
-  personAvatarRing: { width: 120, height: 120, borderRadius: 60, padding: 3, backgroundColor: '#e8824a', marginBottom: 14, shadowColor: '#e8824a', shadowOpacity: 0.5, shadowRadius: 12, shadowOffset: { width: 0, height: 0 } },
-  personAvatarLarge: { width: '100%', height: '100%', borderRadius: 60, borderWidth: 3, borderColor: '#0a0704' },
-  personStatusPill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, backgroundColor: 'rgba(232,130,74,0.15)', borderWidth: 1, borderColor: 'rgba(232,130,74,0.4)' },
-  personStatusDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#e8824a' },
-  personStatusPillText: { fontSize: 12, fontWeight: '700', color: '#e8824a' },
-  personStatusCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 16, padding: 14, marginBottom: 16, borderLeftWidth: 3, borderLeftColor: '#e8824a', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
-  personStatusCardIcon: { width: 36, height: 36, borderRadius: 8, backgroundColor: 'rgba(232,130,74,0.12)', justifyContent: 'center', alignItems: 'center' },
-  personStatusCardLabel: { fontSize: 10, fontWeight: '700', color: 'rgba(232,130,74,0.8)', letterSpacing: 1.5, marginBottom: 4 },
-  personStatusCardText: { fontSize: 16, fontWeight: '500', color: '#ffffff', lineHeight: 22 },
-  personSheet: { minHeight: '48%', backgroundColor: BG, borderTopLeftRadius: 26, borderTopRightRadius: 26, padding: 22, paddingBottom: 40 },
-  personHandle: { width: 42, height: 4, borderRadius: 2, backgroundColor: 'rgba(0,107,44,0.25)', alignSelf: 'center', marginBottom: 18 },
-  personTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
-  personModalName: { fontSize: 22, fontWeight: '900', color: '#ffffff', marginBottom: 8 },
-  personTags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  personTag: { backgroundColor: '#FFD700', color: '#000000', fontWeight: '800', fontSize: 14, paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20, overflow: 'hidden' },
-  personModalMood: { fontSize: 15, color: 'rgba(255,255,255,0.7)', lineHeight: 22, marginBottom: 18 },
-  personHint: { fontSize: 14, color: 'rgba(255,255,255,0.7)', fontWeight: '600' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'center', alignItems: 'center' },
+  qrModal: { backgroundColor: '#0f0a06', borderRadius: 24, padding: 28, alignItems: 'center', width: '85%', borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)' },
+  qrModalTitle: { fontSize: 18, fontWeight: '800', color: '#fff', marginBottom: 20 },
+  qrModalCode: { padding: 14, backgroundColor: '#fff', borderRadius: 16, marginBottom: 16 },
+  qrModalHint: { fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 20, textAlign: 'center', lineHeight: 19 },
+  qrCloseBtn: { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 50, paddingVertical: 13, paddingHorizontal: 32, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  qrCloseBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+
+  personOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: 20 },
+  personModal: { backgroundColor: '#0f0a06', borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(232,130,74,0.15)' },
+  personModalBanner: { height: 80, backgroundColor: 'rgba(232,130,74,0.15)' },
+  personModalAvatarWrap: { position: 'absolute', top: 36, left: 20, borderWidth: 3, borderColor: '#0f0a06', borderRadius: 42, overflow: 'hidden' },
+  personModalBody: { paddingHorizontal: 20, paddingTop: 48, paddingBottom: 28 },
+  personModalName: { fontSize: 22, fontWeight: '800', color: '#fff', marginBottom: 10 },
+  personTags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
+  personTag: { backgroundColor: 'rgba(232,130,74,0.12)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(232,130,74,0.25)' },
+  personTagText: { color: AMBER, fontSize: 13, fontWeight: '600' },
+  personModalAbout: { fontSize: 14, color: 'rgba(255,255,255,0.55)', lineHeight: 22 },
 })
