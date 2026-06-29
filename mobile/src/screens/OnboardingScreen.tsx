@@ -35,6 +35,12 @@ export default function OnboardingScreen() {
   const [preview, setPreview] = useState<PlacePreview | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [intentText, setIntentText] = useState('')
+
+  useEffect(() => {
+    return () => {
+      setIntentText('')
+    }
+  }, [])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
@@ -133,7 +139,7 @@ export default function OnboardingScreen() {
   }
 
   const displayPlaces = isSearching ? filteredPlaces : places
-  const wordCount = intentText.trim() ? intentText.trim().split(/\s+/).filter(Boolean).length : 0
+  const wordCount = intentText.trim() === '' ? 0 : intentText.trim().split(/\s+/).filter(Boolean).length
 
   return (
     <View style={s.root}>
@@ -143,6 +149,7 @@ export default function OnboardingScreen() {
         <View style={s.header}>
           <TouchableOpacity
             onPress={() => {
+              setIntentText('')
               if (selectedPlace) {
                 setSelectedPlace(null)
               } else if (navigation.canGoBack()) {
@@ -222,7 +229,7 @@ export default function OnboardingScreen() {
                       <Text style={[s.readyBadgeText, place.readyCount > 0 && s.readyBadgeTextActive]}>{place.readyCount} ready</Text>
                     </View>
                   </View>
-                  <Text style={s.statusText}>{place.readyCount > 0 ? '🟢 People are ready here now' : '⚪ Quiet right now'}</Text>
+
                 </TouchableOpacity>
               ))
             )}
@@ -276,14 +283,14 @@ export default function OnboardingScreen() {
               <Text style={s.sectionLabel}>What do you want to talk about?</Text>
               <TextInput
                 style={s.intentInput}
-                placeholder="e.g. looking for a creative mind to bounce ideas with..."
+                placeholder="Share your interests..."
                 placeholderTextColor="rgba(255,255,255,0.25)"
                 value={intentText}
                 onChangeText={setIntentText}
                 multiline
-                maxLength={200}
+                maxLength={25}
               />
-              <Text style={[s.wordCount, wordCount > 20 && s.wordCountOver]}>{wordCount}/20 words</Text>
+              <Text style={[s.wordCount, intentText.length > 23 && s.wordCountOver]}>{intentText.length}/25 chars</Text>
             </View>
 
             <TouchableOpacity style={s.joinBtn} onPress={handleJoin} disabled={saving} activeOpacity={0.85}>
