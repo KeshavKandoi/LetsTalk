@@ -632,7 +632,12 @@ export default function PlaceViewScreen() {
                       </View>
                       <View style={{ flex: 1, marginLeft: 44 }}>
                         <Text style={s.personName}>{p.username}</Text>
-
+                        {isMe && (p.intentSummary || p.intentText || '').trim().length > 0 ? (
+                          <View style={s.intentBox}>
+                            <Text style={s.intentBoxLabel}>wants to talk about</Text>
+                            <Text style={s.personIntent} numberOfLines={2}>{p.intentSummary || p.intentText}</Text>
+                          </View>
+                        ) : null}
                       </View>
                     </View>
 
@@ -982,4 +987,7 @@ const s = StyleSheet.create({
   personIntentSectionText: { fontSize: 14, color: 'rgba(255,255,255,0.84)', lineHeight: 22 },
   personSpotSection: { borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', padding: 15 },
   personSpotText: { fontSize: 14, color: 'rgba(255,255,255,0.82)', lineHeight: 22, fontWeight: '600' },
+  intentBox: { marginTop: 4, backgroundColor: 'rgba(232,130,74,0.08)', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 3, borderLeftWidth: 2, borderLeftColor: 'rgba(232,130,74,0.5)', maxWidth: '95%' },
+  intentBoxLabel: { fontSize: 8, color: 'rgba(232,130,74,0.6)', fontWeight: '600', marginBottom: 1, textTransform: 'uppercase', letterSpacing: 0.3 },
+  personIntent: { fontSize: 11, color: '#fff', lineHeight: 16, fontWeight: '400' },
 })
