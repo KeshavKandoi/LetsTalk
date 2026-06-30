@@ -17,7 +17,8 @@ type FriendUser = {
   lastMessage?: string | null
 }
 type IncomingRequest = { id: string; user: FriendUser }
-type OutgoingRequest = { id: string; user: FriendUser }
+type PendingRequest = { id: string; user: FriendUser }
+type RejectedRequest = { id: string; user: FriendUser }
 
 const AMBER = '#e8824a'
 const DARK = '#0a0704'
@@ -44,7 +45,8 @@ export default function FriendsScreen() {
   const [tab, setTab] = useState<'friends' | 'requests'>('friends')
   const [friends, setFriends] = useState<FriendUser[]>([])
   const [incoming, setIncoming] = useState<IncomingRequest[]>([])
-  const [outgoing, setOutgoing] = useState<OutgoingRequest[]>([])
+  const [pending, setPending] = useState<PendingRequest[]>([])
+  const [rejected, setRejected] = useState<RejectedRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -87,7 +89,8 @@ export default function FriendsScreen() {
     ])
     setFriends(friendsData.friends ?? [])
     setIncoming(friendsData.incoming ?? [])
-    setOutgoing(friendsData.outgoing ?? [])
+    setPending(friendsData.pending ?? [])
+    setRejected(friendsData.rejected ?? [])
   }
 
   useEffect(() => {
@@ -185,7 +188,7 @@ export default function FriendsScreen() {
             )}
 
             {tab === 'requests' && (
-              (incoming.length || outgoing.length) ? (
+              (incoming.length || pending.length || rejected.length) ? (
                 <>
                   {incoming.map((request) => (
                     <View key={request.id} style={s.requestCard}>
@@ -209,7 +212,7 @@ export default function FriendsScreen() {
                       </View>
                     </View>
                   ))}
-                  {outgoing.map((request) => (
+                  {pending.map((request) => (
                     <View key={request.id} style={s.pendingCard}>
                       <View style={s.rowInner}>
                         <Avatar
@@ -218,11 +221,40 @@ export default function FriendsScreen() {
                         />
                         <View style={{ flex: 1 }}>
                           <Text style={s.name}>{request.user.username}</Text>
-                          <Text style={s.mood}>Pending acceptance</Text>
+                          <Text style={s.mood}>Waiting for them to accept</Text>
                         </View>
                         <View style={s.pendingBadge}>
                           <Text style={s.pendingBadgeTxt}>Pending</Text>
                         </View>
+                      </View>
+                    </View>
+                  ))}
+                  {rejected.map((request) => (
+                    <View key={request.id} style={s.rejectedCard}>
+                      <View style={s.rowInner}>
+                        <Avatar
+                          user={request.user}
+                          onPress={request.user.photoUrl ? () => openPhoto(request.user.photoUrl!, request.user.username) : undefined}
+                        />
+                        <View style={{ flex: 1 }}>
+                          <Text style={s.name}>{request.user.username}</Text>
+                          <Text style={s.mood}>Request declined</Text>
+                        </View>
+                        <TouchableOpacity
+                          style={s.rejectedBadge}
+                          disabled={busyId === request.id}
+                          onPress={async () => {
+                            setBusyId(request.id)
+                            try {
+                              await apiFetch('/api/friends/respond', { requestId: request.id, action: 'remove' })
+                              await load()
+                            } finally {
+                              setBusyId(null)
+                            }
+                          }}
+                        >
+                          <Text style={s.rejectedBadgeTxt}>Rejected ✕</Text>
+                        </TouchableOpacity>
                       </View>
                     </View>
                   ))}
@@ -287,6 +319,9 @@ const s = StyleSheet.create({
   acceptTxt: { color: '#151515', fontWeight: '800' },
   pendingBadge: { backgroundColor: 'rgba(232,130,74,0.08)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
   pendingBadgeTxt: { color: '#fff', fontWeight: '800', fontSize: 11 },
+  rejectedCard: { backgroundColor: 'rgba(26,16,8,0.75)', borderRadius: 18, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(186,26,26,0.25)' },
+  rejectedBadge: { backgroundColor: 'rgba(186,26,26,0.12)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
+  rejectedBadgeTxt: { color: '#ba1a1a', fontWeight: '800', fontSize: 11 },
   empty: { color: MID, fontWeight: '600', textAlign: 'center', marginTop: 28 },
   modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.88)', justifyContent: 'center', alignItems: 'center' },
   modalContent: { alignItems: 'center', gap: 16 },
