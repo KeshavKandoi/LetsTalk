@@ -19,7 +19,7 @@ type FriendUser = {
 }
 type IncomingRequest = { id: string; user: FriendUser }
 type PendingRequest = { id: string; user: FriendUser }
-type RejectedRequest = { id: string; user: FriendUser; rejectedByMe: boolean }
+type RejectedRequest = { id: string; user: FriendUser }
 
 const AMBER = '#e8824a'
 const DARK = '#0a0704'
@@ -258,7 +258,7 @@ export default function FriendsScreen() {
                         />
                         <View style={{ flex: 1 }}>
                           <Text style={s.name}>{request.user.username}</Text>
-                          <Text style={s.mood}>{request.rejectedByMe ? 'You declined this request' : `${request.user.username} declined your request`}</Text>
+                          <Text style={s.mood}>Request declined</Text>
                         </View>
                         <TouchableOpacity
                           style={s.rejectedBadge}
