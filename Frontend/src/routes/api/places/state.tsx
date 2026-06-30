@@ -2,9 +2,14 @@ import { createFileRoute } from '@tanstack/react-router'
 import { auth } from '@backend/lib/auth'
 import { db } from '@backend/lib/db'
 import { userProfile } from '@backend/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import { place, handoffCode } from '@backend/lib/db/schema'
-import { getActiveConnectionForUser } from '@backend/lib/app-state'
+import {
+  cancelOrphanedRequests,
+  expireStaleReady,
+  getActiveConnectionForUser,
+  touchReadyPresence,
+} from '@backend/lib/app-state'
 
 export const Route = createFileRoute('/api/places/state')({
   server: {
@@ -17,6 +22,11 @@ export const Route = createFileRoute('/api/places/state')({
             ? await auth.api.getSession({ headers: new Headers({ ...Object.fromEntries(request.headers.entries()), cookie: `better-auth.session_token=${token}` }) })
             : await auth.api.getSession({ headers: (() => { const h = new Headers(Object.fromEntries(request.headers.entries())); const t = (request.headers.get('authorization') || request.headers.get('Authorization') || '').replace('Bearer ',''); if(t) h.set('cookie', 'better-auth.session_token=' + t); return h; })() })
           if (!session) return new Response(JSON.stringify({ session: null, profile: null }), { headers: { 'Content-Type': 'application/json' } })
+          const sessionUser = session.user as typeof session.user & {
+            username?: string | null
+          }
+
+          await expireStaleReady()
 
           const [profileRecord] = await db
             .select()
@@ -24,14 +34,34 @@ export const Route = createFileRoute('/api/places/state')({
             .where(eq(userProfile.userId, session.user.id))
             .limit(1)
 
+          if (profileRecord?.status === 'ready') {
+            await touchReadyPresence(session.user.id)
+          }
+
+          await cancelOrphanedRequests()
+
+          const [readyCountRecord] = profileRecord?.currentPlaceId
+            ? await db
+                .select({
+                  readyCount: sql<number>`count(*)`,
+                })
+                .from(userProfile)
+                .where(
+                  and(
+                    eq(userProfile.currentPlaceId, profileRecord.currentPlaceId),
+                    eq(userProfile.status, 'ready'),
+                  ),
+                )
+            : [{ readyCount: 0 }]
+
           return new Response(JSON.stringify({
             session: {
               session: { expiresAt: session.session.expiresAt },
               user: {
-                id: session.user.id,
-                name: session.user.name,
-                username: session.user.username ?? null,
-                email: session.user.email,
+                id: sessionUser.id,
+                name: sessionUser.name,
+                username: sessionUser.username ?? null,
+                email: sessionUser.email,
               },
             },
             profile: profileRecord ? {
@@ -54,7 +84,7 @@ export const Route = createFileRoute('/api/places/state')({
               if (!profileRecord?.currentPlaceId) return null
               const [placeRecord] = await db.select().from(place).where(eq(place.placeId, profileRecord.currentPlaceId)).limit(1)
               if (!placeRecord) return null
-              return { place: { placeId: placeRecord.placeId, name: placeRecord.name, address: placeRecord.address, lat: placeRecord.lat, lng: placeRecord.lng, readyCount: 0 }, readyCount: 0 }
+              return { place: { placeId: placeRecord.placeId, name: placeRecord.name, address: placeRecord.address, lat: placeRecord.lat, lng: placeRecord.lng, readyCount: readyCountRecord.readyCount }, readyCount: readyCountRecord.readyCount }
             })(),
             qrHandoff: await (async () => {
               if (!profileRecord?.currentPlaceId) return null
