@@ -52,10 +52,8 @@ export default function ScannerModal({ onClose, onConnected }: Props) {
     setLoading(true)
     setError('')
     try {
-      const result = await apiFetch('/api/places/scan-preview', { token: t })
-      await apiFetch('/api/places/scan-connect', { token: t })
-      setPreview({ ...result, resolvedToken: t, connected: true })
-      onConnected(`Connected with ${result.counterpart?.username} and verified at this place.`)
+      const result = await apiFetch('/api/friends/request', { token: t })
+      setPreview({ ...result, resolvedToken: t })
     } catch (e: any) {
       setError(e.message || 'Could not verify this connection.')
       setScanned(false)
@@ -106,7 +104,10 @@ export default function ScannerModal({ onClose, onConnected }: Props) {
               <Text style={s.successHint}>
                 They need to accept before you become friends.
               </Text>
-              <TouchableOpacity style={s.connectBtn} onPress={onClose}>
+              <TouchableOpacity
+                style={s.connectBtn}
+                onPress={() => onConnected(`Friend request sent to ${preview.counterpart?.username || 'them'}.`)}
+              >
                 <Text style={s.connectTxt}>Done</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.cancelBtn} onPress={resetScan}>
