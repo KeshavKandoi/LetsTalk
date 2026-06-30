@@ -34,7 +34,7 @@ export const Route = createFileRoute('/api/places/state')({
             .where(eq(userProfile.userId, session.user.id))
             .limit(1)
 
-          if (profileRecord?.status === 'ready') {
+          if (profileRecord?.status === 'ready' || profileRecord?.status === 'in_conversation') {
             await touchReadyPresence(session.user.id)
           }
 
