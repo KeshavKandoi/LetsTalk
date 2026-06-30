@@ -1478,7 +1478,6 @@ export async function listFriends(input?: { viewerUserId?: string }) {
       .map((row) => ({
         id: row.id,
         user: mapFriendUser(row),
-        rejectedByMe: row.initiatorUserId === session.user.id,
       })),
   }
 }
@@ -1540,7 +1539,7 @@ export async function respondToFriendRequest(input: {
   if (input.action === 'reject') {
     await db
       .update(friendRequest)
-      .set({ status: 'rejected', initiatorUserId: session.user.id, updatedAt: now })
+      .set({ status: 'rejected', updatedAt: now })
       .where(eq(friendRequest.id, requestRecord.id))
     return { success: true }
   }
