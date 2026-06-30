@@ -430,7 +430,7 @@ export default function PlaceViewScreen() {
   const isInConversation = profile.status === 'in_conversation'
   const myUserId = state.session?.user.id
   const myDisplayName = myUsername || state.session?.user.username || state.session?.user.name || 'You'
-  const availableParticipants = participants.filter((p) => p.status !== 'in_conversation' && (p.isVerifiedOnSite || p.userId === myUserId))
+  const availableParticipants = participants.filter((p) => p.status !== 'in_conversation' && (p.isVerifiedOnSite || p.userId === myUserId)).sort((a, b) => a.userId === myUserId ? -1 : b.userId === myUserId ? 1 : 0)
   const incomingRequests = pendingRequests.filter((r) => r.direction === 'incoming')
   const requestByUserId = new Map(pendingRequests.map((r) => [r.user.userId, r]))
   const currentParticipant = participants.find((p) => p.userId === myUserId)
