@@ -264,6 +264,7 @@ export function PlaceViewScreen({
   refreshSession,
   clearScanToken,
   setReady,
+  sendHeartbeat,
   saveFinderProfile,
   leavePlace,
   pingParticipant,
@@ -281,6 +282,7 @@ export function PlaceViewScreen({
   refreshSession: () => Promise<void>
   clearScanToken: () => Promise<void>
   setReady: (input: { data: { ready: boolean } }) => Promise<void>
+  sendHeartbeat: () => Promise<unknown>
   saveFinderProfile: (input: {
     data: {
       isFindable: boolean
@@ -542,6 +544,42 @@ export function PlaceViewScreen({
       window.clearInterval(intervalId)
     }
   }, [resolvedActiveConnection?.id])
+
+  useEffect(() => {
+    if (
+      !isReady ||
+      isInConversation ||
+      typeof window === 'undefined' ||
+      typeof document === 'undefined'
+    ) {
+      return
+    }
+
+    let cancelled = false
+
+    const pulse = () => {
+      if (cancelled || document.visibilityState !== 'visible') {
+        return
+      }
+
+      void sendHeartbeat()
+    }
+
+    pulse()
+
+    const intervalId = window.setInterval(pulse, 15_000)
+    const handleVisibilityChange = () => {
+      pulse()
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(intervalId)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [isReady, isInConversation, sendHeartbeat])
 
   useEffect(() => {
     if (locationHint) {
