@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, or, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, lt, or, sql } from 'drizzle-orm'
 // agents removed
 import { getRequestHeaders } from '@tanstack/react-start/server'
 import type {
@@ -18,6 +18,7 @@ import { auth } from './auth'
 import { db } from './db'
 import { UserAgent } from './agents/user-agent'
 import {
+  connectRequestRejection,
   handoffCode,
   handoffConnection,
   friendRequest,
@@ -49,15 +50,20 @@ type GoogleNearbyPlace = {
 }
 
 function mapSession(session: NonNullable<SessionResult>): AppSession {
+  const sessionUser = session.user as typeof session.user & {
+    username?: string | null
+    displayUsername?: string | null
+  }
+
   return {
     session: {
       expiresAt: session.session.expiresAt,
     },
     user: {
-      id: session.user.id,
-      name: session.user.name,
-      username: session.user.username ?? null,
-      displayUsername: session.user.displayUsername ?? null,
+      id: sessionUser.id,
+      name: sessionUser.name,
+      username: sessionUser.username ?? null,
+      displayUsername: sessionUser.displayUsername ?? null,
     },
   }
 }
@@ -122,6 +128,207 @@ function assertCoordinates(input: { latitude?: number; longitude?: number }) {
     throw new Error('A valid location is required.')
   }
   return { latitude: input.latitude as number, longitude: input.longitude as number }
+}
+
+const READY_STALE_MS = 60_000
+const CONNECT_REQUEST_BLOCK_MS = 20 * 60_000
+
+async function getReadyCountByPlaceIds(placeIds: string[]) {
+  if (placeIds.length === 0) {
+    return new Map<string, number>()
+  }
+
+  const rows = await db
+    .select({
+      placeId: userProfile.currentPlaceId,
+      readyCount: sql<number>`count(*)`,
+    })
+    .from(userProfile)
+    .where(
+      and(
+        inArray(userProfile.currentPlaceId, placeIds),
+        eq(userProfile.status, 'ready'),
+      ),
+    )
+    .groupBy(userProfile.currentPlaceId)
+
+  return new Map(
+    rows
+      .filter((row): row is { placeId: string; readyCount: number } => Boolean(row.placeId))
+      .map((row) => [row.placeId, row.readyCount]),
+  )
+}
+
+export async function touchReadyPresence(userId: string, now = new Date()) {
+  await db
+    .update(userProfile)
+    .set({ updatedAt: now })
+    .where(and(eq(userProfile.userId, userId), eq(userProfile.status, 'ready')))
+}
+
+export async function expireStaleReady(now = new Date()) {
+  const staleCutoff = new Date(now.getTime() - READY_STALE_MS)
+  const staleProfiles = await db
+    .select({
+      userId: userProfile.userId,
+      currentPlaceId: userProfile.currentPlaceId,
+    })
+    .from(userProfile)
+    .where(
+      and(
+        eq(userProfile.status, 'ready'),
+        lt(userProfile.updatedAt, staleCutoff),
+      ),
+    )
+
+  if (staleProfiles.length === 0) {
+    return { updatedUserIds: [] as string[], affectedPlaceIds: [] as string[] }
+  }
+
+  await db
+    .update(userProfile)
+    .set({
+      status: 'present',
+      isFindable: false,
+      isVerifiedOnSite: false,
+      locationHint: null,
+      pingRequestedAt: null,
+      pingRequestedByUserId: null,
+      pingRequestedByUsername: null,
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(userProfile.status, 'ready'),
+        lt(userProfile.updatedAt, staleCutoff),
+      ),
+    )
+
+  return {
+    updatedUserIds: staleProfiles.map((profile) => profile.userId),
+    affectedPlaceIds: [...new Set(staleProfiles.map((profile) => profile.currentPlaceId).filter((id): id is string => Boolean(id)))],
+  }
+}
+
+export async function cancelOrphanedRequests(now = new Date()) {
+  const pendingRequests = await db
+    .select({
+      id: handoffConnection.id,
+      placeId: handoffConnection.placeId,
+      requesterUserId: handoffConnection.requesterUserId,
+      recipientUserId: handoffConnection.recipientUserId,
+      requesterStatus: userProfile.status,
+    })
+    .from(handoffConnection)
+    .leftJoin(userProfile, eq(userProfile.userId, handoffConnection.requesterUserId))
+    .where(eq(handoffConnection.status, 'pending'))
+
+  const orphanedRequests = pendingRequests.filter((request) => request.requesterStatus !== 'ready')
+
+  if (orphanedRequests.length === 0) {
+    return {
+      canceledRequestIds: [] as string[],
+      affectedPlaceIds: [] as string[],
+      affectedUserIds: [] as string[],
+    }
+  }
+
+  await db
+    .update(handoffConnection)
+    .set({ status: 'canceled', updatedAt: now })
+    .where(
+      inArray(
+        handoffConnection.id,
+        orphanedRequests.map((request) => request.id),
+      ),
+    )
+
+  return {
+    canceledRequestIds: orphanedRequests.map((request) => request.id),
+    affectedPlaceIds: [...new Set(orphanedRequests.map((request) => request.placeId))],
+    affectedUserIds: [...new Set(orphanedRequests.flatMap((request) => [request.requesterUserId, request.recipientUserId]))],
+  }
+}
+
+async function getConnectRequestRejectionRecord(
+  requesterUserId: string,
+  recipientUserId: string,
+) {
+  const [record] = await db
+    .select()
+    .from(connectRequestRejection)
+    .where(
+      and(
+        eq(connectRequestRejection.requesterUserId, requesterUserId),
+        eq(connectRequestRejection.recipientUserId, recipientUserId),
+      ),
+    )
+    .limit(1)
+
+  return record ?? null
+}
+
+async function incrementConnectRequestRejection(
+  requesterUserId: string,
+  recipientUserId: string,
+  now = new Date(),
+) {
+  const existingRecord = await getConnectRequestRejectionRecord(
+    requesterUserId,
+    recipientUserId,
+  )
+  const rejectionCount =
+    existingRecord &&
+    now.getTime() - new Date(existingRecord.lastRejectedAt).getTime() <
+      CONNECT_REQUEST_BLOCK_MS
+      ? existingRecord.rejectionCount + 1
+      : 1
+
+  await db
+    .insert(connectRequestRejection)
+    .values({
+      requesterUserId,
+      recipientUserId,
+      rejectionCount,
+      lastRejectedAt: now,
+      createdAt: existingRecord?.createdAt ?? now,
+      updatedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: [
+        connectRequestRejection.requesterUserId,
+        connectRequestRejection.recipientUserId,
+      ],
+      set: {
+        rejectionCount,
+        lastRejectedAt: now,
+        updatedAt: now,
+      },
+    })
+}
+
+async function isConnectRequestBlocked(
+  requesterUserId: string,
+  recipientUserId: string,
+  now = new Date(),
+) {
+  const record = await getConnectRequestRejectionRecord(
+    requesterUserId,
+    recipientUserId,
+  )
+
+  if (!record) {
+    return false
+  }
+
+  if (
+    now.getTime() - new Date(record.lastRejectedAt).getTime() >=
+    CONNECT_REQUEST_BLOCK_MS
+  ) {
+    return false
+  }
+
+  return record.rejectionCount >= 2
 }
 
 async function endConnectionsForLocationExit(userId: string, now: Date) {
@@ -608,18 +815,10 @@ export async function getAppState(): Promise<AppState> {
       .limit(1)
 
     if (currentPlaceRecord) {
-      const [{ readyCount }] = await db
-        .select({
-          readyCount: sql<number>`count(*)`,
-        })
-        .from(userProfile)
-        .where(
-          and(
-            eq(userProfile.currentPlaceId, profileRecord.currentPlaceId),
-            eq(userProfile.status, 'ready'),
-            eq(userProfile.isVerifiedOnSite, true),
-          ),
-        )
+      const readyCountByPlaceId = await getReadyCountByPlaceIds([
+        profileRecord.currentPlaceId,
+      ])
+      const readyCount = readyCountByPlaceId.get(profileRecord.currentPlaceId) ?? 0
 
       currentPlace = {
         place: mapPlace(currentPlaceRecord, readyCount),
@@ -918,6 +1117,10 @@ export async function sendConnectRequest(input: {
     throw new Error('They are already connected with someone nearby.')
   }
 
+  if (await isConnectRequestBlocked(session.user.id, targetUserId, new Date())) {
+    throw new Error('You cannot send another request to this person for 20 minutes.')
+  }
+
   const now = new Date()
   const [existingRequest] = await db
     .select()
@@ -1005,6 +1208,11 @@ export async function respondToConnectRequest(input: {
       .update(handoffConnection)
       .set({ status: 'declined', updatedAt: now })
       .where(eq(handoffConnection.id, requestRecord.id))
+    await incrementConnectRequestRejection(
+      requestRecord.requesterUserId,
+      requestRecord.recipientUserId,
+      now,
+    )
     return { success: true }
   }
 
@@ -1576,35 +1784,8 @@ export async function searchNearbyPlacesForLocation(input: {
     return places
   }
 
-  const readyCountRows = await db
-    .select({
-      placeId: userProfile.currentPlaceId,
-      readyCount: sql<number>`count(*)`,
-    })
-    .from(userProfile)
-    .where(
-      and(
-        inArray(
-          userProfile.currentPlaceId,
-          places.map((nearbyPlace) => nearbyPlace.placeId),
-        ),
-        eq(userProfile.status, 'ready'),
-        eq(userProfile.isVerifiedOnSite, true),
-      ),
-    )
-    .groupBy(userProfile.currentPlaceId)
-
-  const readyCountByPlaceId = new Map(
-    readyCountRows
-      .filter(
-        (
-          row,
-        ): row is {
-          placeId: string
-          readyCount: number
-        } => Boolean(row.placeId),
-      )
-      .map((row) => [row.placeId, row.readyCount]),
+  const readyCountByPlaceId = await getReadyCountByPlaceIds(
+    places.map((nearbyPlace) => nearbyPlace.placeId),
   )
 
   return places.map((nearbyPlace) => ({
@@ -1709,8 +1890,8 @@ export async function getNearbyPlacePreview(input: {
 
   return {
     placeId,
-    readyCount,
-    checkedInCount,
+      readyCount,
+      checkedInCount,
     activeConversationCount,
       participants: participantRecords.map((record) => ({
         userId: record.userId,
