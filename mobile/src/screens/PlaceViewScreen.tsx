@@ -632,12 +632,18 @@ export default function PlaceViewScreen() {
                       </View>
                       <View style={{ flex: 1, marginLeft: 44 }}>
                         <Text style={s.personName}>{p.username}</Text>
-                        {(p.intentSummary || p.intentText || '').trim().length > 0 ? (
-                          <View style={s.intentBox}>
-                            <Text style={s.intentBoxLabel}>wants to talk about</Text>
-                            <Text style={s.personIntent} numberOfLines={4}>{p.intentSummary || p.intentText}</Text>
-                          </View>
-                        ) : null}
+                        <View style={s.personMetaRow}>
+                          {p.age ? (
+                            <View style={s.personMetaChip}>
+                              <Text style={s.personMetaChipText}>{p.age}</Text>
+                            </View>
+                          ) : null}
+                          {p.gender ? (
+                            <View style={s.personMetaChip}>
+                              <Text style={s.personMetaChipText}>{p.gender}</Text>
+                            </View>
+                          ) : null}
+                        </View>
                       </View>
                     </View>
 
@@ -774,21 +780,47 @@ export default function PlaceViewScreen() {
           <TouchableOpacity activeOpacity={1} style={s.personModal}>
             {selectedPerson && (
               <>
-                <View style={s.personModalBanner} />
-                <View style={s.personModalAvatarWrap}>
-                  {renderAvatar(selectedPerson, 76)}
+                <View style={s.personModalHeader}>
+                  <View style={s.personModalGlow} />
+                  <View style={s.personModalAvatarWrap}>
+                    {renderAvatar(selectedPerson, 84)}
+                  </View>
+                  <View style={s.personModalHeaderText}>
+                    <Text style={s.personModalKicker}>PROFILE</Text>
+                    <Text style={s.personModalName}>{selectedPerson.username}</Text>
+                    <Text style={s.personModalIntro}>
+                      Get a better sense of the person before you connect.
+                    </Text>
+                  </View>
                 </View>
                 <View style={s.personModalBody}>
-                  <Text style={s.personModalName}>{selectedPerson.username}</Text>
-                  <View style={s.personTags}>
-                    {selectedPerson.gender ? <View style={s.personTag}><Text style={s.personTagText}>{selectedPerson.gender}</Text></View> : null}
-                    {selectedPerson.age ? <View style={s.personTag}><Text style={s.personTagText}>{selectedPerson.age}</Text></View> : null}
-                    <View style={s.personTag}>
-                      <Text style={s.personTagText}>{selectedPerson.status === 'ready' ? 'Open to Talk' : 'Browsing'}</Text>
-                    </View>
+                  <View style={s.personFactRow}>
+                    {selectedPerson.age ? (
+                      <View style={s.personFactCard}>
+                        <Text style={s.personFactLabel}>Age</Text>
+                        <Text style={s.personFactValue}>{selectedPerson.age}</Text>
+                      </View>
+                    ) : null}
+                    {selectedPerson.gender ? (
+                      <View style={s.personFactCard}>
+                        <Text style={s.personFactLabel}>Gender</Text>
+                        <Text style={s.personFactValue}>{selectedPerson.gender}</Text>
+                      </View>
+                    ) : null}
                   </View>
-                  {(selectedPerson.intentText || selectedPerson.about || selectedPerson.intentSummary) ? (
-                    <Text style={s.personModalAbout}>{selectedPerson.intentText || selectedPerson.about || selectedPerson.intentSummary}</Text>
+
+                  <View style={s.personIntentSection}>
+                    <Text style={s.personIntentSectionLabel}>What do you want to talk about</Text>
+                    <Text style={s.personIntentSectionText}>
+                      {selectedPerson.intentText || selectedPerson.intentSummary || 'Open to a nearby conversation.'}
+                    </Text>
+                  </View>
+
+                  {selectedPerson.locationHint ? (
+                    <View style={s.personSpotSection}>
+                      <Text style={s.personIntentSectionLabel}>Shared spot</Text>
+                      <Text style={s.personSpotText}>{selectedPerson.locationHint}</Text>
+                    </View>
                   ) : null}
                 </View>
               </>
@@ -909,10 +941,9 @@ const s = StyleSheet.create({
   avatarPlaceholder: { backgroundColor: 'rgba(232,130,74,0.12)', justifyContent: 'center', alignItems: 'center' },
   avatarInitials: { color: '#fff', fontWeight: '800' },
   personName: { fontSize: 15, fontWeight: '800', color: '#fff', marginBottom: 6 },
-  intentBox: { marginTop: 2, backgroundColor: 'rgba(232,130,74,0.07)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, borderLeftWidth: 2, borderLeftColor: 'rgba(232,130,74,0.5)', alignSelf: 'flex-start', maxWidth: 200 },
-  intentBoxLabel: { fontSize: 9, color: 'rgba(232,130,74,0.6)', fontWeight: '600', marginBottom: 1 },
-  personIntentLabel: { fontSize: 9, fontWeight: '700', color: 'rgba(232,130,74,0.7)', letterSpacing: 1, marginBottom: 5, marginTop: 6, textTransform: 'uppercase' },
-  personIntent: { fontSize: 12, color: 'rgba(255,255,255,0.7)', lineHeight: 16, marginBottom: 0 },
+  personMetaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  personMetaChip: { backgroundColor: 'rgba(232,130,74,0.08)', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: 'rgba(232,130,74,0.18)' },
+  personMetaChipText: { color: AMBER, fontSize: 11, fontWeight: '700' },
   personHint: { fontSize: 12, color: AMBER_LIGHT, fontWeight: '600' },
   personBtns: { flexDirection: 'row', gap: 8 },
   viewProfileBtn: { flex: 1, paddingVertical: 9, borderRadius: 12, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.15)', alignItems: 'center' },
@@ -943,14 +974,23 @@ const s = StyleSheet.create({
   qrCloseBtn: { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 50, paddingVertical: 13, paddingHorizontal: 32, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
   qrCloseBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
 
-  personOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: 20 },
-  personModal: { backgroundColor: '#0f0a06', borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(232,130,74,0.15)' },
-  personModalBanner: { height: 80, backgroundColor: 'rgba(232,130,74,0.15)' },
-  personModalAvatarWrap: { position: 'absolute', top: 36, left: 20, borderWidth: 3, borderColor: '#0f0a06', borderRadius: 42, overflow: 'hidden' },
-  personModalBody: { paddingHorizontal: 20, paddingTop: 48, paddingBottom: 28 },
-  personModalName: { fontSize: 22, fontWeight: '800', color: '#fff', marginBottom: 10 },
-  personTags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
-  personTag: { backgroundColor: 'rgba(232,130,74,0.12)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(232,130,74,0.25)' },
-  personTagText: { color: AMBER, fontSize: 13, fontWeight: '600' },
-  personModalAbout: { fontSize: 14, color: 'rgba(255,255,255,0.55)', lineHeight: 22 },
+  personOverlay: { flex: 1, backgroundColor: 'rgba(8,5,2,0.72)', justifyContent: 'center', padding: 20 },
+  personModal: { backgroundColor: '#120d09', borderRadius: 28, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(232,130,74,0.16)', shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 28, shadowOffset: { width: 0, height: 18 }, elevation: 8 },
+  personModalHeader: { position: 'relative', paddingHorizontal: 20, paddingTop: 22, paddingBottom: 18, backgroundColor: '#1a1009', borderBottomWidth: 1, borderBottomColor: 'rgba(232,130,74,0.12)' },
+  personModalGlow: { position: 'absolute', top: -70, right: -40, width: 180, height: 180, borderRadius: 90, backgroundColor: 'rgba(232,130,74,0.12)' },
+  personModalAvatarWrap: { alignSelf: 'flex-start', borderWidth: 3, borderColor: '#120d09', borderRadius: 46, overflow: 'hidden', marginBottom: 14, zIndex: 1 },
+  personModalHeaderText: { zIndex: 1 },
+  personModalKicker: { fontSize: 10, letterSpacing: 2, fontWeight: '800', color: 'rgba(232,130,74,0.72)', marginBottom: 6 },
+  personModalName: { fontSize: 26, fontWeight: '900', color: '#fff', letterSpacing: -0.4, marginBottom: 8 },
+  personModalIntro: { fontSize: 14, color: 'rgba(255,255,255,0.62)', lineHeight: 21, maxWidth: 280 },
+  personModalBody: { paddingHorizontal: 20, paddingTop: 18, paddingBottom: 26, gap: 14 },
+  personFactRow: { flexDirection: 'row', gap: 10 },
+  personFactCard: { flex: 1, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', paddingHorizontal: 14, paddingVertical: 12 },
+  personFactLabel: { fontSize: 11, textTransform: 'uppercase', letterSpacing: 1.2, color: 'rgba(255,255,255,0.38)', fontWeight: '700', marginBottom: 6 },
+  personFactValue: { fontSize: 15, fontWeight: '800', color: '#fff' },
+  personIntentSection: { borderRadius: 20, backgroundColor: 'rgba(232,130,74,0.08)', borderWidth: 1, borderColor: 'rgba(232,130,74,0.14)', padding: 15 },
+  personIntentSectionLabel: { fontSize: 11, letterSpacing: 1.2, textTransform: 'uppercase', color: 'rgba(232,130,74,0.7)', fontWeight: '800', marginBottom: 8 },
+  personIntentSectionText: { fontSize: 14, color: 'rgba(255,255,255,0.84)', lineHeight: 22 },
+  personSpotSection: { borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', padding: 15 },
+  personSpotText: { fontSize: 14, color: 'rgba(255,255,255,0.82)', lineHeight: 22, fontWeight: '600' },
 })
