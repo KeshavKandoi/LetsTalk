@@ -12,6 +12,8 @@ import {
   getAppState,
   getGoogleMapsBrowserConfig,
   getNearbyPlacePreview,
+  getCurrentSession,
+  touchReadyPresence,
   leaveCurrentPlace,
   joinPlaceAndConnectFromScan,
   pingFindableUser,
@@ -46,6 +48,17 @@ const upsertUserProfile = createServerFn({ method: 'POST' })
 const updateReadyState = createServerFn({ method: 'POST' })
   .inputValidator((input: { ready: boolean }) => input)
   .handler(async ({ data }) => setReadyState(data))
+
+const sendReadyHeartbeat = createServerFn({ method: 'POST' }).handler(async () => {
+  const session = await getCurrentSession()
+
+  if (!session) {
+    return { success: false }
+  }
+
+  await touchReadyPresence(session.user.id)
+  return { success: true }
+})
 
 const updateFinderProfile = createServerFn({ method: 'POST' })
   .inputValidator((input: { isFindable: boolean; locationHint: string | null }) => input)
@@ -87,7 +100,10 @@ function App() {
   const { session, profile, currentPlace, qrHandoff, activeConnection, googleMapsConfig } = Route.useLoaderData()
   const { scan } = Route.useSearch()
   const router = useRouter()
-  const { auth: authParam } = Route.useSearch()
+  const { auth: authParam } = Route.useSearch() as {
+    scan?: string
+    auth?: string
+  }
   const [showAuth, setShowAuth] = useState<'login' | 'signup' | null>(authParam === 'login' || authParam === 'signup' ? authParam : null)
 
   const refreshSession = async () => { await router.invalidate(); setShowAuth(null) }
@@ -124,6 +140,7 @@ function App() {
         qrHandoff={qrHandoff} activeConnection={activeConnection}
         initialScanToken={scan ?? null} refreshSession={refreshSession}
         clearScanToken={clearScanToken} setReady={updateReadyState}
+        sendHeartbeat={sendReadyHeartbeat}
         saveFinderProfile={updateFinderProfile} leavePlace={clearCurrentPlace}
         pingParticipant={pingParticipant} loadScanPreview={loadScanPreview}
         connectScan={connectScannedQr} endConversation={endConversation}
