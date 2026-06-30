@@ -53,11 +53,11 @@ export default function ScannerModal({ onClose, onConnected }: Props) {
     setError('')
     try {
       const result = await apiFetch('/api/places/scan-preview', { token: t })
-      await apiFetch('/api/friends/request', { token: t })
-      setPreview({ ...result, resolvedToken: t, requestSent: true })
-      onConnected(`Friend request sent to ${result.counterpart?.username}. Waiting for their acceptance.`)
+      await apiFetch('/api/places/scan-connect', { token: t })
+      setPreview({ ...result, resolvedToken: t, connected: true })
+      onConnected(`Connected with ${result.counterpart?.username} and verified at this place.`)
     } catch (e: any) {
-      setError(e.message || 'Could not send friend request.')
+      setError(e.message || 'Could not verify this connection.')
       setScanned(false)
     } finally {
       setLoading(false)
@@ -95,7 +95,7 @@ export default function ScannerModal({ onClose, onConnected }: Props) {
           {preview ? (
             /* Preview card */
             <View style={s.previewCard}>
-              <Text style={s.previewLabel}>Friend request sent to</Text>
+              <Text style={s.previewLabel}>Connected with</Text>
               <Text style={s.previewName}>{preview.counterpart?.username}</Text>
               <Text style={s.previewMood}>
                 {preview.counterpart?.moodEmoji} {preview.counterpart?.intentSummary || 'Open to a conversation.'}
@@ -104,7 +104,7 @@ export default function ScannerModal({ onClose, onConnected }: Props) {
                 <Text style={s.previewPlaceTxt}>📍 {preview.placeName}</Text>
               </View>
               <Text style={s.successHint}>
-                They need to accept before you become friends.
+                Your place connection is now verified on both sides.
               </Text>
               <TouchableOpacity style={s.connectBtn} onPress={onClose}>
                 <Text style={s.connectTxt}>Done</Text>
