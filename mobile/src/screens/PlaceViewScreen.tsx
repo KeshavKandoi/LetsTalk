@@ -113,7 +113,12 @@ export default function PlaceViewScreen() {
   const [selectedHint, setSelectedHint] = useState<string | null>(null)
   const [myUsername, setMyUsername] = useState<string>('')
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const gpsVerifyRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const appStateRef = useRef(AppState.currentState)
+  const isFocusedRef = useRef(false)
+  const leaveInFlightRef = useRef(false)
+  const profileStatusRef = useRef<string | null>(null)
   const photoLoadedRef = useRef(false)
   const seenConnectionEventIdsRef = useRef<Set<string>>(new Set())
 
@@ -154,6 +159,38 @@ export default function PlaceViewScreen() {
     }
   }
 
+  const clearHeartbeat = () => {
+    if (heartbeatRef.current) {
+      clearInterval(heartbeatRef.current)
+      heartbeatRef.current = null
+    }
+  }
+
+  const updateHeartbeat = () => {
+    clearHeartbeat()
+    if (profileStatusRef.current !== 'ready') return
+    if (!isFocusedRef.current) return
+    if (appStateRef.current !== 'active') return
+
+    heartbeatRef.current = setInterval(() => {
+      if (!isFocusedRef.current) return
+      if (appStateRef.current !== 'active') return
+      if (profileStatusRef.current !== 'ready') return
+      void apiFetch('/api/places/state', {}).catch(() => {})
+    }, 15_000)
+  }
+
+  const leavePlaceSilently = useCallback(async () => {
+    if (leaveInFlightRef.current) return false
+    leaveInFlightRef.current = true
+    try {
+      await apiFetch('/api/places/leave', {})
+      return true
+    } finally {
+      leaveInFlightRef.current = false
+    }
+  }, [])
+
   const loadState = async (silent = false) => {
     if (!silent) setLoading(true)
     try {
@@ -163,6 +200,7 @@ export default function PlaceViewScreen() {
         return
       }
       setState(data)
+      profileStatusRef.current = data.profile?.status ?? null
       if (!myUsername) {
         if (data.session?.user?.username) setMyUsername(data.session.user.username)
         else if (data.session?.user?.name) setMyUsername(data.session.user.name)
@@ -211,14 +249,44 @@ export default function PlaceViewScreen() {
     loadState()
     pollRef.current = setInterval(() => loadState(true), 3000)
     const subscription = AppState.addEventListener('change', (nextState) => {
-      if (nextState === 'active') void loadState(true)
+      appStateRef.current = nextState
+      if (nextState === 'active') {
+        void loadState(true)
+        updateHeartbeat()
+        return
+      }
+      if (profileStatusRef.current === 'ready') {
+        void leavePlaceSilently().then((left) => {
+          if (left) navigation.reset({ index: 0, routes: [{ name: 'Onboarding' }] })
+        }).catch(() => {})
+      }
     })
     return () => {
       if (pollRef.current) clearInterval(pollRef.current)
+      clearHeartbeat()
       if (gpsVerifyRef.current) clearInterval(gpsVerifyRef.current)
       subscription.remove()
     }
   }, [])
+
+  useFocusEffect(
+    useCallback(() => {
+      isFocusedRef.current = true
+      updateHeartbeat()
+
+      return () => {
+        isFocusedRef.current = false
+        clearHeartbeat()
+        if (profileStatusRef.current === 'ready' && appStateRef.current === 'active') {
+          void leavePlaceSilently().catch(() => {})
+        }
+      }
+    }, [leavePlaceSilently]),
+  )
+
+  useEffect(() => {
+    updateHeartbeat()
+  }, [state?.profile?.status])
 
   useEffect(() => {
     if (gpsVerifyRef.current) { clearInterval(gpsVerifyRef.current); gpsVerifyRef.current = null }
@@ -255,8 +323,10 @@ export default function PlaceViewScreen() {
         const currentLocation = await getCurrentGpsLocation()
         if (distanceMeters(currentLocation, currentPlaceLocation) > GPS_LIMIT_METERS) throw new Error('You are outside 200 meters of this location.')
         await apiFetch('/api/places/ready', { ready: true, ...currentLocation })
+        updateHeartbeat()
       } else {
         await apiFetch('/api/places/ready', { ready: false })
+        clearHeartbeat()
         setQrVerified(false)
       }
       await loadState(true)
@@ -269,7 +339,11 @@ export default function PlaceViewScreen() {
       { text: 'Cancel', style: 'cancel' },
       { text: 'Leave', style: 'destructive', onPress: async () => {
         setLeaving(true)
-        try { await apiFetch('/api/places/leave', {}); navigation.reset({ index: 0, routes: [{ name: 'Onboarding' }] }) }
+        try {
+          clearHeartbeat()
+          await leavePlaceSilently()
+          navigation.reset({ index: 0, routes: [{ name: 'Onboarding' }] })
+        }
         catch (e: any) { setError(e.message); setLeaving(false) }
       }}
     ])
