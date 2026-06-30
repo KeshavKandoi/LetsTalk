@@ -632,18 +632,7 @@ export default function PlaceViewScreen() {
                       </View>
                       <View style={{ flex: 1, marginLeft: 44 }}>
                         <Text style={s.personName}>{p.username}</Text>
-                        <View style={s.personMetaRow}>
-                          {p.age ? (
-                            <View style={s.personMetaChip}>
-                              <Text style={s.personMetaChipText}>{p.age}</Text>
-                            </View>
-                          ) : null}
-                          {p.gender ? (
-                            <View style={s.personMetaChip}>
-                              <Text style={s.personMetaChipText}>{p.gender}</Text>
-                            </View>
-                          ) : null}
-                        </View>
+
                       </View>
                     </View>
 
