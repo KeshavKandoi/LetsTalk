@@ -1299,10 +1299,11 @@ export async function createFriendRequest(input: { token?: string }) {
   let targetUserId = ''
   let placeId: string | null = null
 
+  let scannedPreview: Awaited<ReturnType<typeof resolveScannedHandoff>> | null = null
   if (input.token) {
-    const preview = await resolveScannedHandoff(input.token.trim(), session.user.id)
-    targetUserId = preview.counterpart.userId
-    placeId = preview.placeId
+    scannedPreview = await resolveScannedHandoff(input.token.trim(), session.user.id)
+    targetUserId = scannedPreview.counterpart.userId
+    placeId = scannedPreview.placeId
   }
 
   if (!targetUserId) {
@@ -1376,7 +1377,11 @@ export async function createFriendRequest(input: { token?: string }) {
       },
     })
 
-  return { success: true }
+  return {
+    success: true,
+    counterpart: scannedPreview?.counterpart ?? null,
+    placeName: scannedPreview?.placeName ?? null,
+  }
 }
 
 export async function listFriends(input?: { viewerUserId?: string }) {
