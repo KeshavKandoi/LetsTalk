@@ -180,11 +180,11 @@ export default function PlaceViewScreen() {
     }, 15_000)
   }
 
-  const leavePlaceSilently = useCallback(async () => {
+  const clearTransientPresenceSilently = useCallback(async () => {
     if (leaveInFlightRef.current) return false
     leaveInFlightRef.current = true
     try {
-      await apiFetch('/api/places/leave', {})
+      await apiFetch('/api/places/ready', { ready: false })
       return true
     } finally {
       leaveInFlightRef.current = false
@@ -255,10 +255,8 @@ export default function PlaceViewScreen() {
         updateHeartbeat()
         return
       }
-      if (profileStatusRef.current === 'ready') {
-        void leavePlaceSilently().then((left) => {
-          if (left) navigation.reset({ index: 0, routes: [{ name: 'Onboarding' }] })
-        }).catch(() => {})
+      if (['ready', 'in_conversation'].includes(profileStatusRef.current ?? '')) {
+        void clearTransientPresenceSilently().catch(() => {})
       }
     })
     return () => {
@@ -277,11 +275,11 @@ export default function PlaceViewScreen() {
       return () => {
         isFocusedRef.current = false
         clearHeartbeat()
-        if (profileStatusRef.current === 'ready' && appStateRef.current === 'active') {
-          void leavePlaceSilently().catch(() => {})
+        if (['ready', 'in_conversation'].includes(profileStatusRef.current ?? '') && appStateRef.current === 'active') {
+          void clearTransientPresenceSilently().catch(() => {})
         }
       }
-    }, [leavePlaceSilently]),
+    }, [clearTransientPresenceSilently]),
   )
 
   useEffect(() => {
@@ -341,7 +339,7 @@ export default function PlaceViewScreen() {
         setLeaving(true)
         try {
           clearHeartbeat()
-          await leavePlaceSilently()
+          await apiFetch('/api/places/leave', {})
           navigation.reset({ index: 0, routes: [{ name: 'Onboarding' }] })
         }
         catch (e: any) { setError(e.message); setLeaving(false) }
