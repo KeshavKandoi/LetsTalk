@@ -819,7 +819,7 @@ export function PlaceViewScreen({
   }, [initialScanToken])
 
   useEffect(() => {
-    if (!scannerOpen || scanPreview || isInConversation) {
+    if (!scannerOpen || scanPreview) {
       return
     }
 
@@ -899,7 +899,7 @@ export function PlaceViewScreen({
       cancelled = true
       stopScanner()
     }
-  }, [scannerOpen, scanPreview, isInConversation])
+  }, [scannerOpen, scanPreview])
 
   const handleReadyToggle = async () => {
     await updateReadyState(!isReady)
@@ -1506,7 +1506,6 @@ export function PlaceViewScreen({
             <button
               type="button"
               onClick={handleOpenScanner}
-              disabled={isInConversation}
               className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--rt-accent)] px-5 py-3 font-semibold text-white transition hover:bg-[var(--rt-accent-strong)] disabled:cursor-not-allowed disabled:opacity-70"
             >
               <ScanLine className="h-4 w-4" />
