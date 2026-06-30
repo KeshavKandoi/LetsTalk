@@ -528,6 +528,8 @@ export async function getActiveConnectionForUser(
       username: getDisplayUsername(counterpartUser),
       moodEmoji: counterpartProfile.moodEmoji,
       intentSummary: counterpartProfile.intentSummary,
+      spotLabel: counterpartProfile.locationHint ?? null,
+      locationHint: counterpartProfile.locationHint ?? null,
       photoUrl: counterpartProfile.photoUrl,
     },
   }
@@ -732,6 +734,8 @@ async function resolveScanPreview(
       username: getDisplayUsername(targetUser),
       moodEmoji: targetProfile.moodEmoji,
       intentSummary: targetProfile.intentSummary,
+      spotLabel: targetProfile.locationHint ?? null,
+      locationHint: targetProfile.locationHint ?? null,
       status: targetProfile.status as PresenceStatus,
     },
   }
