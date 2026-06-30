@@ -53,11 +53,11 @@ export default function ScannerModal({ onClose, onConnected }: Props) {
     setError('')
     try {
       const result = await apiFetch('/api/places/scan-preview', { token: t })
-      await apiFetch('/api/friends/request', { token: t })
-      setPreview({ ...result, resolvedToken: t, requestSent: true })
-      onConnected(`Friend request sent to ${result.counterpart?.username}. Waiting for their acceptance.`)
+      await apiFetch('/api/places/scan-connect', { token: t })
+      setPreview({ ...result, resolvedToken: t, connected: true })
+      onConnected(`Connected with ${result.counterpart?.username} and verified at this place.`)
     } catch (e: any) {
-      setError(e.message || 'Could not send friend request.')
+      setError(e.message || 'Could not verify this connection.')
       setScanned(false)
     } finally {
       setLoading(false)
