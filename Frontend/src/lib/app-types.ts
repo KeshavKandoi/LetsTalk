@@ -153,6 +153,8 @@ export type ActiveConnectionState = {
     username: string
     moodEmoji: string | null
     intentSummary: string | null
+    spotLabel?: string | null
+    locationHint?: string | null
     photoUrl?: string | null
   }
 }
