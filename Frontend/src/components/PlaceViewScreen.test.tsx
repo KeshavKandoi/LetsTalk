@@ -120,6 +120,7 @@ function renderPlaceViewScreen(
     refreshSession: vi.fn(async () => undefined),
     clearScanToken: vi.fn(async () => undefined),
     setReady: vi.fn(async () => undefined),
+    sendHeartbeat: vi.fn(async () => undefined),
     saveFinderProfile: vi.fn(async () => ({
       userId: 'user-1',
       moodEmoji: '🙂',
@@ -289,6 +290,49 @@ describe('PlaceViewScreen', () => {
 
     expect(refreshSession).toHaveBeenCalledTimes(1)
     dateNow.mockRestore()
+  })
+
+  it('sends a heartbeat while ready and visible', async () => {
+    vi.useFakeTimers()
+
+    const sendHeartbeat = vi.fn(async () => undefined)
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      value: 'visible',
+    })
+
+    renderPlaceViewScreen({
+      profile: {
+        userId: 'user-1',
+        moodEmoji: '🙂',
+        intentText: 'Open to a quick hello.',
+        intentSummary: 'Open to a quick hello.',
+        status: 'ready',
+        currentPlaceId: 'place-1',
+        isFindable: false,
+        locationHint: null,
+        pingRequestedAt: null,
+        pingRequestedByUserId: null,
+        pingRequestedByUsername: null,
+        createdAt: '2026-03-04T19:00:00.000Z',
+        updatedAt: '2026-03-04T19:00:00.000Z',
+      },
+      sendHeartbeat,
+    })
+
+    await vi.advanceTimersByTimeAsync(0)
+    expect(sendHeartbeat).toHaveBeenCalledTimes(1)
+
+    await vi.advanceTimersByTimeAsync(15_000)
+    expect(sendHeartbeat).toHaveBeenCalledTimes(2)
+
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      value: 'hidden',
+    })
+
+    await vi.advanceTimersByTimeAsync(15_000)
+    expect(sendHeartbeat).toHaveBeenCalledTimes(2)
   })
 
   it('does not immediately mark someone unready until an upright reading arms it', async () => {
