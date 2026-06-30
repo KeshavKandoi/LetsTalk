@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import {
   Image, Modal,
   View, Text, StyleSheet, TouchableOpacity, Alert,
@@ -51,6 +52,25 @@ export default function FriendsScreen() {
   const [refreshing, setRefreshing] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [photoModal, setPhotoModal] = useState<{ url: string; username: string } | null>(null)
+  const [dismissedRejected, setDismissedRejected] = useState<string[]>([])
+
+  useEffect(() => {
+    AsyncStorage.getItem('dismissedRejectedRequests')
+      .then((raw) => {
+        if (raw) setDismissedRejected(JSON.parse(raw))
+      })
+      .catch(() => {})
+  }, [])
+
+  const dismissRejected = (requestId: string) => {
+    setDismissedRejected((prev) => {
+      const next = prev.includes(requestId) ? prev : [...prev, requestId]
+      AsyncStorage.setItem('dismissedRejectedRequests', JSON.stringify(next)).catch(() => {})
+      return next
+    })
+  }
+
+  const visibleRejected = rejected.filter((r) => !dismissedRejected.includes(r.id))
 
 
   const fadeAnim = useRef(new Animated.Value(0)).current
@@ -188,7 +208,7 @@ export default function FriendsScreen() {
             )}
 
             {tab === 'requests' && (
-              (incoming.length || pending.length || rejected.length) ? (
+              (incoming.length || pending.length || visibleRejected.length) ? (
                 <>
                   {incoming.map((request) => (
                     <View key={request.id} style={s.requestCard}>
@@ -229,7 +249,7 @@ export default function FriendsScreen() {
                       </View>
                     </View>
                   ))}
-                  {rejected.map((request) => (
+                  {visibleRejected.map((request) => (
                     <View key={request.id} style={s.rejectedCard}>
                       <View style={s.rowInner}>
                         <Avatar
@@ -242,18 +262,9 @@ export default function FriendsScreen() {
                         </View>
                         <TouchableOpacity
                           style={s.rejectedBadge}
-                          disabled={busyId === request.id}
-                          onPress={async () => {
-                            setBusyId(request.id)
-                            try {
-                              await apiFetch('/api/friends/respond', { requestId: request.id, action: 'remove' })
-                              await load()
-                            } finally {
-                              setBusyId(null)
-                            }
-                          }}
+                          onPress={() => dismissRejected(request.id)}
                         >
-                          <Text style={s.rejectedBadgeTxt}>Rejected ✕</Text>
+                          <Text style={s.rejectedBadgeTxt}>Dismiss ✕</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -319,9 +330,9 @@ const s = StyleSheet.create({
   acceptTxt: { color: '#151515', fontWeight: '800' },
   pendingBadge: { backgroundColor: 'rgba(232,130,74,0.08)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
   pendingBadgeTxt: { color: '#fff', fontWeight: '800', fontSize: 11 },
-  rejectedCard: { backgroundColor: 'rgba(26,16,8,0.75)', borderRadius: 18, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(186,26,26,0.25)' },
-  rejectedBadge: { backgroundColor: 'rgba(186,26,26,0.12)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
-  rejectedBadgeTxt: { color: '#ba1a1a', fontWeight: '800', fontSize: 11 },
+  rejectedCard: { backgroundColor: 'rgba(26,16,8,0.75)', borderRadius: 18, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(150,90,80,0.25)' },
+  rejectedBadge: { backgroundColor: 'rgba(120,60,55,0.35)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
+  rejectedBadgeTxt: { color: '#e8a89e', fontWeight: '800', fontSize: 11 },
   empty: { color: MID, fontWeight: '600', textAlign: 'center', marginTop: 28 },
   modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.88)', justifyContent: 'center', alignItems: 'center' },
   modalContent: { alignItems: 'center', gap: 16 },
