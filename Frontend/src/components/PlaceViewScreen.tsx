@@ -582,6 +582,27 @@ export function PlaceViewScreen({
   }, [isReady, isInConversation, sendHeartbeat])
 
   useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    const leaveIfNeeded = () => {
+      if (!isReady && !isInConversation) {
+        return
+      }
+
+      void leavePlace()
+    }
+
+    window.addEventListener('pagehide', leaveIfNeeded)
+
+    return () => {
+      window.removeEventListener('pagehide', leaveIfNeeded)
+      leaveIfNeeded()
+    }
+  }, [isReady, isInConversation, leavePlace])
+
+  useEffect(() => {
     if (locationHint) {
       setSelectedFinderHint(locationHint)
     }
