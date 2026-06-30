@@ -1443,6 +1443,7 @@ export async function listFriends(input?: { viewerUserId?: string }) {
 
   const latestMessageByRequestId = new Map(latestMessages)
 
+  console.log('[listFriends] userId=', session.user.id, 'allRows=', JSON.stringify(rows.map((r) => ({ id: r.id, status: r.status, requesterUserId: r.requesterUserId, recipientUserId: r.recipientUserId, requesterAccepted: r.requesterAccepted, recipientAccepted: r.recipientAccepted }))))
   return {
     friends: acceptedRows.map((row) => ({
       id: row.id,
@@ -1537,10 +1538,17 @@ export async function respondToFriendRequest(input: {
   }
 
   if (input.action === 'reject') {
+    console.log('[respond] REJECT requestId=', requestRecord.id, 'by user=', session.user.id)
     await db
       .update(friendRequest)
       .set({ status: 'rejected', updatedAt: now })
       .where(eq(friendRequest.id, requestRecord.id))
+    const [afterUpdate] = await db
+      .select({ id: friendRequest.id, status: friendRequest.status })
+      .from(friendRequest)
+      .where(eq(friendRequest.id, requestRecord.id))
+      .limit(1)
+    console.log('[respond] AFTER UPDATE row=', JSON.stringify(afterUpdate))
     return { success: true }
   }
 
