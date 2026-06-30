@@ -1,4 +1,4 @@
-import { pgTable, uniqueIndex, index, foreignKey, text, timestamp, boolean, real } from "drizzle-orm/pg-core"
+import { pgTable, uniqueIndex, index, foreignKey, text, timestamp, boolean, real, integer } from "drizzle-orm/pg-core"
 
 
 
@@ -217,5 +217,28 @@ export const friendMessage = pgTable("friend_message", {
 			columns: [table.senderUserId],
 			foreignColumns: [user.id],
 			name: "friend_message_sender_user_id_user_id_fk"
+		}).onDelete("cascade"),
+]);
+
+export const connectRequestRejection = pgTable("connect_request_rejection", {
+	requesterUserId: text("requester_user_id").notNull(),
+	recipientUserId: text("recipient_user_id").notNull(),
+	rejectionCount: integer("rejection_count").notNull().default(0),
+	lastRejectedAt: timestamp("last_rejected_at", { mode: 'string' }).notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).notNull(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).notNull(),
+}, (table) => [
+	uniqueIndex("connect_request_rejection_pair_unique").using("btree", table.requesterUserId.asc().nullsLast().op("text_ops"), table.recipientUserId.asc().nullsLast().op("text_ops")),
+	index("connect_request_rejection_requester_idx").using("btree", table.requesterUserId.asc().nullsLast().op("text_ops")),
+	index("connect_request_rejection_recipient_idx").using("btree", table.recipientUserId.asc().nullsLast().op("text_ops")),
+	foreignKey({
+			columns: [table.requesterUserId],
+			foreignColumns: [user.id],
+			name: "connect_request_rejection_requester_user_id_user_id_fk"
+		}).onDelete("cascade"),
+	foreignKey({
+			columns: [table.recipientUserId],
+			foreignColumns: [user.id],
+			name: "connect_request_rejection_recipient_user_id_user_id_fk"
 		}).onDelete("cascade"),
 ]);
