@@ -163,7 +163,7 @@ export async function touchReadyPresence(userId: string, now = new Date()) {
   await db
     .update(userProfile)
     .set({ updatedAt: now })
-    .where(and(eq(userProfile.userId, userId), eq(userProfile.status, 'ready')))
+    .where(and(eq(userProfile.userId, userId), inArray(userProfile.status, ['ready', 'in_conversation'])))
 }
 
 export async function expireStaleReady(now = new Date()) {
@@ -176,7 +176,7 @@ export async function expireStaleReady(now = new Date()) {
     .from(userProfile)
     .where(
       and(
-        eq(userProfile.status, 'ready'),
+        inArray(userProfile.status, ['ready', 'in_conversation']),
         lt(userProfile.updatedAt, staleCutoff),
       ),
     )
@@ -185,24 +185,9 @@ export async function expireStaleReady(now = new Date()) {
     return { updatedUserIds: [] as string[], affectedPlaceIds: [] as string[] }
   }
 
-  await db
-    .update(userProfile)
-    .set({
-      status: 'present',
-      isFindable: false,
-      isVerifiedOnSite: false,
-      locationHint: null,
-      pingRequestedAt: null,
-      pingRequestedByUserId: null,
-      pingRequestedByUsername: null,
-      updatedAt: now,
-    })
-    .where(
-      and(
-        eq(userProfile.status, 'ready'),
-        lt(userProfile.updatedAt, staleCutoff),
-      ),
-    )
+  for (const staleProfile of staleProfiles) {
+    await new UserAgent(staleProfile.userId).clearTransientPresence()
+  }
 
   return {
     updatedUserIds: staleProfiles.map((profile) => profile.userId),
@@ -734,7 +719,6 @@ async function resolveScanPreview(
       username: getDisplayUsername(targetUser),
       moodEmoji: targetProfile.moodEmoji,
       intentSummary: targetProfile.intentSummary,
-      spotLabel: targetProfile.locationHint ?? null,
       locationHint: targetProfile.locationHint ?? null,
       status: targetProfile.status as PresenceStatus,
     },
@@ -801,6 +785,8 @@ export async function getAppState(): Promise<AppState> {
       activeConnection: null,
     }
   }
+
+  await expireStaleReady()
 
   const [profileRecord] = await db
     .select()
@@ -1029,6 +1015,26 @@ export async function connectFromScan(input: { token: string }) {
 
   if (!viewerProfile?.currentPlaceId || viewerProfile.currentPlaceId !== preview.placeId) {
     throw new Error('You need to be checked into the same place first.')
+  }
+
+  // If the viewer is already in a conversation, check whether it's with the SAME
+  // person they're scanning right now. If so, this scan is confirming/verifying
+  // the existing connection rather than starting a new one.
+  const existingScanConnection = await getActiveConnectionForUser(session.user.id)
+  if (existingScanConnection && existingScanConnection.counterpart.userId === preview.counterpart.userId) {
+    await db
+      .update(userProfile)
+      .set({ isVerifiedOnSite: true, updatedAt: new Date() })
+      .where(eq(userProfile.userId, session.user.id))
+    await db
+      .update(userProfile)
+      .set({ isVerifiedOnSite: true, updatedAt: new Date() })
+      .where(eq(userProfile.userId, preview.counterpart.userId))
+    return {
+      success: true,
+      connectionId: existingScanConnection.id,
+      alreadyConnected: true,
+    }
   }
 
   if (viewerProfile.status === 'in_conversation') {
