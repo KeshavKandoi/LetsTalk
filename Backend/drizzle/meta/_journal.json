@@ -36,6 +36,20 @@
       "when": 1781347200000,
       "tag": "0005_gps_verification",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1782802016522,
+      "tag": "0005_melted_natasha_romanoff",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1782802016523,
+      "tag": "0006_connect_request_rejections",
+      "breakpoints": true
     }
   ]
 }
