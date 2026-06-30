@@ -1,4 +1,3 @@
-import { VideoView, useVideoPlayer } from 'expo-video'
 import { useEffect, useState, useRef } from 'react'
 import {
   Image, Modal,
@@ -39,22 +38,6 @@ function Avatar({ user, onPress }: { user: FriendUser; onPress?: () => void }) {
 
 
 
-function VideoBackground({ style }: { style: any }) {
-  const player = useVideoPlayer(require('../video/animation.mp4'), (p) => {
-    p.loop = true
-    p.muted = true
-    p.play()
-  })
-  return (
-    <VideoView
-      style={style}
-      player={player}
-      allowsFullscreen={false}
-      nativeControls={false}
-      contentFit="cover"
-    />
-  )
-}
 
 export default function FriendsScreen() {
   const navigation = useNavigation<any>()
@@ -149,7 +132,6 @@ export default function FriendsScreen() {
 
   return (
     <SafeAreaView style={s.root} edges={['top']}>
-      <VideoBackground style={s.videoBackground} />
       <View style={s.overlay} />
 
       <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
