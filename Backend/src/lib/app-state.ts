@@ -1462,7 +1462,23 @@ export async function listFriends(input?: { viewerUserId?: string }) {
         id: row.id,
         user: mapFriendUser(row),
       })),
-    outgoing: [],
+    pending: rows
+      .filter((row) => {
+        if (row.status !== 'pending') return false
+        // I have already accepted, waiting on the other person
+        const iAmRequester = row.requesterUserId === session.user.id
+        return iAmRequester ? row.requesterAccepted : row.recipientAccepted
+      })
+      .map((row) => ({
+        id: row.id,
+        user: mapFriendUser(row),
+      })),
+    rejected: rows
+      .filter((row) => row.status === 'rejected')
+      .map((row) => ({
+        id: row.id,
+        user: mapFriendUser(row),
+      })),
   }
 }
 
