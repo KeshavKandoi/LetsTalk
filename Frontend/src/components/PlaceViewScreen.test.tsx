@@ -158,9 +158,9 @@ function renderPlaceViewScreen(
     ...overrides,
   }
 
-  render(<PlaceViewScreen {...props} />)
+  const rendered = render(<PlaceViewScreen {...props} />)
 
-  return props
+  return { ...props, unmount: rendered.unmount }
 }
 
 function dispatchDeviceMotion(acceleration: { x: number; y: number; z: number }) {
@@ -333,6 +333,33 @@ describe('PlaceViewScreen', () => {
 
     await vi.advanceTimersByTimeAsync(15_000)
     expect(sendHeartbeat).toHaveBeenCalledTimes(2)
+  })
+
+  it('leaves the place when the screen unmounts while ready', async () => {
+    const leavePlace = vi.fn(async () => undefined)
+    const { unmount } = renderPlaceViewScreen({
+      profile: {
+        userId: 'user-1',
+        moodEmoji: '🙂',
+        intentText: 'Open to a quick hello.',
+        intentSummary: 'Open to a quick hello.',
+        status: 'ready',
+        currentPlaceId: 'place-1',
+        isFindable: false,
+        locationHint: null,
+        pingRequestedAt: null,
+        pingRequestedByUserId: null,
+        pingRequestedByUsername: null,
+        createdAt: '2026-03-04T19:00:00.000Z',
+        updatedAt: '2026-03-04T19:00:00.000Z',
+      },
+      leavePlace,
+    })
+    unmount()
+
+    await waitFor(() => {
+      expect(leavePlace).toHaveBeenCalledTimes(1)
+    })
   })
 
   it('does not immediately mark someone unready until an upright reading arms it', async () => {
