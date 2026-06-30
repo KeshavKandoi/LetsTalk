@@ -1,6 +1,7 @@
 import { relations } from 'drizzle-orm'
 import {
   boolean,
+  integer,
   index,
   pgTable,
   real,
@@ -222,6 +223,30 @@ export const friendMessage = pgTable(
     index('friend_message_request_idx').on(table.friendRequestId),
     index('friend_message_sender_idx').on(table.senderUserId),
     index('friend_message_recipient_idx').on(table.recipientUserId),
+  ],
+)
+
+export const connectRequestRejection = pgTable(
+  'connect_request_rejection',
+  {
+    requesterUserId: text('requester_user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    recipientUserId: text('recipient_user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    rejectionCount: integer('rejection_count').notNull().default(0),
+    lastRejectedAt: timestamp('last_rejected_at').notNull(),
+    createdAt: timestamp('created_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('connect_request_rejection_pair_unique').on(
+      table.requesterUserId,
+      table.recipientUserId,
+    ),
+    index('connect_request_rejection_requester_idx').on(table.requesterUserId),
+    index('connect_request_rejection_recipient_idx').on(table.recipientUserId),
   ],
 )
 
