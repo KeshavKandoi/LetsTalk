@@ -134,22 +134,57 @@ async function endAcceptedConnectionsForUser(userId: string) {
     await db.update(handoffConnection).set({ status: 'ended', updatedAt: now }).where(eq(handoffConnection.id, conn.id))
 
     for (const nextUserId of [conn.requesterUserId, conn.recipientUserId]) {
-      const [nextProfile] = await db.select().from(userProfile).where(eq(userProfile.userId, nextUserId)).limit(1)
-      if (nextProfile?.status === 'in_conversation') {
-        await db.update(userProfile).set({
-          status: 'ready',
-          isFindable: false,
-          locationHint: null,
-          pingRequestedAt: null,
-          pingRequestedByUserId: null,
-          pingRequestedByUsername: null,
-          updatedAt: now,
-        }).where(eq(userProfile.userId, nextUserId))
-      }
+      await db.update(userProfile).set({
+        status: 'present',
+        isFindable: false,
+        isVerifiedOnSite: false,
+        locationHint: null,
+        pingRequestedAt: null,
+        pingRequestedByUserId: null,
+        pingRequestedByUsername: null,
+        updatedAt: now,
+      }).where(eq(userProfile.userId, nextUserId))
     }
   }
 
   return { placeIds: [...placeIds], participantUserIds: [...participantUserIds] }
+}
+
+async function cancelOutgoingConnectRequestsForUser(userId: string, now = new Date()) {
+  const pendingRequests = await db
+    .select({
+      id: handoffConnection.id,
+      placeId: handoffConnection.placeId,
+      requesterUserId: handoffConnection.requesterUserId,
+      recipientUserId: handoffConnection.recipientUserId,
+    })
+    .from(handoffConnection)
+    .where(
+      and(
+        eq(handoffConnection.status, 'pending'),
+        eq(handoffConnection.requesterUserId, userId),
+      ),
+    )
+
+  if (pendingRequests.length === 0) {
+    return { requestIds: [] as string[], placeIds: [] as string[], participantUserIds: [] as string[] }
+  }
+
+  await db
+    .update(handoffConnection)
+    .set({ status: 'canceled', updatedAt: now })
+    .where(
+      and(
+        eq(handoffConnection.status, 'pending'),
+        eq(handoffConnection.requesterUserId, userId),
+      ),
+    )
+
+  return {
+    requestIds: pendingRequests.map((request) => request.id),
+    placeIds: [...new Set(pendingRequests.map((request) => request.placeId))],
+    participantUserIds: [...new Set(pendingRequests.flatMap((request) => [request.requesterUserId, request.recipientUserId]))],
+  }
 }
 
 export class UserAgent {
@@ -188,10 +223,14 @@ export class UserAgent {
   async setReady(input: { ready: boolean }) {
     const [profileRecord] = await db.select().from(userProfile).where(eq(userProfile.userId, this.userId)).limit(1)
     assertCanSetReady(toUserProfileSnapshot(profileRecord))
+    if (!input.ready) {
+      await this.clearTransientPresence()
+      return this.refresh()
+    }
     await db.update(userProfile).set({
-      status: input.ready ? 'ready' : 'present',
-      isFindable: input.ready ? profileRecord?.isFindable ?? false : false,
-      isVerifiedOnSite: input.ready ? profileRecord?.isVerifiedOnSite ?? false : false,
+      status: 'ready',
+      isFindable: profileRecord?.isFindable ?? false,
+      isVerifiedOnSite: profileRecord?.isVerifiedOnSite ?? false,
       pingRequestedAt: null, pingRequestedByUserId: null, pingRequestedByUsername: null,
       updatedAt: new Date(),
     }).where(eq(userProfile.userId, this.userId))
@@ -217,16 +256,44 @@ export class UserAgent {
     return this.setOffline()
   }
 
+  async clearTransientPresence() {
+    const [profileRecord] = await db.select().from(userProfile).where(eq(userProfile.userId, this.userId)).limit(1)
+    const now = new Date()
+    const endedConnections = await endAcceptedConnectionsForUser(this.userId)
+    const canceledRequests = await cancelOutgoingConnectRequestsForUser(this.userId, now)
+
+    await db.update(userProfile).set({
+      status: 'present',
+      isFindable: false,
+      isVerifiedOnSite: false,
+      locationHint: null,
+      pingRequestedAt: null, pingRequestedByUserId: null, pingRequestedByUsername: null,
+      updatedAt: now,
+    }).where(eq(userProfile.userId, this.userId))
+
+    await syncPlaceAgents([
+      profileRecord?.currentPlaceId,
+      ...endedConnections.placeIds,
+      ...canceledRequests.placeIds,
+    ])
+    await syncUserAgents([
+      ...endedConnections.participantUserIds,
+      ...canceledRequests.participantUserIds,
+    ].filter((id) => id !== this.userId))
+    return this.refresh()
+  }
+
   async setOffline() {
     const [profileRecord] = await db.select().from(userProfile).where(eq(userProfile.userId, this.userId)).limit(1)
     const endedConnections = await endAcceptedConnectionsForUser(this.userId)
+    const canceledRequests = await cancelOutgoingConnectRequestsForUser(this.userId, new Date())
     await db.update(userProfile).set({
       status: 'offline', currentPlaceId: null, isFindable: false, locationHint: null,
       isVerifiedOnSite: false,
       pingRequestedAt: null, pingRequestedByUserId: null, pingRequestedByUsername: null, updatedAt: new Date(),
     }).where(eq(userProfile.userId, this.userId))
-    await syncPlaceAgents([profileRecord?.currentPlaceId, ...endedConnections.placeIds])
-    await syncUserAgents(endedConnections.participantUserIds.filter((id) => id !== this.userId))
+    await syncPlaceAgents([profileRecord?.currentPlaceId, ...endedConnections.placeIds, ...canceledRequests.placeIds])
+    await syncUserAgents([...endedConnections.participantUserIds, ...canceledRequests.participantUserIds].filter((id) => id !== this.userId))
     return this.refresh()
   }
 
