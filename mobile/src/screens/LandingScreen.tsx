@@ -8,7 +8,8 @@ import {
   ScrollView, Animated, Modal, ActivityIndicator, Dimensions,
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
-import { MaterialIcons, Ionicons, FontAwesome5 } from '@expo/vector-icons'
+import { MaterialIcons, Feather } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
 
 const { width, height } = Dimensions.get('window')
 const AMBER = '#e8824a'
@@ -16,64 +17,9 @@ const AMBER_DIM = 'rgba(232,130,74,0.15)'
 const MUTED = 'rgba(255,180,100,0.55)'
 const DARK = '#050302'
 
-function Ember({ delay, startX, size, duration }: { delay: number; startX: number; size: number; duration: number }) {
-  const translateY = useRef(new Animated.Value(0)).current
-  const opacity = useRef(new Animated.Value(0)).current
-  const translateX = useRef(new Animated.Value(0)).current
-
-  useEffect(() => {
-    const animate = () => {
-      translateY.setValue(0)
-      opacity.setValue(0)
-      translateX.setValue(0)
-      Animated.parallel([
-        Animated.timing(translateY, { toValue: -height * 1.2, duration, useNativeDriver: true }),
-        Animated.sequence([
-          Animated.timing(opacity, { toValue: 0.95, duration: duration * 0.12, useNativeDriver: true }),
-          Animated.timing(opacity, { toValue: 0.6, duration: duration * 0.58, useNativeDriver: true }),
-          Animated.timing(opacity, { toValue: 0, duration: duration * 0.3, useNativeDriver: true }),
-        ]),
-        Animated.sequence([
-          Animated.timing(translateX, { toValue: 16, duration: duration * 0.25, useNativeDriver: true }),
-          Animated.timing(translateX, { toValue: -14, duration: duration * 0.35, useNativeDriver: true }),
-          Animated.timing(translateX, { toValue: 10, duration: duration * 0.25, useNativeDriver: true }),
-          Animated.timing(translateX, { toValue: -6, duration: duration * 0.15, useNativeDriver: true }),
-        ]),
-      ]).start(() => animate())
-    }
-    const timer = setTimeout(animate, delay)
-    return () => clearTimeout(timer)
-  }, [])
-
-  return (
-    <Animated.View style={{
-      position: 'absolute', bottom: 0, left: startX,
-      width: size, height: size * 3,
-      borderRadius: size,
-      backgroundColor: size > 3.5 ? '#ffaa55' : AMBER,
-      opacity,
-      transform: [{ translateY }, { translateX }],
-      shadowColor: AMBER, shadowOpacity: 1, shadowRadius: size * 3, elevation: 6,
-    }} />
-  )
-}
-
 function EmberBackground() {
-  const embers = Array.from({ length: 32 }, (_, i) => ({
-    id: i,
-    delay: (i * 300) + Math.random() * 2000,
-    startX: Math.random() * width,
-    size: Math.random() * 3.5 + 1.2,
-    duration: Math.random() * 5000 + 6000,
-  }))
   return (
-    <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
-      <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: DARK }} />
-      <View style={{ position: 'absolute', bottom: -120, left: -60, right: -60, height: 500, borderRadius: 250, backgroundColor: 'rgba(232,130,74,0.10)' }} />
-      <View style={{ position: 'absolute', bottom: -40, left: width * 0.2, right: width * 0.2, height: 220, borderRadius: 110, backgroundColor: 'rgba(232,130,74,0.16)' }} />
-      <View style={{ position: 'absolute', bottom: 0, left: width * 0.35, right: width * 0.35, height: 100, borderRadius: 50, backgroundColor: 'rgba(255,160,80,0.22)' }} />
-      {embers.map(e => <Ember key={e.id} {...e} />)}
-    </View>
+    <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#000000' }]} pointerEvents="none" />
   )
 }
 
@@ -144,11 +90,18 @@ export default function LandingScreen() {
       {/* Nav */}
       <View style={s.nav}>
         <View style={s.navBrand}>
-          <MaterialIcons name="forum" size={20} color={AMBER} />
+          <Feather name="message-circle" size={22} color={AMBER} />
           <Text style={s.navTitle}>Let's Talk</Text>
         </View>
-        <TouchableOpacity style={s.joinBtn} onPress={handleJoin}>
-          <Text style={s.joinBtnText}>Join Now</Text>
+        <TouchableOpacity activeOpacity={0.88} style={s.joinBtnWrap} onPress={handleJoin}>
+          <LinearGradient
+            colors={['#FF964F', '#FF7B36']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={s.joinBtn}
+          >
+            <Text style={s.joinBtnText}>Join Now</Text>
+          </LinearGradient>
         </TouchableOpacity>
       </View>
 
@@ -166,33 +119,36 @@ export default function LandingScreen() {
           </View>
 
           <Text style={s.heroTitle}>Real people.{'\n'}Real places.{'\n'}Real talk.</Text>
-          <Text style={s.heroSub}>Walk into any cafe nearby and instantly meet people who actually want to have a conversation.</Text>
+          <Text style={s.heroSub}>Meet people nearby who actually want to talk.</Text>
 
-          {/* Stats */}
-          <View style={s.statsRow}>
+          {/* Feature strip */}
+          <View style={s.featureStrip}>
             {[
-              { val: '2.4k', lbl: 'Online now' },
-              { val: '180+', lbl: 'Active venues' },
-              { val: '94%', lbl: 'Made a friend' },
-            ].map((st, i) => (
-              <View key={i} style={[s.statBox, i < 2 && s.statBorder]}>
-                <Text style={s.statVal}>{st.val}</Text>
-                <Text style={s.statLbl}>{st.lbl}</Text>
+              { icon: <Feather name="zap" size={14} color={MUTED} />, text: 'No swiping' },
+              { icon: <Feather name="map-pin" size={14} color={MUTED} />, text: 'Real venues' },
+              { icon: <Feather name="message-circle" size={14} color={MUTED} />, text: 'In-person talk' },
+            ].map((f, i) => (
+              <View key={i} style={s.featureItem}>
+                {f.icon}
+                <Text style={s.featureText}>{f.text}</Text>
               </View>
             ))}
           </View>
 
           {/* CTA */}
           <Animated.View style={[s.ctaBtnWrap, { transform: [{ scale: pulseAnim }] }]}>
-            <TouchableOpacity style={s.ctaBtn} onPress={handleJoin}>
-              <MaterialIcons name="near-me" size={20} color="#fff" />
-              <Text style={s.ctaBtnText}>Find People Nearby</Text>
+            <TouchableOpacity activeOpacity={0.88} style={s.ctaBtnOuter} onPress={handleJoin}>
+              <LinearGradient
+                colors={['#FF974D', '#FF7A32']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={s.ctaBtn}
+              >
+                <Feather name="navigation" size={20} color="#fffaf6" />
+                <Text style={s.ctaBtnText}>Find People Nearby</Text>
+              </LinearGradient>
             </TouchableOpacity>
           </Animated.View>
-
-          <TouchableOpacity onPress={() => navigation.navigate('Login' as never)}>
-            <Text style={s.signinHint}>Already have an account? <Text style={{ color: AMBER, fontWeight: '700' }}>Sign in</Text></Text>
-          </TouchableOpacity>
 
           {/* Activity card */}
           <Animated.View style={[s.actCard, { transform: [{ translateY: floatAnim }] }]}>
@@ -204,10 +160,10 @@ export default function LandingScreen() {
                   </View>
                 ))}
               </View>
-              <Text style={s.actTitle}>4 people ready to talk</Text>
+              <Text style={s.actTitle}>A live room feels better than a feed</Text>
               <View style={s.actVenueRow}>
-                <MaterialIcons name="place" size={11} color={MUTED} />
-                <Text style={s.actVenue}>BREW & CO · 0.3 KM AWAY</Text>
+                <Feather name="map-pin" size={11} color={MUTED} />
+                <Text style={s.actVenue}>CHECK IN, SEE WHO'S OPEN TO CHAT</Text>
               </View>
             </View>
             <View style={s.actPing}>
@@ -229,7 +185,7 @@ export default function LandingScreen() {
           {[
             {
               anim: step1, num: '01',
-              icon: <MaterialIcons name="mood" size={26} color={AMBER} />,
+              icon: <Feather name="smile" size={25} color={AMBER} />,
               title: 'Set your vibe',
               desc: 'Tell the room what you\'re in the mood for — deep talk, casual chat, or just good company.',
               tag: 'Takes 10 seconds',
@@ -237,7 +193,7 @@ export default function LandingScreen() {
             },
             {
               anim: step2, num: '02',
-              icon: <MaterialIcons name="location-on" size={26} color={AMBER} />,
+              icon: <Feather name="map-pin" size={25} color={AMBER} />,
               title: 'Walk in, check in',
               desc: 'Arrive at any participating cafe or venue. One tap puts you on the live map.',
               tag: 'Location verified',
@@ -245,7 +201,7 @@ export default function LandingScreen() {
             },
             {
               anim: step3, num: '03',
-              icon: <MaterialIcons name="chat-bubble" size={26} color={AMBER} />,
+              icon: <Feather name="message-circle" size={25} color={AMBER} />,
               title: 'Say hello for real',
               desc: 'See who\'s there, break the ice digitally, then look up and actually talk.',
               tag: 'No swiping. No matching.',
@@ -272,11 +228,11 @@ export default function LandingScreen() {
           <Text style={s.whyTitle}>Why Let's Talk?</Text>
           <Text style={s.whySub}>Because real connection doesn't happen on a screen — it happens across a table.</Text>
           <View style={s.whyGrid}>
-            {[
-              { icon: <MaterialIcons name="block" size={28} color={AMBER} />, title: 'No endless scrolling', desc: 'You\'re not here to scroll. You\'re here to talk.' },
-              { icon: <MaterialIcons name="verified-user" size={28} color={AMBER} />, title: 'No fake profiles', desc: 'You\'re physically at the same place. It\'s real.' },
-              { icon: <MaterialIcons name="flash-on" size={28} color={AMBER} />, title: 'Instant connection', desc: 'No waiting. People are there right now.' },
-              { icon: <MaterialIcons name="tune" size={28} color={AMBER} />, title: 'You\'re in control', desc: 'Set your mood, choose who to talk to.' },
+          {[
+              { icon: <Feather name="eye-off" size={24} color={AMBER} />, title: 'No endless scrolling', desc: 'You\'re not here to scroll. You\'re here to talk.' },
+              { icon: <Feather name="shield" size={24} color={AMBER} />, title: 'No fake profiles', desc: 'You\'re physically at the same place. It\'s real.' },
+              { icon: <Feather name="zap" size={24} color={AMBER} />, title: 'Instant connection', desc: 'No waiting. People are there right now.' },
+              { icon: <Feather name="sliders" size={24} color={AMBER} />, title: 'You\'re in control', desc: 'Set your mood, choose who to talk to.' },
             ].map((item, i) => (
               <View key={i} style={s.whyCard}>
                 <View style={s.whyIconBox}>{item.icon}</View>
@@ -290,12 +246,14 @@ export default function LandingScreen() {
         {/* ── QUOTE ── */}
         <View style={s.finalSect}>
           <View style={s.finalGlow} />
-          <MaterialIcons name="location-on" size={36} color={AMBER} style={{ marginBottom: 16 }} />
+          <Feather name="map-pin" size={32} color={AMBER} style={{ marginBottom: 16 }} />
           <Text style={s.finalTitle}>Your next real{'\n'}conversation is nearby.</Text>
-          <Text style={s.finalSub}>Join thousands of people who chose real connection over another scroll session.</Text>
-          <TouchableOpacity style={s.finalBtn} onPress={handleJoin}>
-            <Text style={s.finalBtnTxt}>Start Now — It's Free</Text>
-            <MaterialIcons name="arrow-forward" size={18} color="#050302" />
+          <Text style={s.finalSub}>Step into a small, growing network of people who came here to talk face to face.</Text>
+          <TouchableOpacity activeOpacity={0.88} style={s.finalBtnWrap} onPress={handleJoin}>
+            <LinearGradient colors={['#FF974D', '#FF7A32']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.finalBtn}>
+              <Text style={s.finalBtnTxt}>Start Now — It's Free</Text>
+              <Feather name="arrow-right" size={18} color="#fffaf6" />
+            </LinearGradient>
           </TouchableOpacity>
           <Text style={s.finalNote}>No credit card · No algorithm · Just people</Text>
         </View>
@@ -356,11 +314,11 @@ export default function LandingScreen() {
 
       {/* Bottom nav */}
       <View style={[s.bottomNav, { paddingBottom: insets.bottom + 8 }]}>
-        {[
-          { icon: 'explore', label: 'Explore', active: true, guard: false, badge: 0 },
-          { icon: 'near-me', label: 'Nearby', active: false, guard: true, badge: 0 },
-          { icon: 'chat-bubble-outline', label: 'Chats', active: false, guard: true, badge: 0 },
-          { icon: 'person-outline', label: 'Profile', active: false, guard: false, badge: 0 },
+          {[
+          { icon: 'compass', label: 'Explore', active: true, guard: false, badge: 0 },
+          { icon: 'map-pin', label: 'Nearby', active: false, guard: true, badge: 0 },
+          { icon: 'message-circle', label: 'Chats', active: false, guard: true, badge: 0 },
+          { icon: 'user', label: 'Profile', active: false, guard: false, badge: 0 },
         ].map(item => (
           <TouchableOpacity
             key={item.label}
@@ -378,7 +336,7 @@ export default function LandingScreen() {
               }
             }}
           >
-            <MaterialIcons name={item.icon as any} size={22} color={item.active ? AMBER : 'rgba(255,220,160,0.4)'} />
+            <Feather name={item.icon as any} size={22} color={item.active ? '#FF8C42' : 'rgba(255,255,255,0.38)'} />
             <Text style={[s.navItemLabel, item.active && s.navItemLabelActive]}>{item.label}</Text>
           </TouchableOpacity>
         ))}
@@ -388,92 +346,98 @@ export default function LandingScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: DARK },
+  container: { flex: 1, backgroundColor: '#090909' },
 
-  nav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, backgroundColor: 'rgba(5,3,2,0.9)', borderBottomWidth: 1, borderBottomColor: 'rgba(232,130,74,0.1)', zIndex: 10 },
-  navBrand: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  navTitle: { fontSize: 19, fontWeight: '800', color: AMBER },
-  joinBtn: { backgroundColor: AMBER, borderRadius: 50, paddingHorizontal: 18, paddingVertical: 8 },
-  joinBtnText: { color: '#fff', fontWeight: '800', fontSize: 14 },
+  nav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 22, paddingTop: 14, paddingBottom: 12, backgroundColor: 'rgba(20,20,20,0.85)', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)', zIndex: 10, shadowColor: '#000', shadowOpacity: 0.22, shadowRadius: 24, elevation: 6 },
+  navBrand: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  navTitle: { fontSize: 19, fontWeight: '900', color: '#fff', letterSpacing: -0.2 },
+  joinBtnWrap: { borderRadius: 999, overflow: 'hidden', shadowColor: '#FF8C42', shadowOpacity: 0.28, shadowRadius: 30, elevation: 8 },
+  joinBtn: { borderRadius: 999, paddingHorizontal: 18, paddingVertical: 10, minWidth: 104, alignItems: 'center', justifyContent: 'center' },
+  joinBtnText: { color: '#fff', fontWeight: '800', fontSize: 13, letterSpacing: 0.2 },
 
-  scroll: { paddingBottom: 120 },
+  scroll: { paddingBottom: 132 },
 
   // HERO
-  hero: { paddingHorizontal: 22, paddingTop: 52, paddingBottom: 24, alignItems: 'center' },
-  livePill: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(232,130,74,0.1)', borderWidth: 1, borderColor: 'rgba(232,130,74,0.25)', borderRadius: 50, paddingHorizontal: 14, paddingVertical: 7, marginBottom: 30 },
-  liveDotRing: { width: 12, height: 12, borderRadius: 6, backgroundColor: 'rgba(232,130,74,0.3)', justifyContent: 'center', alignItems: 'center' },
-  liveDotCore: { width: 6, height: 6, borderRadius: 3, backgroundColor: AMBER },
-  livePillText: { fontSize: 10, fontWeight: '800', color: AMBER, letterSpacing: 2.5 },
+  hero: { paddingHorizontal: 18, paddingTop: 32, paddingBottom: 20, alignItems: 'center' },
+  livePill: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(17,17,17,0.74)', borderWidth: 1, borderColor: 'rgba(255,140,66,0.2)', borderRadius: 999, paddingHorizontal: 13, paddingVertical: 7, marginBottom: 28, shadowColor: '#000', shadowOpacity: 0.16, shadowRadius: 14, elevation: 2 },
+  liveDotRing: { width: 12, height: 12, borderRadius: 6, backgroundColor: 'rgba(255,140,66,0.16)', justifyContent: 'center', alignItems: 'center' },
+  liveDotCore: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#FF8C42' },
+  livePillText: { fontSize: 10, fontWeight: '900', color: '#F6A45A', letterSpacing: 2.2 },
 
-  heroTitle: { fontSize: 46, fontWeight: '900', color: '#ffffff', textAlign: 'center', lineHeight: 54, marginBottom: 16, letterSpacing: -1.5 },
-  heroSub: { fontSize: 16, color: MUTED, textAlign: 'center', lineHeight: 26, marginBottom: 30, paddingHorizontal: 4 },
+  heroTitle: { fontSize: 32, fontWeight: '800', color: '#fff', textAlign: 'center', lineHeight: 44, marginBottom: 28, letterSpacing: -0.6 },
+  heroSub: { fontSize: 16, color: '#D7D7D7', textAlign: 'center', lineHeight: 22, marginBottom: 38, paddingHorizontal: 8, maxWidth: '86%' },
+  featureStrip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 18, marginBottom: 42 },
+  featureItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  featureText: { fontSize: 12, color: '#B0B0B0', fontWeight: '600' },
 
-  statsRow: { flexDirection: 'row', width: '100%', backgroundColor: 'rgba(15,10,6,0.85)', borderRadius: 18, borderWidth: 1, borderColor: 'rgba(232,130,74,0.1)', marginBottom: 28, overflow: 'hidden' },
-  statBox: { flex: 1, alignItems: 'center', paddingVertical: 16 },
-  statBorder: { borderRightWidth: 1, borderRightColor: 'rgba(232,130,74,0.1)' },
-  statVal: { fontSize: 24, fontWeight: '900', color: AMBER, marginBottom: 2 },
-  statLbl: { fontSize: 10, color: MUTED, fontWeight: '600', letterSpacing: 0.3 },
+  statsRow: { flexDirection: 'row', width: '100%', backgroundColor: 'rgba(17,17,17,0.88)', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', marginBottom: 26, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 24, elevation: 4 },
+  statBox: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 26, paddingHorizontal: 10, backgroundColor: 'rgba(255,255,255,0.01)' },
+  statBorder: { borderRightWidth: 1, borderRightColor: 'rgba(255,255,255,0.08)' },
+  statTitle: { fontSize: 19, fontWeight: '800', color: '#fff', textAlign: 'center', lineHeight: 23, marginBottom: 8, letterSpacing: -0.3 },
+  statLbl: { fontSize: 11, color: '#9A9A9A', fontWeight: '600', letterSpacing: 0.1, textAlign: 'center', lineHeight: 15 },
 
-  ctaBtnWrap: { width: '100%', marginBottom: 14 },
-  ctaBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: AMBER, borderRadius: 50, paddingVertical: 18, shadowColor: AMBER, shadowOpacity: 0.45, shadowRadius: 24, elevation: 14 },
-  ctaBtnText: { color: '#fff', fontWeight: '900', fontSize: 17, letterSpacing: 0.3 },
-  signinHint: { fontSize: 13, color: MUTED, marginBottom: 36 },
+  ctaBtnWrap: { width: '100%', marginBottom: 28 },
+  ctaBtnOuter: { borderRadius: 999, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.16, shadowRadius: 24, elevation: 10 },
+  ctaBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderRadius: 999, height: 58, paddingHorizontal: 26, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
+  ctaBtnText: { color: '#fffaf6', fontWeight: '700', fontSize: 16, letterSpacing: 0.1 },
+  signinHint: { fontSize: 13, color: '#8A8A8A', marginBottom: 26 },
 
-  actCard: { width: '100%', backgroundColor: 'rgba(12,8,4,0.95)', borderRadius: 22, padding: 18, borderWidth: 1, borderColor: 'rgba(232,130,74,0.18)', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  actCard: { width: '100%', backgroundColor: 'rgba(17,17,17,0.92)', borderRadius: 24, padding: 18, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 24, elevation: 4 },
   actLeft: { flex: 1 },
   actAvatarRow: { flexDirection: 'row', marginBottom: 10 },
-  actAvatar: { width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: DARK },
+  actAvatar: { width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#111111' },
   actAvatarTxt: { fontSize: 11, fontWeight: '900', color: '#fff' },
-  actTitle: { fontSize: 14, fontWeight: '800', color: '#fff', marginBottom: 5 },
+  actTitle: { fontSize: 15, fontWeight: '800', color: '#fff', marginBottom: 5, letterSpacing: -0.1 },
   actVenueRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  actVenue: { fontSize: 10, color: MUTED, letterSpacing: 1, fontWeight: '600' },
+  actVenue: { fontSize: 10, color: '#8A8A8A', letterSpacing: 1, fontWeight: '600' },
   actPing: { width: 22, height: 22, justifyContent: 'center', alignItems: 'center' },
-  actPingRing: { position: 'absolute', width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(61,191,122,0.2)' },
+  actPingRing: { position: 'absolute', width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(255,140,66,0.16)' },
   actPingDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#3dbf7a' },
 
   // DIVIDER
-  divider: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 22, marginVertical: 44, gap: 14 },
-  divLine: { flex: 1, height: 1, backgroundColor: 'rgba(232,130,74,0.12)' },
-  divTxt: { fontSize: 10, fontWeight: '800', color: 'rgba(232,130,74,0.5)', letterSpacing: 3 },
+  divider: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 22, marginVertical: 48, gap: 14 },
+  divLine: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.06)' },
+  divTxt: { fontSize: 10, fontWeight: '900', color: '#9A9A9A', letterSpacing: 3.2 },
 
   // STEPS
-  stepsWrap: { paddingHorizontal: 18, gap: 14, marginBottom: 14 },
-  stepCard: { backgroundColor: 'rgba(12,8,4,0.92)', borderRadius: 26, padding: 24, borderWidth: 1, borderColor: 'rgba(232,130,74,0.13)' },
-  stepTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 },
-  stepNum: { fontSize: 52, fontWeight: '900', color: 'rgba(232,130,74,0.35)', lineHeight: 56 },
-  stepIconBox: { width: 54, height: 54, borderRadius: 18, backgroundColor: 'rgba(232,130,74,0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)' },
-  stepTitle: { fontSize: 22, fontWeight: '800', color: '#fff', marginBottom: 8 },
-  stepDesc: { fontSize: 14, color: MUTED, lineHeight: 22, marginBottom: 16 },
-  stepTag: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 50, paddingHorizontal: 12, paddingVertical: 5, alignSelf: 'flex-start', borderWidth: 1 },
-  stepTagTxt: { fontSize: 11, fontWeight: '700' },
+  stepsWrap: { paddingHorizontal: 18, gap: 14, marginBottom: 18 },
+  stepCard: { backgroundColor: 'rgba(17,17,17,0.92)', borderRadius: 26, padding: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 24, elevation: 4 },
+  stepTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
+  stepNum: { fontSize: 50, fontWeight: '900', color: 'rgba(255,255,255,0.08)', lineHeight: 54, letterSpacing: -1 },
+  stepIconBox: { width: 54, height: 54, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.03)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
+  stepTitle: { fontSize: 22, fontWeight: '800', color: '#fff', marginBottom: 8, letterSpacing: -0.3 },
+  stepDesc: { fontSize: 14, color: '#D7D7D7', lineHeight: 23, marginBottom: 16 },
+  stepTag: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6, alignSelf: 'flex-start', borderWidth: 1 },
+  stepTagTxt: { fontSize: 11, fontWeight: '800' },
 
   // WHY
-  whySect: { paddingHorizontal: 18, paddingVertical: 44 },
+  whySect: { paddingHorizontal: 18, paddingVertical: 48 },
   whyTitle: { fontSize: 30, fontWeight: '900', color: '#fff', marginBottom: 10, letterSpacing: -0.8 },
-  whySub: { fontSize: 15, color: MUTED, lineHeight: 24, marginBottom: 24 },
+  whySub: { fontSize: 15, color: '#D7D7D7', lineHeight: 24, marginBottom: 24 },
   whyGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  whyCard: { width: (width - 48) / 2, backgroundColor: 'rgba(12,8,4,0.92)', borderRadius: 22, padding: 18, borderWidth: 1, borderColor: 'rgba(232,130,74,0.1)' },
-  whyIconBox: { width: 48, height: 48, borderRadius: 14, backgroundColor: 'rgba(232,130,74,0.1)', justifyContent: 'center', alignItems: 'center', marginBottom: 12, borderWidth: 1, borderColor: 'rgba(232,130,74,0.18)' },
+  whyCard: { width: (width - 48) / 2, backgroundColor: 'rgba(17,17,17,0.92)', borderRadius: 22, padding: 18, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', shadowColor: '#000', shadowOpacity: 0.22, shadowRadius: 18, elevation: 3 },
+  whyIconBox: { width: 48, height: 48, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.03)', justifyContent: 'center', alignItems: 'center', marginBottom: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
   whyCardTitle: { fontSize: 13, fontWeight: '800', color: '#fff', marginBottom: 6 },
-  whyCardDesc: { fontSize: 12, color: MUTED, lineHeight: 18 },
+  whyCardDesc: { fontSize: 12, color: '#D7D7D7', lineHeight: 18 },
 
   // QUOTE
 
   // FINAL CTA
-  finalSect: { margin: 18, backgroundColor: 'rgba(12,8,4,0.95)', borderRadius: 28, padding: 30, borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)', alignItems: 'center', overflow: 'hidden', marginBottom: 20 },
-  finalGlow: { position: 'absolute', top: -80, left: -80, right: -80, height: 220, borderRadius: 110, backgroundColor: 'rgba(232,130,74,0.07)' },
+  finalSect: { margin: 18, backgroundColor: 'rgba(17,17,17,0.92)', borderRadius: 28, padding: 30, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', alignItems: 'center', overflow: 'hidden', marginBottom: 20, shadowColor: '#000', shadowOpacity: 0.24, shadowRadius: 24, elevation: 4 },
+  finalGlow: { position: 'absolute', top: -90, left: -90, right: -90, height: 240, borderRadius: 120, backgroundColor: 'rgba(255,140,66,0.06)' },
   finalTitle: { fontSize: 28, fontWeight: '900', color: '#fff', textAlign: 'center', lineHeight: 36, marginBottom: 12, letterSpacing: -0.6 },
-  finalSub: { fontSize: 14, color: MUTED, textAlign: 'center', lineHeight: 22, marginBottom: 26 },
-  finalBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: AMBER, borderRadius: 50, paddingHorizontal: 28, paddingVertical: 16, marginBottom: 14, width: '100%', justifyContent: 'center', shadowColor: AMBER, shadowOpacity: 0.4, shadowRadius: 20, elevation: 12 },
-  finalBtnTxt: { color: DARK, fontWeight: '900', fontSize: 16 },
-  finalNote: { fontSize: 11, color: 'rgba(255,180,100,0.35)', textAlign: 'center', letterSpacing: 0.5 },
+  finalSub: { fontSize: 14, color: '#D7D7D7', textAlign: 'center', lineHeight: 22, marginBottom: 24 },
+  finalBtnWrap: { width: '100%', borderRadius: 999, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 24, elevation: 8, marginBottom: 14 },
+  finalBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 999, paddingHorizontal: 28, paddingVertical: 16, width: '100%', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
+  finalBtnTxt: { color: '#fffaf6', fontWeight: '900', fontSize: 16 },
+  finalNote: { fontSize: 11, color: '#9A9A9A', textAlign: 'center', letterSpacing: 0.5 },
 
   // BOTTOM NAV
-  bottomNav: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', backgroundColor: 'rgba(5,3,2,0.97)', paddingTop: 10, paddingHorizontal: 16, justifyContent: 'space-around', borderTopWidth: 1, borderTopColor: 'rgba(232,130,74,0.15)' },
-  navItem: { alignItems: 'center', paddingHorizontal: 16, paddingVertical: 6 },
-  navItemActive: { backgroundColor: 'rgba(232,130,74,0.12)', borderRadius: 12, paddingHorizontal: 14 },
-  navItemLabel: { fontSize: 10, fontWeight: '600', color: 'rgba(255,200,150,0.35)', marginTop: 2 },
-  navItemLabelActive: { color: '#fff' },
+  bottomNav: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', backgroundColor: 'rgba(20,20,20,0.82)', paddingTop: 10, paddingHorizontal: 14, justifyContent: 'space-around', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)', shadowColor: '#000', shadowOpacity: 0.24, shadowRadius: 24, elevation: 8 },
+  navItem: { alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, minWidth: 66 },
+  navItemActive: { backgroundColor: 'rgba(255,140,66,0.12)', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 8, borderWidth: 1, borderColor: 'rgba(255,140,66,0.14)' },
+  navItemLabel: { fontSize: 10, fontWeight: '700', color: '#9A9A9A', marginTop: 2, letterSpacing: 0.2 },
+  navItemLabelActive: { color: '#FF8C42' },
 })
 
 const ps = StyleSheet.create({
