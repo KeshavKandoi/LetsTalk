@@ -188,7 +188,7 @@ export default function LandingScreen() {
           {[
             {
               anim: step1, num: '01',
-              icon: <Feather name="smile" size={25} color={AMBER} />,
+              icon: <Feather name="smile" size={25} color="#8B5CF6" />,
               title: 'Set your vibe',
               desc: 'Tell the room what you\'re in the mood for — deep talk, casual chat, or just good company.',
               tag: 'Takes 10 seconds',
@@ -196,7 +196,7 @@ export default function LandingScreen() {
             },
             {
               anim: step2, num: '02',
-              icon: <Feather name="map-pin" size={25} color={AMBER} />,
+              icon: <Feather name="map-pin" size={25} color="#8B5CF6" />,
               title: 'Walk in, check in',
               desc: 'Arrive at any participating cafe or venue. One tap puts you on the live map.',
               tag: 'Location verified',
@@ -204,7 +204,7 @@ export default function LandingScreen() {
             },
             {
               anim: step3, num: '03',
-              icon: <Feather name="message-circle" size={25} color={AMBER} />,
+              icon: <Feather name="message-circle" size={25} color="#8B5CF6" />,
               title: 'Say hello for real',
               desc: 'See who\'s there, break the ice digitally, then look up and actually talk.',
               tag: 'No swiping. No matching.',
@@ -232,10 +232,10 @@ export default function LandingScreen() {
           <Text style={s.whySub}>Because real connection doesn't happen on a screen — it happens across a table.</Text>
           <View style={s.whyGrid}>
           {[
-              { icon: <Feather name="eye-off" size={24} color={AMBER} />, title: 'No endless scrolling', desc: 'You\'re not here to scroll. You\'re here to talk.' },
-              { icon: <Feather name="shield" size={24} color={AMBER} />, title: 'No fake profiles', desc: 'You\'re physically at the same place. It\'s real.' },
-              { icon: <Feather name="zap" size={24} color={AMBER} />, title: 'Instant connection', desc: 'No waiting. People are there right now.' },
-              { icon: <Feather name="sliders" size={24} color={AMBER} />, title: 'You\'re in control', desc: 'Set your mood, choose who to talk to.' },
+              { icon: <Feather name="eye-off" size={24} color="#8B5CF6" />, title: 'No endless scrolling', desc: 'You\'re not here to scroll. You\'re here to talk.' },
+              { icon: <Feather name="shield" size={24} color="#8B5CF6" />, title: 'No fake profiles', desc: 'You\'re physically at the same place. It\'s real.' },
+              { icon: <Feather name="zap" size={24} color="#8B5CF6" />, title: 'Instant connection', desc: 'No waiting. People are there right now.' },
+              { icon: <Feather name="sliders" size={24} color="#8B5CF6" />, title: 'You\'re in control', desc: 'Set your mood, choose who to talk to.' },
             ].map((item, i) => (
               <View key={i} style={s.whyCard}>
                 <View style={s.whyIconBox}>{item.icon}</View>
@@ -418,12 +418,12 @@ const s = StyleSheet.create({
 
   // DIVIDER
   divider: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 22, marginVertical: 48, gap: 14 },
-  divLine: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.06)' },
+  divLine: { flex: 1, height: 1.5, backgroundColor: 'rgba(255,255,255,0.6)' },
   divTxt: { fontSize: 10, fontWeight: '900', color: 'rgba(255,255,255,0.65)', letterSpacing: 3.2 },
 
   // STEPS
   stepsWrap: { paddingHorizontal: 18, gap: 14, marginBottom: 18 },
-  stepCard: { backgroundColor: 'rgba(17,17,17,0.92)', borderRadius: 26, padding: 24, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)', shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 24, elevation: 4 },
+  stepCard: { backgroundColor: 'rgba(17,17,17,0.92)', borderRadius: 26, padding: 24, borderWidth: 2, borderColor: '#ffffff', shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 24, elevation: 4 },
   stepTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
   stepNum: { fontSize: 50, fontWeight: '900', color: 'rgba(255,255,255,0.08)', lineHeight: 54, letterSpacing: -1 },
   stepIconBox: { width: 54, height: 54, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.03)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
