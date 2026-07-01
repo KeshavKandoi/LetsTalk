@@ -50,6 +50,13 @@
       "when": 1782802016523,
       "tag": "0006_connect_request_rejections",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1782883938323,
+      "tag": "0007_complex_lake",
+      "breakpoints": true
     }
   ]
 }
