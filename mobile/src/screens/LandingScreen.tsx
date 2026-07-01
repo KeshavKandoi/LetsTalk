@@ -118,7 +118,10 @@ export default function LandingScreen() {
             <Text style={s.livePillText}>LIVE NOW IN YOUR CITY</Text>
           </View>
 
-          <Text style={s.heroTitle}>Real people.{'\n'}Real places.{'\n'}Real conversations.</Text>
+          <Text style={s.heroTitle}>
+            <Text style={s.heroTitleLight}>Real people. Real places.{'\n'}</Text>
+            <Text style={s.heroTitleBold}>Real conversations.</Text>
+          </Text>
           <Text style={s.heroSub}>Meet people nearby who actually want to talk.</Text>
 
           {/* Feature strip */}
@@ -376,16 +379,18 @@ const s = StyleSheet.create({
 
   // HERO
   hero: { paddingHorizontal: 18, paddingTop: 32, paddingBottom: 20, alignItems: 'center' },
-  livePill: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(17,17,17,0.74)', borderWidth: 1, borderColor: 'rgba(255,140,66,0.2)', borderRadius: 999, paddingHorizontal: 13, paddingVertical: 7, marginBottom: 28, shadowColor: '#000', shadowOpacity: 0.16, shadowRadius: 14, elevation: 2 },
-  liveDotRing: { width: 12, height: 12, borderRadius: 6, backgroundColor: 'rgba(255,140,66,0.16)', justifyContent: 'center', alignItems: 'center' },
-  liveDotCore: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#FF8C42' },
-  livePillText: { fontSize: 10, fontWeight: '900', color: '#F6A45A', letterSpacing: 2.2 },
+  livePill: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(17,17,17,0.74)', borderWidth: 1, borderColor: 'rgba(139,92,246,0.35)', borderRadius: 999, paddingHorizontal: 13, paddingVertical: 7, marginBottom: 28, shadowColor: '#000', shadowOpacity: 0.16, shadowRadius: 14, elevation: 2 },
+  liveDotRing: { width: 12, height: 12, borderRadius: 6, backgroundColor: 'rgba(139,92,246,0.22)', justifyContent: 'center', alignItems: 'center' },
+  liveDotCore: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#8B5CF6' },
+  livePillText: { fontSize: 10, fontWeight: '900', color: '#fff', letterSpacing: 2.2 },
 
-  heroTitle: { fontSize: 30, fontWeight: '800', color: '#fff', textAlign: 'center', lineHeight: 40, marginBottom: 28, letterSpacing: -0.4 },
+  heroTitle: { textAlign: 'center', marginBottom: 28 },
+  heroTitleLight: { fontSize: 24, fontWeight: '600', color: 'rgba(255,255,255,0.65)', lineHeight: 32, letterSpacing: -0.2 },
+  heroTitleBold: { fontSize: 34, fontWeight: '900', color: '#fff', lineHeight: 42, letterSpacing: -0.6 },
   heroSub: { fontSize: 16, color: 'rgba(255,255,255,0.65)', textAlign: 'center', lineHeight: 22, marginBottom: 38, paddingHorizontal: 8, maxWidth: '86%' },
-  featureStrip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 18, marginBottom: 42 },
-  featureItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  featureText: { fontSize: 12, color: 'rgba(255,255,255,0.65)', fontWeight: '600' },
+  featureStrip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 42, flexWrap: 'wrap' },
+  featureItem: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 6 },
+  featureText: { fontSize: 11, color: 'rgba(255,255,255,0.65)', fontWeight: '600' },
 
   statsRow: { flexDirection: 'row', width: '100%', backgroundColor: 'rgba(17,17,17,0.88)', borderRadius: 24, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)', marginBottom: 26, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 24, elevation: 4 },
   statBox: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 26, paddingHorizontal: 10, backgroundColor: 'rgba(255,255,255,0.01)' },
