@@ -23,16 +23,7 @@ export default function AboutUsScreen() {
 
   return (
     <View style={s.root}>
-      <LinearGradient
-        colors={['#1a0000', '#6B1500', '#C4400A', '#E05010', '#8B2000', '#1a0000']}
-        locations={[0, 0.15, 0.35, 0.55, 0.8, 1]}
-        start={{ x: 0.3, y: 0 }}
-        end={{ x: 0.7, y: 1 }}
-        style={StyleSheet.absoluteFillObject}
-      />
 
-      {/* Glow effect */}
-      <View style={s.glow} />
 
       <SafeAreaView edges={['top']} style={s.header}>
         <TouchableOpacity
@@ -89,7 +80,7 @@ export default function AboutUsScreen() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#1a0000' },
+  root: { flex: 1, backgroundColor: '#0a0704' },
   glow: {
     position: 'absolute',
     top: height * 0.15,
@@ -109,7 +100,7 @@ const s = StyleSheet.create({
   },
   mainContent: {
     flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
     paddingBottom: 80,
   },
   heroText: {
@@ -122,7 +113,7 @@ const s = StyleSheet.create({
   },
   heroTitle: {
     fontSize: 48, fontWeight: '900', color: WHITE,
-    lineHeight: 54, letterSpacing: -1, marginBottom: 20,
+    lineHeight: 54, letterSpacing: -1, marginBottom: 28,
   },
   heroSub: {
     fontSize: 14, color: MUTED, lineHeight: 22, maxWidth: 300,
@@ -131,8 +122,8 @@ const s = StyleSheet.create({
     marginHorizontal: 20,
     backgroundColor: CARD,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.9)',
     overflow: 'hidden',
     marginBottom: 20,
   },
