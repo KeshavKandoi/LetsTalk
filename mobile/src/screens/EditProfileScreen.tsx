@@ -170,16 +170,16 @@ export default function EditProfileScreen() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#fff8ee' },
+  root: { flex: 1, backgroundColor: '#0a0704' },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 12,
-    backgroundColor: '#fff8ee',
-    borderBottomWidth: 1, borderBottomColor: 'rgba(245,197,0,0.3)',
+    backgroundColor: '#0a0704',
+    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.15)',
   },
   backBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  backText: { fontSize: 16, fontWeight: '700', color: DARK },
-  headerTitle: { fontSize: 18, fontWeight: '900', color: DARK },
+  backText: { fontSize: 16, fontWeight: '700', color: '#fff' },
+  headerTitle: { fontSize: 18, fontWeight: '900', color: '#fff' },
   saveBtn: {
     backgroundColor: '#F5C500', borderRadius: 50,
     paddingHorizontal: 20, paddingVertical: 8,
@@ -187,13 +187,13 @@ const s = StyleSheet.create({
   saveBtnText: { color: DARK, fontWeight: '800', fontSize: 14 },
   scroll: { padding: 16, gap: 16, paddingBottom: 60 },
   card: {
-    backgroundColor: '#fff', borderRadius: 20, padding: 20,
-    borderWidth: 1.5, borderColor: 'rgba(245,197,0,0.4)',
-    shadowColor: '#F0956A', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1, shadowRadius: 8, elevation: 3,
+    backgroundColor: 'rgba(20,12,6,0.9)', borderRadius: 20, padding: 20,
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2, shadowRadius: 8, elevation: 3,
   },
   label: { fontSize: 12, fontWeight: '900', color: '#F0956A', letterSpacing: 1.5, marginBottom: 6 },
-  sublabel: { fontSize: 13, color: 'rgba(21,21,21,0.5)', marginBottom: 14 },
+  sublabel: { fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 14 },
   photoRow: { flexDirection: 'row', alignItems: 'center', gap: 20 },
   photoWrap: { width: 80, height: 80, borderRadius: 40, overflow: 'hidden' },
   photo: { width: 80, height: 80, borderRadius: 40 },
@@ -213,9 +213,9 @@ const s = StyleSheet.create({
   },
   changePhotoText: { color: DARK, fontWeight: '800', fontSize: 14 },
   textArea: {
-    backgroundColor: '#fff8ee', borderRadius: 14,
-    borderWidth: 1.5, borderColor: 'rgba(245,197,0,0.4)',
-    padding: 14, fontSize: 14, color: DARK,
+    backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 14,
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)',
+    padding: 14, fontSize: 14, color: '#fff',
     minHeight: 100, textAlignVertical: 'top',
   },
 })
