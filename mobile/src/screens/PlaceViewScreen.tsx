@@ -67,6 +67,7 @@ interface Participant {
   about?: string
 }
 interface ActiveConnection {
+  qrVerifiedAt?: string | null
   counterpart: { userId: string; username: string; photoUrl?: string | null; spotLabel?: string | null; intentText?: string | null }
 }
 interface QrHandoff { url: string }
@@ -507,7 +508,7 @@ export default function PlaceViewScreen() {
 
               <View style={s.divider} />
 
-              {qrVerified ? (
+              {activeConnection?.qrVerifiedAt ? (
                 <View style={s.qrVerifiedBox}>
                   <MaterialIcons name="verified" size={16} color="#4ade80" style={{ marginRight: 6 }} />
                   <Text style={s.qrVerifiedText}>Connected & Verified</Text>
