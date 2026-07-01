@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
 import { MaterialIcons } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
 import { apiFetch } from '../lib/api'
 import { getSession, signOut } from '../lib/auth'
 
@@ -115,6 +116,12 @@ export default function AccountSettingsScreen() {
 
   return (
     <View style={s.root}>
+      <LinearGradient
+        colors={['#F5C500', '#F2A96B', '#F0956A', '#EE8A5C']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
       <SafeAreaView edges={['top']}>
         <View style={s.header}>
           <TouchableOpacity onPress={goBack} style={s.backBtn}>
@@ -141,21 +148,21 @@ export default function AccountSettingsScreen() {
                     <Text style={s.rowSub}>Update your account password</Text>
                   </View>
                 </View>
-                <MaterialIcons name="chevron-right" size={22} color="rgba(0,0,0,0.4)" />
+                <MaterialIcons name="chevron-right" size={22} color="rgba(255,255,255,0.6)" />
               </TouchableOpacity>
             </View>
 
             <Text style={[s.sectionLabel, { color: '#151515', marginTop: 24 }]}>DANGER ZONE</Text>
-            <View style={[s.card, { borderColor: 'rgba(186,26,26,0.2)' }]}>
+            <View style={[s.card, { backgroundColor: 'rgba(40,10,10,0.9)', borderWidth: 1.5, borderColor: 'rgba(220,60,60,0.7)' }]}>
               <TouchableOpacity style={s.row} onPress={handleDeleteAccount}>
                 <View style={s.rowLeft}>
                   <Text style={s.rowIcon}>⚠️</Text>
                   <View>
-                    <Text style={[s.rowTitle, { color: '#151515' }]}>Delete Account</Text>
+                    <Text style={[s.rowTitle, { color: '#fff' }]}>Delete Account</Text>
                     <Text style={s.rowSub}>Permanently remove your account</Text>
                   </View>
                 </View>
-                <MaterialIcons name="chevron-right" size={22} color="rgba(0,0,0,0.4)" />
+                <MaterialIcons name="chevron-right" size={22} color="rgba(255,255,255,0.6)" />
               </TouchableOpacity>
             </View>
           </>
@@ -254,7 +261,7 @@ export default function AccountSettingsScreen() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: YELLOW },
+  root: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingBottom: 12,
@@ -262,20 +269,20 @@ const s = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: '900', color: DARK },
   backBtn: {
     width: 44, height: 44, borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.15)',
+    backgroundColor: 'rgba(21,21,21,0.7)',
     justifyContent: 'center', alignItems: 'center',
   },
   scroll: { padding: 20, paddingTop: 10, paddingBottom: 60 },
   sectionLabel: { fontSize: 15, fontWeight: '900', color: DARK, letterSpacing: 1.5, marginBottom: 10, marginLeft: 4 },
   card: {
-    backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 20,
-    borderWidth: 0, overflow: 'hidden', marginBottom: 8,
+    backgroundColor: 'rgba(20,12,6,0.9)', borderRadius: 20,
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)', overflow: 'hidden', marginBottom: 8,
   },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 18 },
   rowLeft: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   rowIcon: { fontSize: 22 },
-  rowTitle: { fontSize: 15, fontWeight: '700', color: DARK },
-  rowSub: { fontSize: 12, color: 'rgba(0,0,0,0.5)', marginTop: 2 },
+  rowTitle: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  rowSub: { fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2 },
 
   darkCard: {
     backgroundColor: '#151515', borderRadius: 24,
