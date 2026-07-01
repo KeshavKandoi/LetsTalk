@@ -148,6 +148,7 @@ export type ActiveConnectionState = {
   id: string
   placeId: string
   createdAt: string | Date
+  qrVerifiedAt?: string | Date | null
   counterpart: {
     userId: string
     username: string

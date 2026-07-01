@@ -508,6 +508,7 @@ export async function getActiveConnectionForUser(
     id: connectionRecord.id,
     placeId: connectionRecord.placeId,
     createdAt: connectionRecord.createdAt,
+    qrVerifiedAt: connectionRecord.qrVerifiedAt ?? null,
     counterpart: {
       userId: counterpartUser.id,
       username: getDisplayUsername(counterpartUser),
@@ -1376,6 +1377,29 @@ export async function createFriendRequest(input: { token?: string }) {
         updatedAt: now,
       },
     })
+
+  // Mark the existing in-person connection as QR-verified (visible to both users)
+  if (input.token) {
+    const verifyPair = normalizeFriendPair(session.user.id, targetUserId)
+    await db
+      .update(handoffConnection)
+      .set({ qrVerifiedAt: now, updatedAt: now })
+      .where(
+        and(
+          eq(handoffConnection.status, 'accepted'),
+          or(
+            and(
+              eq(handoffConnection.requesterUserId, verifyPair.requesterUserId),
+              eq(handoffConnection.recipientUserId, verifyPair.recipientUserId),
+            ),
+            and(
+              eq(handoffConnection.requesterUserId, verifyPair.recipientUserId),
+              eq(handoffConnection.recipientUserId, verifyPair.requesterUserId),
+            ),
+          ),
+        ),
+      )
+  }
 
   return {
     success: true,
