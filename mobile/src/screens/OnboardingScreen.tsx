@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
 import { MaterialIcons } from '@expo/vector-icons'
 import * as Location from 'expo-location'
+import { LinearGradient } from 'expo-linear-gradient'
 import { apiFetch } from '../lib/api'
 
 const AMBER = '#e8824a'
@@ -293,14 +294,21 @@ export default function OnboardingScreen() {
               <Text style={[s.wordCount, intentText.length > 23 && s.wordCountOver]}>{intentText.length}/25 chars</Text>
             </View>
 
-            <TouchableOpacity style={s.joinBtn} onPress={handleJoin} disabled={saving} activeOpacity={0.85}>
-              {saving
-                ? <ActivityIndicator color="#0a0704" />
-                : <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Text style={s.joinBtnText}>Join this place</Text>
-                    <MaterialIcons name="arrow-forward" size={20} color="#0a0704" />
-                  </View>
-              }
+            <TouchableOpacity style={s.joinBtnWrap} onPress={handleJoin} disabled={saving} activeOpacity={0.85}>
+              <LinearGradient
+                colors={['#eafff0', '#cdeed6', '#a9dcb8']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0, y: 1 }}
+                style={s.joinBtn}
+              >
+                {saving
+                  ? <ActivityIndicator color="#1f4a2c" />
+                  : <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Text style={s.joinBtnText}>Join this place</Text>
+                      <MaterialIcons name="arrow-forward" size={20} color="#1f4a2c" />
+                    </View>
+                }
+              </LinearGradient>
             </TouchableOpacity>
           </ScrollView>
         )}
@@ -340,22 +348,22 @@ const s = StyleSheet.create({
   statusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.3)' },
   statusDotActive: { backgroundColor: '#4ade80' },
   statusText: { fontSize: 12, color: 'rgba(255,255,255,0.4)', fontWeight: '500' },
-  selectedCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(232,130,74,0.08)', borderRadius: 16, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(232,130,74,0.25)' },
+  selectedCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(232,130,74,0.08)', borderRadius: 16, padding: 14, marginBottom: 16, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)' },
   selectedCardLeft: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(232,130,74,0.15)', justifyContent: 'center', alignItems: 'center' },
   selectedName: { fontSize: 15, fontWeight: '800', color: '#fff', marginBottom: 2 },
   selectedAddress: { fontSize: 12, color: 'rgba(255,255,255,0.45)' },
   statsRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  statBox: { flex: 1, backgroundColor: 'rgba(232,130,74,0.07)', borderRadius: 14, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(232,130,74,0.12)' },
-  statVal: { fontSize: 22, fontWeight: '900', color: AMBER },
-  statLabel: { fontSize: 11, color: AMBER_LIGHT, fontWeight: '600', marginTop: 2 },
-  sectionCard: { backgroundColor: 'rgba(20,12,6,0.9)', borderRadius: 18, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(232,130,74,0.15)' },
+  statBox: { flex: 1, backgroundColor: '#000000', borderRadius: 14, padding: 12, alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.95)' },
+  statVal: { fontSize: 22, fontWeight: '900', color: '#ffffff' },
+  statLabel: { fontSize: 11, color: '#ffffff', fontWeight: '600', marginTop: 2 },
+  sectionCard: { backgroundColor: 'rgba(20,12,6,0.9)', borderRadius: 18, padding: 16, marginBottom: 12, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)' },
   sectionLabel: { fontSize: 13, fontWeight: '700', color: 'rgba(255,255,255,0.6)', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.8 },
   vibeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   vibeBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 50, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.08)' },
   vibeBtnActive: { borderColor: AMBER, backgroundColor: 'rgba(232,130,74,0.1)' },
   vibeBtnText: { fontSize: 13, color: 'rgba(255,255,255,0.45)', fontWeight: '600' },
   vibeBtnTextActive: { color: AMBER },
-  intentInput: { backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: 12, fontSize: 14, color: '#fff', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', minHeight: 90, textAlignVertical: 'top', lineHeight: 22 },
+  intentInput: { backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: 12, fontSize: 14, color: '#fff', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)', minHeight: 90, textAlignVertical: 'top', lineHeight: 22 },
   wordCount: { fontSize: 11, color: 'rgba(255,255,255,0.35)', textAlign: 'right', marginTop: 8 },
   wordCountOver: { color: '#ff4444' },
   locationHintRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
@@ -364,6 +372,21 @@ const s = StyleSheet.create({
   hintChipText: { fontSize: 12, color: 'rgba(255,255,255,0.4)', fontWeight: '600' },
   hintChipTextActive: { color: AMBER },
   hintInput: { backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: 12, fontSize: 13, color: '#fff', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
-  joinBtn: { backgroundColor: AMBER, borderRadius: 50, paddingVertical: 16, alignItems: 'center', marginTop: 8 },
-  joinBtnText: { color: '#0a0704', fontWeight: '900', fontSize: 16 },
+  joinBtnWrap: {
+    borderRadius: 50,
+    marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  joinBtn: {
+    borderRadius: 50,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.7)',
+  },
+  joinBtnText: { color: '#1f4a2c', fontWeight: '900', fontSize: 16 },
 })
