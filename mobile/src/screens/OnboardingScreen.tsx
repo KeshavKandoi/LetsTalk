@@ -183,8 +183,8 @@ export default function OnboardingScreen() {
               <MaterialIcons name="search" size={20} color={searchFocused ? AMBER : 'rgba(255,255,255,0.4)'} />
               <TextInput
                 style={s.searchInput}
-                placeholder="Search cafés, parks, libraries..."
-                placeholderTextColor="rgba(255,255,255,0.35)"
+                placeholder="Search cafes, parks, libraries..."
+                placeholderTextColor="rgba(255,255,255,0.55)"
                 value={searchQuery}
                 onChangeText={searchPlaces}
                 onFocus={() => setSearchFocused(true)}
@@ -329,14 +329,14 @@ const s = StyleSheet.create({
   subtitle: { fontSize: 14, color: 'rgba(255,255,255,0.5)', marginBottom: 20, lineHeight: 20 },
   errorBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(186,26,26,0.12)', borderRadius: 12, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(186,26,26,0.25)' },
   errorText: { color: '#ff6b6b', fontSize: 13, flex: 1 },
-  searchBar: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', marginBottom: 16 },
+  searchBar: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)', marginBottom: 16 },
   searchBarFocused: { borderColor: 'rgba(232,130,74,0.5)', backgroundColor: 'rgba(232,130,74,0.05)' },
   searchInput: { flex: 1, fontSize: 14, color: '#fff' },
   emptyState: { alignItems: 'center', paddingVertical: 48, gap: 12 },
   emptyText: { fontSize: 14, color: 'rgba(255,255,255,0.35)', fontWeight: '600' },
   retryBtn: { marginTop: 4, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 50, borderWidth: 1, borderColor: 'rgba(232,130,74,0.4)' },
   retryBtnText: { color: AMBER, fontWeight: '700', fontSize: 13 },
-  placeCard: { backgroundColor: 'rgba(20,12,6,0.9)', borderRadius: 18, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: 'rgba(232,130,74,0.15)' },
+  placeCard: { backgroundColor: 'rgba(20,12,6,0.9)', borderRadius: 18, padding: 14, marginBottom: 10, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)' },
   placeCardRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
   placeIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(232,130,74,0.1)', justifyContent: 'center', alignItems: 'center' },
   placeName: { fontSize: 15, fontWeight: '800', color: '#fff', marginBottom: 2 },
