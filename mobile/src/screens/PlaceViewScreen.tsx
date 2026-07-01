@@ -12,6 +12,7 @@ import ScannerModal from './ScannerModal'
 import { apiFetch } from '../lib/api'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { MaterialIcons } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
 
 const FINDER_HINTS = ['By the window', 'Near the counter', 'At the bar', 'Corner table', 'Outside area', 'Near entrance']
 const GPS_LIMIT_METERS = 200
@@ -474,7 +475,14 @@ export default function PlaceViewScreen() {
 
           {/* Active Connection Banner */}
           {activeConnection && (
-            <View style={s.connectionBanner}>
+            <View style={s.gradBorderWrap}>
+              <LinearGradient
+                colors={['#ffffff', '#f5e6c8', '#e8b84a', '#f5e6c8', '#ffffff']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={s.gradBorderGradient}
+              />
+              <View style={[s.connectionBanner, s.gradBorderInner]}>
               <View style={s.connectionHeader}>
                 <View style={s.connectedDot} />
                 <Text style={s.connectedLabel}>CONNECTED</Text>
@@ -523,10 +531,18 @@ export default function PlaceViewScreen() {
                   : <Text style={s.endBtnText}>I'm free again</Text>}
               </TouchableOpacity>
             </View>
+            </View>
           )}
 
           {/* Place Card */}
-          <View style={s.placeCard}>
+          <View style={s.gradBorderWrap}>
+            <LinearGradient
+              colors={['#ffffff', '#f5e6c8', '#e8b84a', '#f5e6c8', '#ffffff']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={s.gradBorderGradient}
+            />
+            <View style={[s.placeCard, s.gradBorderInner]}>
             <View style={s.livePill}>
               <View style={s.liveDot} />
               <Text style={s.liveText}>Live Place</Text>
@@ -546,9 +562,17 @@ export default function PlaceViewScreen() {
               ))}
             </View>
           </View>
+          </View>
 
           {/* Your Status */}
-          <View style={s.card}>
+          <View style={s.gradBorderWrap}>
+            <LinearGradient
+              colors={['#ffffff', '#f5e6c8', '#e8b84a', '#f5e6c8', '#ffffff']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={s.gradBorderGradient}
+            />
+            <View style={[s.card, s.gradBorderInner]}>
             <Text style={s.cardTitle}>Your Status</Text>
             <Text style={s.cardHint}>
               {isInConversation
@@ -559,43 +583,27 @@ export default function PlaceViewScreen() {
             </Text>
             {!isInConversation && (
               <TouchableOpacity
-                style={[s.readyBtn, isReady && s.readyBtnActive]}
+                style={s.readyBtnWrap}
                 onPress={toggleReady}
                 disabled={togglingReady}
               >
-                {togglingReady
-                  ? <ActivityIndicator color={isReady ? AMBER : '#0a0704'} size="small" />
-                  : <Text style={[s.readyBtnText, isReady && s.readyBtnTextActive]}>
-                      {isReady ? '✓ Leave ready pool' : '👋 Set me ready'}
-                    </Text>}
+                <LinearGradient
+                  colors={['#eafff0', '#cdeed6', '#a9dcb8']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 0, y: 1 }}
+                  style={s.readyBtn}
+                >
+                  {togglingReady
+                    ? <ActivityIndicator color="#1f4a2c" size="small" />
+                    : <Text style={s.readyBtnText}>{isReady ? '✓ Leave ready pool' : 'Set me ready'}</Text>}
+                </LinearGradient>
               </TouchableOpacity>
             )}
+          </View>
           </View>
 
           {/* People Nearby */}
           <Text style={s.sectionTitle}>People Nearby</Text>
-
-          {/* Incoming Requests */}
-          {incomingRequests.length > 0 && !activeConnection && (
-            <View style={s.requestsBox}>
-              <Text style={s.requestsTitle}>Incoming Requests</Text>
-              {incomingRequests.map((request) => (
-                <View key={request.id} style={s.requestRow}>
-                  {renderAvatar(request.user, 42)}
-                  <View style={{ flex: 1, marginLeft: 10 }}>
-                    <Text style={s.requestName}>{request.user.username}</Text>
-                    {request.user.intentSummary ? <Text style={s.requestHint} numberOfLines={1}>{request.user.intentSummary}</Text> : null}
-                  </View>
-                  <TouchableOpacity style={s.acceptBtn} onPress={() => handleRespondToRequest(request, 'accept')} disabled={connectionActionId === request.id}>
-                    <Text style={s.acceptBtnText}>Accept</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={s.declineBtn} onPress={() => handleRespondToRequest(request, 'decline')} disabled={connectionActionId === request.id}>
-                    <Text style={s.declineBtnText}>✕</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </View>
-          )}
 
           {/* Participant Cards */}
           {availableParticipants.length > 0
@@ -660,12 +668,17 @@ export default function PlaceViewScreen() {
                             {actionLoading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={s.actionBtnCancelText}>Cancel</Text>}
                           </TouchableOpacity>
                         ) : request?.direction === 'incoming' ? (
-                          <TouchableOpacity style={[s.actionBtn, s.actionBtnAccept]} onPress={() => handleRespondToRequest(request, 'accept')} disabled={Boolean(actionLoading)}>
-                            {actionLoading ? <ActivityIndicator size="small" color="#0a0704" /> : <Text style={s.actionBtnAcceptText}>Accept</Text>}
-                          </TouchableOpacity>
+                          <>
+                            <TouchableOpacity style={[s.actionBtn, s.actionBtnAccept]} onPress={() => handleRespondToRequest(request, 'accept')} disabled={Boolean(actionLoading)}>
+                              {actionLoading ? <ActivityIndicator size="small" color="#ffffff" /> : <Text style={s.actionBtnAcceptText}>Accept</Text>}
+                            </TouchableOpacity>
+                            <TouchableOpacity style={s.actionBtnReject} onPress={() => handleRespondToRequest(request, 'decline')} disabled={Boolean(actionLoading)}>
+                              <Text style={s.actionBtnRejectText}>✕</Text>
+                            </TouchableOpacity>
+                          </>
                         ) : canSendConnectRequest ? (
                           <TouchableOpacity style={[s.actionBtn, s.actionBtnConnect]} onPress={() => handleSendConnectRequest(p)} disabled={Boolean(actionLoading)}>
-                            {actionLoading ? <ActivityIndicator size="small" color="#0a0704" /> : <Text style={s.actionBtnConnectText}>Connect</Text>}
+                            {actionLoading ? <ActivityIndicator size="small" color="#ffffff" /> : <Text style={s.actionBtnConnectText}>Connect</Text>}
                           </TouchableOpacity>
                         ) : (
                           <View style={[s.actionBtn, s.actionBtnDisabled]}>
@@ -678,39 +691,47 @@ export default function PlaceViewScreen() {
                 )
               })
             : (
-              <View style={s.emptyPeople}>
+              <View style={s.gradBorderWrap}>
+                <LinearGradient
+                  colors={['#ffffff', '#f5e6c8', '#e8b84a', '#f5e6c8', '#ffffff']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={s.gradBorderGradient}
+                />
+                <View style={[s.emptyPeople, s.gradBorderInner]}>
                 <Text style={s.emptyEmoji}>👀</Text>
                 <Text style={s.emptyTitle}>No one ready yet</Text>
                 <Text style={s.emptyHint}>Mark yourself ready and wait for others.</Text>
               </View>
+              </View>
             )}
           {/* Help Someone Find You */}
-          <View style={s.card}>
-            <Text style={s.cardTitle}>Help Someone Find You</Text>
-            <Text style={s.cardHint}>Sharing your spot makes it easier for people to walk up and say hi!</Text>
+          <View style={s.findCard}>
+            <Text style={s.findCardTitle}>Help Someone Find You</Text>
+            <Text style={s.findCardHint}>Sharing your spot makes it easier for people to walk up and say hi!</Text>
             <View style={s.hintRow}>
               {FINDER_HINTS.map((hint) => (
                 <TouchableOpacity
                   key={hint}
-                  style={[s.hintChip, (selectedHint ?? profile.locationHint) === hint && s.hintChipActive]}
+                  style={[s.findHintChip, (selectedHint ?? profile.locationHint) === hint && s.findHintChipActive]}
                   onPress={() => {
                     if ((selectedHint ?? profile.locationHint) === hint) { setSelectedHint(null) }
                     else { setSelectedHint(hint); setCustomSpot('') }
                   }}
                 >
-                  <Text style={[s.hintChipText, (selectedHint ?? profile.locationHint) === hint && s.hintChipTextActive]}>{hint}</Text>
+                  <Text style={[s.findHintChipText, (selectedHint ?? profile.locationHint) === hint && s.findHintChipTextActive]}>{hint}</Text>
                 </TouchableOpacity>
               ))}
             </View>
             <TextInput
-              placeholder="Or describe your spot..."
-              placeholderTextColor="rgba(255,255,255,0.2)"
+              placeholder="Describe Your Spot"
+              placeholderTextColor="rgba(255,255,255,0.3)"
               value={customSpot}
               onChangeText={(text) => { setCustomSpot(text); if (text) setSelectedHint(null) }}
-              style={s.spotInput}
+              style={s.findSpotInput}
             />
             <TouchableOpacity
-              style={[s.shareSpotBtn, profile.isFindable && s.shareSpotBtnActive]}
+              style={s.shareSpotBtnWrap}
               onPress={async () => {
                 if (!profile.isFindable) {
                   const hintToShare = customSpot.trim() || selectedHint
@@ -723,11 +744,16 @@ export default function PlaceViewScreen() {
               }}
               disabled={finderLoading}
             >
-              {finderLoading
-                ? <ActivityIndicator color={profile.isFindable ? '#ef4444' : '#0a0704'} size="small" />
-                : <Text style={[s.shareSpotBtnText, profile.isFindable && s.shareSpotBtnTextActive]}>
-                    {profile.isFindable ? 'Stop sharing my spot' : 'Share My Spot'}
-                  </Text>}
+              <LinearGradient
+                colors={['#eafff0', '#cdeed6', '#a9dcb8']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0, y: 1 }}
+                style={s.shareSpotBtn}
+              >
+                {finderLoading
+                  ? <ActivityIndicator color="#1f4a2c" size="small" />
+                  : <Text style={s.shareSpotBtnText}>{profile.isFindable ? 'Stop sharing my spot' : 'Share My Spot'}</Text>}
+              </LinearGradient>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -827,17 +853,17 @@ export default function PlaceViewScreen() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#080502' },
-  bgCircle1: { position: 'absolute', top: -100, right: -80, width: 300, height: 300, borderRadius: 150, backgroundColor: 'rgba(232,130,74,0.05)' },
-  bgCircle2: { position: 'absolute', bottom: 60, left: -120, width: 350, height: 350, borderRadius: 175, backgroundColor: 'rgba(232,130,74,0.03)' },
+  root: { flex: 1, backgroundColor: '#000000' },
+  bgCircle1: { position: 'absolute', top: -100, right: -80, width: 300, height: 300, borderRadius: 150, backgroundColor: 'transparent' },
+  bgCircle2: { position: 'absolute', bottom: 60, left: -120, width: 350, height: 350, borderRadius: 175, backgroundColor: 'transparent' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   scroll: { padding: 16, paddingBottom: 48 },
 
   // Header
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(232,130,74,0.1)' },
-  logo: { fontSize: 20, fontWeight: '900', color: AMBER, letterSpacing: -0.5 },
-  leaveBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(239,68,68,0.4)', backgroundColor: 'rgba(239,68,68,0.08)' },
-  leaveText: { color: '#ef4444', fontWeight: '700', fontSize: 13 },
+  logo: { fontSize: 20, fontWeight: '900', color: '#ffffff', letterSpacing: -0.5 },
+  leaveBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5, borderColor: '#ffffff', backgroundColor: '#ef4444' },
+  leaveText: { color: '#ffffff', fontWeight: '700', fontSize: 13 },
 
   // Alerts
   errorBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(186,26,26,0.12)', borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(186,26,26,0.25)' },
@@ -847,47 +873,66 @@ const s = StyleSheet.create({
   noticeDismiss: { color: 'rgba(255,215,0,0.5)', fontSize: 11, marginTop: 3 },
 
   // Connection Banner
-  connectionBanner: { backgroundColor: 'rgba(20,12,6,0.95)', borderRadius: 20, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(74,222,128,0.2)' },
+  connectionBanner: { backgroundColor: '#0c0c0c', borderRadius: 18, padding: 18, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 8 },
+  gradBorderWrap: { borderRadius: 20, padding: 2, marginBottom: 14, overflow: 'hidden', position: 'relative' },
+  gradBorderGradient: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  gradBorderInner: { marginBottom: 0 },
   connectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   connectedDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#4ade80', marginRight: 8 },
   connectedLabel: { color: '#4ade80', fontWeight: '800', fontSize: 12, letterSpacing: 1.2 },
   connectionAvatarRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 },
-  connectionPerson: { flex: 1, alignItems: 'center', gap: 6 },
-  connectionName: { color: '#fff', fontWeight: '700', fontSize: 13, textAlign: 'center' },
-  spotChip: { backgroundColor: 'rgba(232,130,74,0.12)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+  connectionPerson: { flex: 1, alignItems: 'center', gap: 7 },
+  connectionName: { color: '#fff', fontWeight: '700', fontSize: 14, textAlign: 'center' },
+  spotChip: { backgroundColor: 'rgba(232,130,74,0.14)', borderRadius: 10, paddingHorizontal: 9, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(232,130,74,0.25)' },
   spotChipText: { color: AMBER, fontSize: 11, fontWeight: '600' },
   noSpot: { color: 'rgba(255,255,255,0.3)', fontSize: 11 },
-  divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginBottom: 14 },
-  qrVerifiedBox: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(74,222,128,0.08)', borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(74,222,128,0.2)' },
+  divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.1)', marginTop: 4, marginBottom: 16 },
+  qrVerifiedBox: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(74,222,128,0.1)', borderRadius: 14, padding: 13, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(74,222,128,0.3)', shadowColor: '#4ade80', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 2 },
   qrVerifiedText: { color: '#4ade80', fontWeight: '700', fontSize: 14 },
   qrBtnRow: { flexDirection: 'row', marginBottom: 12 },
-  qrBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12, paddingVertical: 11, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  qrBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 14, paddingVertical: 12, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.7)', shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 3 },
   qrBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
-  endBtn: { borderRadius: 50, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', backgroundColor: 'rgba(255,255,255,0.04)' },
+  endBtn: { borderRadius: 50, paddingVertical: 13, alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.7)', backgroundColor: 'rgba(255,255,255,0.05)', marginTop: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 3 },
   endBtnText: { color: 'rgba(255,255,255,0.7)', fontWeight: '700', fontSize: 14 },
 
   // Place Card
-  placeCard: { backgroundColor: 'rgba(20,12,6,0.95)', borderRadius: 20, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(232,130,74,0.15)' },
+  placeCard: { backgroundColor: '#000000', borderRadius: 20, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(232,130,74,0.15)' },
   livePill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(0,180,80,0.1)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start', marginBottom: 10 },
   liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#00b050' },
   liveText: { fontSize: 11, color: '#00b050', fontWeight: '700', letterSpacing: 0.5 },
   placeName: { fontSize: 20, fontWeight: '800', color: '#fff', marginBottom: 4 },
   placeAddress: { fontSize: 12, color: 'rgba(255,255,255,0.4)', lineHeight: 17, marginBottom: 14 },
-  statsRow: { flexDirection: 'row', backgroundColor: 'rgba(232,130,74,0.05)', borderRadius: 14, paddingVertical: 12 },
+  statsRow: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 14, paddingVertical: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
   statBox: { flex: 1, alignItems: 'center' },
-  statBorderLeft: { borderLeftWidth: 1, borderLeftColor: 'rgba(232,130,74,0.12)' },
-  statVal: { fontSize: 22, fontWeight: '900', color: AMBER },
-  statLabel: { fontSize: 11, color: AMBER_LIGHT, fontWeight: '600', marginTop: 2 },
+  statBorderLeft: { borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.25)' },
+  statVal: { fontSize: 22, fontWeight: '900', color: '#ffffff' },
+  statLabel: { fontSize: 11, color: '#ffffff', fontWeight: '600', marginTop: 2 },
 
   // Card
-  card: { backgroundColor: 'rgba(20,12,6,0.95)', borderRadius: 20, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(232,130,74,0.12)' },
+  card: { backgroundColor: '#000000', borderRadius: 20, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(232,130,74,0.12)' },
   cardTitle: { fontSize: 16, fontWeight: '800', color: '#fff', marginBottom: 6 },
   cardHint: { fontSize: 13, color: 'rgba(255,255,255,0.45)', lineHeight: 19, marginBottom: 14 },
 
   // Ready Button
-  readyBtn: { backgroundColor: AMBER, borderRadius: 50, paddingVertical: 14, alignItems: 'center' },
-  readyBtnActive: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.5)' },
-  readyBtnText: { color: '#0a0704', fontWeight: '800', fontSize: 15 },
+  readyBtnWrap: {
+    borderRadius: 50,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  readyBtn: {
+    borderRadius: 50,
+    paddingVertical: 16,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.7)',
+  },
+  readyBtnActive: { borderRadius: 50, paddingVertical: 16, alignItems: 'center', backgroundColor: 'transparent', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.5)' },
+  readyBtnText: { color: '#1f4a2c', fontWeight: '700', fontSize: 16 },
   readyBtnTextActive: { color: 'rgba(255,255,255,0.7)' },
 
   // Finder
@@ -896,27 +941,51 @@ const s = StyleSheet.create({
   hintChipActive: { backgroundColor: 'rgba(232,130,74,0.15)', borderColor: AMBER },
   hintChipText: { fontSize: 12, color: 'rgba(255,255,255,0.45)', fontWeight: '600' },
   hintChipTextActive: { color: AMBER },
+  findCard: { backgroundColor: '#000000', borderRadius: 20, padding: 16, marginBottom: 12, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.6)' },
+  findCardTitle: { fontSize: 16, fontWeight: '800', color: '#ffffff', marginBottom: 6 },
+  findCardHint: { fontSize: 13, color: 'rgba(255,255,255,0.55)', marginBottom: 14, lineHeight: 18 },
+  findHintChip: { borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.6)', backgroundColor: 'rgba(255,255,255,0.04)' },
+  findHintChipActive: { backgroundColor: 'rgba(232,130,74,0.15)', borderColor: AMBER },
+  findHintChipText: { fontSize: 12, color: '#ffffff', fontWeight: '600' },
+  findHintChipTextActive: { color: AMBER },
+  findSpotInput: { backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: '#ffffff', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.5)', marginBottom: 12 },
   spotInput: { backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: '#fff', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', marginBottom: 12 },
-  shareSpotBtn: { borderRadius: 50, paddingVertical: 13, alignItems: 'center', backgroundColor: AMBER },
-  shareSpotBtnActive: { backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)' },
-  shareSpotBtnText: { color: '#0a0704', fontWeight: '800', fontSize: 14 },
+  shareSpotBtnWrap: {
+    borderRadius: 50,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  shareSpotBtn: {
+    borderRadius: 50,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.7)',
+  },
+  shareSpotBtnActive: { borderRadius: 50, paddingVertical: 16, alignItems: 'center', backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)' },
+  shareSpotBtnText: { color: '#1f4a2c', fontWeight: '700', fontSize: 16 },
   shareSpotBtnTextActive: { color: '#ef4444' },
 
   // People
   sectionTitle: { fontSize: 18, fontWeight: '800', color: '#fff', marginBottom: 12, paddingHorizontal: 2 },
-  requestsBox: { backgroundColor: 'rgba(20,12,6,0.95)', borderRadius: 16, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)' },
+  requestsBox: { backgroundColor: '#000000', borderRadius: 16, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)' },
   requestsTitle: { fontSize: 13, fontWeight: '800', color: AMBER, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.8 },
   requestRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   requestName: { fontSize: 14, fontWeight: '700', color: '#fff' },
   requestHint: { fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 2 },
-  acceptBtn: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, backgroundColor: 'rgba(232,130,74,0.15)', borderWidth: 1, borderColor: AMBER, marginLeft: 8 },
-  acceptBtnText: { color: AMBER, fontSize: 12, fontWeight: '700' },
+  acceptBtn: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, backgroundColor: '#181818', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.85)', marginLeft: 8 },
+  acceptBtnText: { color: '#ffffff', fontSize: 12, fontWeight: '700' },
   declineBtn: { paddingHorizontal: 10, paddingVertical: 7, borderRadius: 10, backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)', marginLeft: 6 },
   declineBtnText: { color: '#ef4444', fontSize: 13, fontWeight: '700' },
+  actionBtnReject: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)', alignItems: 'center', justifyContent: 'center' },
+  actionBtnRejectText: { color: '#ef4444', fontSize: 15, fontWeight: '700' },
 
   // Person Card
-  personCard: { backgroundColor: 'rgba(18,10,4,0.98)', borderRadius: 16, paddingHorizontal: 12, paddingTop: 6, paddingBottom: 0, marginBottom: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.5)' },
-  personCardReady: { borderColor: 'rgba(255,255,255,0.35)', backgroundColor: 'rgba(232,130,74,0.04)' },
+  personCard: { backgroundColor: '#000000', borderRadius: 16, paddingHorizontal: 12, paddingTop: 6, paddingBottom: 0, marginBottom: 8, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.8)' },
+  personCardReady: { borderColor: 'rgba(255,255,255,0.8)', backgroundColor: 'rgba(232,130,74,0.04)' },
   personCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   personDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginBottom: 8 },
   personIntentEmpty: { fontSize: 12, color: 'rgba(255,255,255,0.2)', fontStyle: 'italic', marginTop: 3 },
@@ -924,15 +993,15 @@ const s = StyleSheet.create({
   youBadge: { backgroundColor: 'rgba(99,102,241,0.2)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: 'rgba(99,102,241,0.4)' },
   youBadgeText: { color: '#818cf8', fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
   statusPill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
-  statusPillActive: { backgroundColor: 'rgba(232,130,74,0.1)', borderColor: 'rgba(232,130,74,0.3)' },
+  statusPillActive: { backgroundColor: '#000000', borderColor: '#ffffff', borderWidth: 1.5 },
   statusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.3)' },
-  statusDotActive: { backgroundColor: AMBER },
+  statusDotActive: { backgroundColor: '#ffffff' },
   statusPillText: { fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: '700' },
-  statusPillTextActive: { color: AMBER },
+  statusPillTextActive: { color: '#ffffff' },
   personCardMain: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 4 },
   personAvatarWrap: { position: 'relative' },
   avatarOnline: { position: 'absolute', bottom: 1, right: 1, width: 11, height: 11, borderRadius: 6, backgroundColor: '#4ade80', borderWidth: 2, borderColor: '#080502' },
-  avatarPlaceholder: { backgroundColor: 'rgba(232,130,74,0.12)', justifyContent: 'center', alignItems: 'center' },
+  avatarPlaceholder: { backgroundColor: 'rgba(232,130,74,0.14)', justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(232,130,74,0.3)', shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 4 },
   avatarInitials: { color: '#fff', fontWeight: '800' },
   personName: { fontSize: 15, fontWeight: '800', color: '#fff', marginBottom: 6 },
   personMetaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
@@ -940,21 +1009,24 @@ const s = StyleSheet.create({
   personMetaChipText: { color: AMBER, fontSize: 11, fontWeight: '700' },
   personHint: { fontSize: 12, color: AMBER_LIGHT, fontWeight: '600' },
   personBtns: { flexDirection: 'row', gap: 8 },
-  viewProfileBtn: { flex: 1, paddingVertical: 10, borderRadius: 14, backgroundColor: 'rgba(232,130,74,0.15)', borderWidth: 1.5, borderColor: 'rgba(232,130,74,0.4)', alignItems: 'center' },
-  viewProfileBtnText: { fontSize: 14, fontWeight: '800', color: 'rgba(232,130,74,0.95)' },
+  viewProfileBtnWrap: { flex: 1, borderRadius: 14, overflow: 'hidden' },
+  viewProfileBtn: { flex: 1, paddingVertical: 10, borderRadius: 14, alignItems: 'center', backgroundColor: '#181818', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.85)', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 4 },
+  viewProfileBtnText: { fontSize: 14, fontWeight: '800', color: '#ffffff' },
+  actionBtnWrapConnect: { flex: 1, borderRadius: 12, overflow: 'hidden' },
+  actionBtnConnectGradient: { paddingVertical: 9, borderRadius: 12, alignItems: 'center' },
   actionBtn: { flex: 1, paddingVertical: 9, borderRadius: 12, alignItems: 'center' },
-  actionBtnConnect: { backgroundColor: AMBER },
-  actionBtnConnectText: { color: '#0a0704', fontWeight: '800', fontSize: 13 },
+  actionBtnConnect: { backgroundColor: 'rgba(59,130,246,0.1)', borderWidth: 1, borderColor: 'rgba(59,130,246,0.35)' },
+  actionBtnConnectText: { color: '#3b82f6', fontWeight: '800', fontSize: 13 },
   actionBtnConnected: { backgroundColor: 'rgba(74,222,128,0.08)', borderWidth: 1, borderColor: 'rgba(74,222,128,0.25)' },
   actionBtnConnectedText: { color: '#4ade80', fontWeight: '700', fontSize: 13 },
   actionBtnCancel: { backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
   actionBtnCancelText: { color: 'rgba(255,255,255,0.5)', fontWeight: '700', fontSize: 13 },
-  actionBtnAccept: { backgroundColor: AMBER },
-  actionBtnAcceptText: { color: '#0a0704', fontWeight: '800', fontSize: 13 },
+  actionBtnAccept: { backgroundColor: 'rgba(74,222,128,0.1)', borderWidth: 1, borderColor: 'rgba(74,222,128,0.35)' },
+  actionBtnAcceptText: { color: '#4ade80', fontWeight: '800', fontSize: 13 },
   actionBtnDisabled: { backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
   actionBtnDisabledText: { color: 'rgba(255,255,255,0.2)', fontWeight: '700', fontSize: 13 },
 
-  emptyPeople: { backgroundColor: 'rgba(20,12,6,0.95)', borderRadius: 18, padding: 32, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(232,130,74,0.08)' },
+  emptyPeople: { backgroundColor: '#000000', borderRadius: 18, padding: 32, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(232,130,74,0.08)' },
   emptyEmoji: { fontSize: 32, marginBottom: 8 },
   emptyTitle: { fontSize: 15, fontWeight: '700', color: '#fff', marginBottom: 4 },
   emptyHint: { fontSize: 13, color: 'rgba(255,255,255,0.35)', textAlign: 'center' },
@@ -987,7 +1059,7 @@ const s = StyleSheet.create({
   personIntentSectionText: { fontSize: 14, color: 'rgba(255,255,255,0.84)', lineHeight: 22 },
   personSpotSection: { borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', padding: 15 },
   personSpotText: { fontSize: 14, color: 'rgba(255,255,255,0.82)', lineHeight: 22, fontWeight: '600' },
-  intentBox: { marginTop: 4, backgroundColor: 'rgba(232,130,74,0.08)', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 3, borderLeftWidth: 2, borderLeftColor: 'rgba(232,130,74,0.5)', maxWidth: '95%' },
-  intentBoxLabel: { fontSize: 8, color: 'rgba(232,130,74,0.6)', fontWeight: '600', marginBottom: 1, textTransform: 'uppercase', letterSpacing: 0.3 },
-  personIntent: { fontSize: 11, color: '#fff', lineHeight: 16, fontWeight: '400' },
+  intentBox: { marginTop: 4, backgroundColor: '#000000', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 3, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.8)', maxWidth: '95%' },
+  intentBoxLabel: { fontSize: 8, color: '#ffffff', fontWeight: '600', marginBottom: 1, textTransform: 'uppercase', letterSpacing: 0.3 },
+  personIntent: { fontSize: 11, color: AMBER, lineHeight: 16, fontWeight: '400' },
 })
