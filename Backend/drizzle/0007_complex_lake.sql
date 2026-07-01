@@ -1,0 +1,1 @@
+ALTER TABLE "handoff_connection" ADD COLUMN "qr_verified_at" timestamp;

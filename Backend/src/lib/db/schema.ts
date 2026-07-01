@@ -159,6 +159,7 @@ export const handoffConnection = pgTable(
       .notNull()
       .references(() => place.placeId, { onDelete: 'cascade' }),
     status: text('status').notNull().default('accepted'),
+    qrVerifiedAt: timestamp('qr_verified_at'),
     createdAt: timestamp('created_at').notNull(),
     updatedAt: timestamp('updated_at').notNull(),
   },
