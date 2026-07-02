@@ -130,7 +130,8 @@ function assertCoordinates(input: { latitude?: number; longitude?: number }) {
   return { latitude: input.latitude as number, longitude: input.longitude as number }
 }
 
-const READY_STALE_MS = 60_000
+const READY_STALE_MS = 60 * 60_000 // 1 hour
+const CONVERSATION_STALE_MS = 60_000 // 60 seconds
 const CONNECT_REQUEST_BLOCK_MS = 20 * 60_000
 
 async function getReadyCountByPlaceIds(placeIds: string[]) {
@@ -167,7 +168,8 @@ export async function touchReadyPresence(userId: string, now = new Date()) {
 }
 
 export async function expireStaleReady(now = new Date()) {
-  const staleCutoff = new Date(now.getTime() - READY_STALE_MS)
+  const readyStaleCutoff = new Date(now.getTime() - READY_STALE_MS)
+  const conversationStaleCutoff = new Date(now.getTime() - CONVERSATION_STALE_MS)
   const staleProfiles = await db
     .select({
       userId: userProfile.userId,
@@ -175,9 +177,9 @@ export async function expireStaleReady(now = new Date()) {
     })
     .from(userProfile)
     .where(
-      and(
-        inArray(userProfile.status, ['ready', 'in_conversation']),
-        lt(userProfile.updatedAt, staleCutoff),
+      or(
+        and(eq(userProfile.status, 'ready'), lt(userProfile.updatedAt, readyStaleCutoff)),
+        and(eq(userProfile.status, 'in_conversation'), lt(userProfile.updatedAt, conversationStaleCutoff)),
       ),
     )
 
