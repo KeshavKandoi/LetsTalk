@@ -178,7 +178,7 @@ export default function PlaceViewScreen() {
       if (!isFocusedRef.current) return
       if (appStateRef.current !== 'active') return
       if (profileStatusRef.current !== 'ready') return
-      void apiFetch('/api/places/state', {}).catch(() => {})
+      void apiFetch('/api/places/state', {}).catch((e) => console.warn('[heartbeat] failed:', e?.message))
     }, 15_000)
   }
 

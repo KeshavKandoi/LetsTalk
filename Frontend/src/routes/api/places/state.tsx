@@ -100,6 +100,7 @@ export const Route = createFileRoute('/api/places/state')({
             activeConnection: await getActiveConnectionForUser(session.user.id),
           }), { headers: { 'Content-Type': 'application/json' } })
         } catch (e: any) {
+          console.error('[places/state] failed:', e?.message, e?.stack)
           return new Response(JSON.stringify({ session: null, profile: null }), { headers: { 'Content-Type': 'application/json' } })
         }
       },
