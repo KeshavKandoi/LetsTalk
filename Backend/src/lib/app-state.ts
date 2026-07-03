@@ -915,10 +915,22 @@ export async function verifyOnSiteLocation(input: { latitude?: number; longitude
   if (isWithinRange) {
     await db
       .update(userProfile)
-      .set({ isVerifiedOnSite: true, updatedAt: new Date() })
+      .set({ isVerifiedOnSite: true, gpsOutOfRangeStrikes: 0, updatedAt: new Date() })
       .where(eq(userProfile.userId, session.user.id))
     return { success: true, verified: true }
   }
+  const nextStrikes = (profileRecord.gpsOutOfRangeStrikes ?? 0) + 1
+  if (nextStrikes < 2) {
+    await db
+      .update(userProfile)
+      .set({ gpsOutOfRangeStrikes: nextStrikes, updatedAt: new Date() })
+      .where(eq(userProfile.userId, session.user.id))
+    return { success: true, verified: true }
+  }
+  await db
+    .update(userProfile)
+    .set({ gpsOutOfRangeStrikes: 0 })
+    .where(eq(userProfile.userId, session.user.id))
 
   const now = new Date()
   const ended = await endConnectionsForLocationExit(session.user.id, now)
