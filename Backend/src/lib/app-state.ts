@@ -891,6 +891,7 @@ export async function setReadyState(input: { ready: boolean; latitude?: number; 
 export async function verifyOnSiteLocation(input: { latitude?: number; longitude?: number }) {
   const session = await requireCurrentSession()
   const currentLocation = assertCoordinates(input)
+  console.log('[GPS-CHECK] verifyOnSiteLocation called', JSON.stringify({ currentLocation }))
   const [profileRecord] = await db
     .select()
     .from(userProfile)
@@ -911,6 +912,7 @@ export async function verifyOnSiteLocation(input: { latitude?: number; longitude
     longitude: placeRecord.lng,
   }
   const isWithinRange = distanceMeters(currentLocation, placeLocation) <= 200
+  console.log('[GPS-CHECK] distance result', JSON.stringify({ isWithinRange: distanceMeters(currentLocation, placeLocation) <= 200 }))
 
   if (isWithinRange) {
     await db
