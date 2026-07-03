@@ -884,7 +884,7 @@ export async function setReadyState(input: { ready: boolean; latitude?: number; 
   await agent.setReady(input)
   await db
     .update(userProfile)
-    .set({ isVerifiedOnSite: input.ready, updatedAt: new Date() })
+    .set({ isVerifiedOnSite: input.ready, gpsOutOfRangeStrikes: 0, updatedAt: new Date() })
     .where(eq(userProfile.userId, session.user.id))
 }
 
