@@ -97,7 +97,7 @@ export default function ProfileScreen() {
           <Image
             source={{ uri: photoUrl }}
             style={s.profilePhoto}
-            contentFit="cover"
+            resizeMode="cover"
           />
         ) : (
           <View style={s.photoPlaceholder}>
@@ -108,13 +108,13 @@ export default function ProfileScreen() {
 
       <Animated.View style={[s.panel, { top: panelY }]}>
         <LinearGradient
-          colors={['#F5C500', '#F5C500', '#F2A96B', '#F0956A']}
+          colors={['#F5C500', '#F2A96B', '#F0956A', '#EE8A5C']}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
         />
         <TouchableOpacity style={s.handleArea} onPress={togglePanel} activeOpacity={0.8}>
-          <View style={s.handle} />
+          <MaterialIcons name={expanded ? 'keyboard-arrow-down' : 'keyboard-arrow-up'} size={22} color="#151515" style={{ marginTop: 2 }} />
         </TouchableOpacity>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
@@ -170,7 +170,7 @@ export default function ProfileScreen() {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#fff' },
-  photoSection: { position: 'absolute', top: 0, left: 0, right: 0, height: height * 0.55, backgroundColor: '#f5ead0', overflow: 'hidden' },
+  photoSection: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#f5ead0', overflow: 'hidden' },
   topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, zIndex: 10 },
   backBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   backText: { fontSize: 17, fontWeight: '800', color: '#151515' },
@@ -188,7 +188,7 @@ const s = StyleSheet.create({
   handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: 'rgba(21,21,21,0.3)' },
   nameRow: { marginBottom: 20 },
   displayName: { fontSize: 38, fontWeight: '900', color: '#151515', letterSpacing: -1, lineHeight: 42 },
-  statsRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, backgroundColor: 'rgba(200,100,20,0.2)', borderRadius: 16, padding: 16 },
+  statsRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, backgroundColor: 'rgba(21,21,21,0.08)', borderRadius: 16, padding: 16 },
   statItem: { flex: 1, alignItems: 'center' },
   statNum: { fontSize: 22, fontWeight: '900', color: '#151515' },
   statLabel: { fontSize: 11, color: 'rgba(21,21,21,0.55)', marginTop: 2, fontWeight: '600' },
@@ -197,7 +197,7 @@ const s = StyleSheet.create({
   editBtnText: { color: '#fff', fontWeight: '800', fontSize: 16 },
   section: { marginBottom: 20 },
   sectionTitle: { fontSize: 14, fontWeight: '900', color: '#151515', letterSpacing: 1.5, marginBottom: 12 },
-  sectionBody: { fontSize: 14, color: 'rgba(0,0,0,0.65)', lineHeight: 22 },
+  sectionBody: { fontSize: 14, color: 'rgba(0,0,0,0.85)', lineHeight: 22 },
   accountRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6 },
   accountText: { fontSize: 14, color: '#151515', flex: 1, fontWeight: '700' },
   logoutBtn: { borderWidth: 1.5, borderColor: '#151515', borderRadius: 50, paddingVertical: 14, alignItems: 'center', marginTop: 24, marginBottom: 40 },
