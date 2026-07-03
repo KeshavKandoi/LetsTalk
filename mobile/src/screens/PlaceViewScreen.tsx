@@ -297,7 +297,7 @@ export default function PlaceViewScreen() {
 
   useEffect(() => {
     if (gpsVerifyRef.current) { clearInterval(gpsVerifyRef.current); gpsVerifyRef.current = null }
-    if (!state?.profile || !['ready', 'in_conversation'].includes(state.profile.status)) return
+    if (!state?.profile || state.profile.status !== 'in_conversation') return
     gpsVerifyRef.current = setInterval(() => {
       verifyCurrentGpsLocation(true).catch((e: any) => setError(e.message || 'Could not verify location.'))
     }, 30000)
