@@ -111,6 +111,7 @@ export const userProfile = pgTable('user_profile', {
   photoUrl: text('photo_url'),
   age: text('age'),
   gender: text('gender'),
+  gpsOutOfRangeStrikes: integer('gps_out_of_range_strikes').notNull().default(0),
   createdAt: timestamp('created_at').notNull(),
   updatedAt: timestamp('updated_at').notNull(),
 })
