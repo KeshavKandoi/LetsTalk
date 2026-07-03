@@ -123,6 +123,7 @@ export default function PlaceViewScreen() {
   const profileStatusRef = useRef<string | null>(null)
   const photoLoadedRef = useRef(false)
   const seenConnectionEventIdsRef = useRef<Set<string>>(new Set())
+  const gpsOutOfRangeStrikesRef = useRef(0)
 
   const getCurrentGpsLocation = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync()
@@ -145,12 +146,18 @@ export default function PlaceViewScreen() {
     if (!currentPlaceLocation) return
     const currentLocation = await getCurrentGpsLocation()
     if (distanceMeters(currentLocation, currentPlaceLocation) > GPS_LIMIT_METERS) {
+      gpsOutOfRangeStrikesRef.current += 1
+      if (gpsOutOfRangeStrikesRef.current < 2) {
+        return
+      }
+      gpsOutOfRangeStrikesRef.current = 0
       const result = await apiFetch('/api/places/verify-location', currentLocation)
       setQrVerified(false)
       setNotice(result.message || 'You are out of 200 meters. Your availability has been deactivated.')
       await loadState(true)
       return
     }
+    gpsOutOfRangeStrikesRef.current = 0
     const result = await apiFetch('/api/places/verify-location', currentLocation)
     if (result.deactivated) {
       setQrVerified(false)
