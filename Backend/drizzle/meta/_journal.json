@@ -57,6 +57,13 @@
       "when": 1782883938323,
       "tag": "0007_complex_lake",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1783067246535,
+      "tag": "0008_breezy_echo",
+      "breakpoints": true
     }
   ]
 }
