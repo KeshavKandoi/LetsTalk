@@ -60,6 +60,28 @@ const sendReadyHeartbeat = createServerFn({ method: 'POST' }).handler(async () =
   return { success: true }
 })
 
+async function sendGpsVerification() {
+  if (typeof navigator === 'undefined' || !navigator.geolocation) return
+  navigator.geolocation.getCurrentPosition(
+    async (position) => {
+      try {
+        await fetch('/api/places/verify-location', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          }),
+        })
+      } catch (err) {
+        console.error('GPS verification failed', err)
+      }
+    },
+    (err) => console.error('Geolocation error', err),
+    { enableHighAccuracy: true, timeout: 8000 },
+  )
+}
+
 const updateFinderProfile = createServerFn({ method: 'POST' })
   .inputValidator((input: { isFindable: boolean; locationHint: string | null }) => input)
   .handler(async ({ data }) => saveFinderProfile(data))
@@ -141,6 +163,7 @@ function App() {
         initialScanToken={scan ?? null} refreshSession={refreshSession}
         clearScanToken={clearScanToken} setReady={updateReadyState}
         sendHeartbeat={sendReadyHeartbeat}
+        sendGpsVerification={sendGpsVerification}
         saveFinderProfile={updateFinderProfile} leavePlace={clearCurrentPlace}
         pingParticipant={pingParticipant} loadScanPreview={loadScanPreview}
         connectScan={connectScannedQr} endConversation={endConversation}

@@ -265,6 +265,7 @@ export function PlaceViewScreen({
   clearScanToken,
   setReady,
   sendHeartbeat,
+  sendGpsVerification,
   saveFinderProfile,
   leavePlace,
   pingParticipant,
@@ -283,6 +284,7 @@ export function PlaceViewScreen({
   clearScanToken: () => Promise<void>
   setReady: (input: { data: { ready: boolean } }) => Promise<void>
   sendHeartbeat: () => Promise<unknown>
+  sendGpsVerification?: () => Promise<void>
   saveFinderProfile: (input: {
     data: {
       isFindable: boolean
@@ -563,6 +565,7 @@ export function PlaceViewScreen({
       }
 
       void sendHeartbeat()
+      void sendGpsVerification?.()
     }
 
     pulse()
@@ -579,7 +582,7 @@ export function PlaceViewScreen({
       window.clearInterval(intervalId)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [isReady, isInConversation, sendHeartbeat])
+  }, [isReady, isInConversation, sendHeartbeat, sendGpsVerification])
 
   useEffect(() => {
     if (typeof window === 'undefined') {
