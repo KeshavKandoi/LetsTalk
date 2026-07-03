@@ -1,0 +1,1 @@
+ALTER TABLE "user_profile" ADD COLUMN "gps_out_of_range_strikes" integer DEFAULT 0 NOT NULL;
