@@ -330,6 +330,7 @@ export default function PlaceViewScreen() {
         const currentLocation = await getCurrentGpsLocation()
         if (distanceMeters(currentLocation, currentPlaceLocation) > GPS_LIMIT_METERS) throw new Error('You are outside 200 meters of this location.')
         await apiFetch('/api/places/ready', { ready: true, ...currentLocation })
+        gpsOutOfRangeStrikesRef.current = 0
         updateHeartbeat()
       } else {
         await apiFetch('/api/places/ready', { ready: false })
