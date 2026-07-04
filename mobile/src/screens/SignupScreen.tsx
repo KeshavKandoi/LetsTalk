@@ -137,11 +137,10 @@ export default function SignupScreen() {
           showsVerticalScrollIndicator={false}
         >
           <TouchableOpacity style={styles.backButtonScroll} onPress={() => navigation.goBack()}>
-            <MaterialIcons name="chevron-left" size={28} color="#ff525f" />
+            <MaterialIcons name="chevron-left" size={28} color="#ffffff" />
           </TouchableOpacity>
 
           <View style={styles.header}>
-            <Text style={styles.badgeText}>IDENTITY CREATION</Text>
             <Text style={styles.titleText}>CREATE{'\n'}IDENTITY</Text>
           </View>
 
