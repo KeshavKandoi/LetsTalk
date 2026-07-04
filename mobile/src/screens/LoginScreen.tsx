@@ -29,14 +29,6 @@ export default function LoginScreen() {
   const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const embersAnim = useRef(new Animated.Value(0)).current
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.timing(embersAnim, { toValue: 1, duration: 8000, useNativeDriver: true })
-    ).start()
-  }, [])
-
   useFocusEffect(
     useCallback(() => {
       return () => {
@@ -131,31 +123,6 @@ export default function LoginScreen() {
         <View style={[styles.bgGradient, { backgroundColor: '#000000', opacity: 0.85 }]} />
       </View>
 
-      <View style={styles.embersContainer}>
-        {[...Array(15)].map((_, i) => (
-          <Animated.View
-            key={i}
-            style={[
-              styles.ember,
-              {
-                left: `${Math.random() * 100}%`,
-                opacity: embersAnim.interpolate({
-                  inputRange: [0, 0.2, 0.8, 1],
-                  outputRange: [0, 0.8, 0.8, 0],
-                }),
-                transform: [
-                  {
-                    translateY: embersAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [height, -height],
-                    }),
-                  },
-                ],
-              },
-            ]}
-          />
-        ))}
-      </View>
 
 
 
@@ -294,8 +261,6 @@ const styles = StyleSheet.create({
   safeContainer: { flex: 1, backgroundColor: '#121414', overflow: 'hidden' },
   bgContainer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0 },
   bgGradient: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  embersContainer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1 },
-  ember: { position: 'absolute', width: 2, height: 2, backgroundColor: '#ff525f', borderRadius: 1 },
   topLeftHUD: { position: 'absolute', top: 32, left: 16, zIndex: 10 },
   hudText: { fontSize: 10, color: 'rgba(0, 227, 253, 0.6)', fontWeight: '600', letterSpacing: 0.5, fontFamily: 'monospace', marginBottom: 4 },
   flex: { flex: 1, zIndex: 5 },
