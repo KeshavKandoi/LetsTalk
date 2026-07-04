@@ -167,11 +167,10 @@ export default function LoginScreen() {
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <MaterialIcons name="chevron-left" size={28} color="#ff525f" />
+            <MaterialIcons name="chevron-left" size={28} color="#ffffff" />
           </TouchableOpacity>
 
           <View style={styles.headerSection}>
-            <Text style={styles.authBadgeText}>AUTHORIZATION REQUIRED</Text>
             <Text style={styles.mainTitle}>Welcome{'\n'}back</Text>
           </View>
 
@@ -243,7 +242,6 @@ export default function LoginScreen() {
               onPress={handleLogin}
               disabled={loading || googleLoading}
             >
-              <View style={[styles.buttonShade, { position: 'absolute', left: -15, backgroundColor: '#ff525f' }]} />
               {loading ? (
                 <ActivityIndicator color="#121414" size="small" />
               ) : (
@@ -261,7 +259,7 @@ export default function LoginScreen() {
               <TouchableOpacity onPress={() => navigation.navigate('Signup')} disabled={loading}>
                 <Text style={styles.createText}>Create Identity</Text>
               </TouchableOpacity>
-              <MaterialIcons name="bolt" size={14} color="#00e3fd" style={{ marginLeft: 6 }} />
+              <MaterialIcons name="bolt" size={14} color="#ffffff" style={{ marginLeft: 6 }} />
             </View>
 
             <TouchableOpacity
@@ -271,7 +269,7 @@ export default function LoginScreen() {
             >
               
               {googleLoading ? (
-                <ActivityIndicator color="#00e3fd" size="small" />
+                <ActivityIndicator color="#ffffff" size="small" />
               ) : (
                 <View style={styles.googleContent}>
                   <Text style={styles.googleLetter}>G</Text>
@@ -282,11 +280,6 @@ export default function LoginScreen() {
             </View>
           </View>
 
-          <View style={styles.accentBars}>
-            <View style={[styles.bar, { width: '20%', backgroundColor: '#ff525f' }]} />
-            <View style={[styles.bar, { width: '8%', backgroundColor: '#00e3fd' }]} />
-            <View style={[styles.bar, { width: '40%', backgroundColor: 'rgba(255,255,255,0.08)' }]} />
-          </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -346,13 +339,12 @@ const styles = StyleSheet.create({
   dividerLine: { height: 1, backgroundColor: 'rgba(255, 255, 255, 0.12)', marginVertical: 20 },
   signupSection: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 18 },
   signupText: { fontSize: 12, color: '#ae8787', fontWeight: '600', textTransform: 'uppercase' },
-  createText: { fontSize: 12, fontWeight: '800', color: '#00e3fd', letterSpacing: 0.6, textTransform: 'uppercase', marginLeft: 4 },
-  googleButton: { borderWidth: 2, borderColor: '#00e3fd', backgroundColor: 'transparent', paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  createText: { fontSize: 12, fontWeight: '800', color: '#ffffff', letterSpacing: 0.6, textTransform: 'uppercase', marginLeft: 4 },
+  googleButton: { borderWidth: 2, borderColor: '#ffffff', backgroundColor: 'transparent', paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   googleContent: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  googleLetter: { fontSize: 16, fontWeight: '900', color: '#00e3fd' },
-  googleText: { fontSize: 13, fontWeight: '700', color: '#00e3fd', letterSpacing: 0.6, textTransform: 'uppercase' },
-  accentBars: { flexDirection: 'row', gap: 8 },
-  bar: { height: 3, borderRadius: 1.5 },
+  googleLetter: { fontSize: 16, fontWeight: '900', color: '#ffffff' },
+  googleText: { fontSize: 13, fontWeight: '700', color: '#ffffff', letterSpacing: 0.6, textTransform: 'uppercase' },
+
   bottomStatus: { position: 'absolute', bottom: 20, right: 20, zIndex: 10 },
   statusText: { fontSize: 10, color: '#ff525f', fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', fontFamily: 'monospace' },
 })
