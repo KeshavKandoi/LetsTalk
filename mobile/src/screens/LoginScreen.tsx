@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
 
   authBadgeText: { fontSize: 12, fontWeight: '900', color: '#ff525f', letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 12 },
   mainTitle: { fontSize: 56, fontWeight: '900', color: '#e2e2e2', letterSpacing: -2, textTransform: 'uppercase', lineHeight: 60, fontStyle: 'italic', marginBottom: -35, zIndex: 200 },
-  formCard: { backgroundColor: 'rgba(18, 20, 20, 0.85)', borderWidth: 1, marginTop: -30, zIndex: 1, borderColor: 'rgba(255, 179, 179, 0.15)', padding: 28, marginBottom: 28, transform: [{ translateX: -8 }] },
+  formCard: { backgroundColor: 'rgba(18, 20, 20, 0.85)', borderWidth: 1, marginTop: 10, zIndex: 1, borderColor: 'rgba(255, 255, 255, 0.7)', padding: 28, marginBottom: 28 },
   formContent: {
   
 },
