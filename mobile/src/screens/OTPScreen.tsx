@@ -20,14 +20,6 @@ export default function OTPScreen() {
   const [error, setError] = useState('')
   const [countdown, setCountdown] = useState(60)
   const inputs = useRef<any[]>([])
-  const embersAnim = useRef(new Animated.Value(0)).current
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.timing(embersAnim, { toValue: 1, duration: 8000, useNativeDriver: true })
-    ).start()
-  }, [])
-
   useEffect(() => {
     sendOTP(email).catch(() => {})
   }, [])
@@ -91,27 +83,13 @@ export default function OTPScreen() {
         <View style={[styles.bgGradient, { backgroundColor: '#121414' }]} />
         <View style={[styles.bgGradient, { backgroundColor: '#000000', opacity: 0.85 }]} />
       </View>
-      <View pointerEvents="none" style={styles.embersContainer}>
-        {[...Array(15)].map((_, i) => (
-          <Animated.View
-            key={i}
-            style={[styles.ember, {
-              left: `${Math.random() * 100}%`,
-              opacity: embersAnim.interpolate({ inputRange: [0, 0.2, 0.8, 1], outputRange: [0, 0.8, 0.8, 0] }),
-              transform: [{ translateY: embersAnim.interpolate({ inputRange: [0, 1], outputRange: [height, -height] }) }],
-            }]}
-          />
-        ))}
-      </View>
-
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
         <View style={styles.inner}>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <MaterialIcons name="chevron-left" size={28} color="#ff525f" />
+            <MaterialIcons name="chevron-left" size={28} color="#ffffff" />
           </TouchableOpacity>
 
           <View style={styles.headerSection}>
-            <Text style={styles.badgeText}>EMAIL VERIFICATION</Text>
             <Text style={styles.mainTitle}>Check{'\n'}your{'\n'}email</Text>
           </View>
 
@@ -149,7 +127,6 @@ export default function OTPScreen() {
                 onPress={handleVerify}
                 disabled={loading}
               >
-                <View style={[styles.buttonShade, { position: 'absolute', left: -15, backgroundColor: '#ff525f' }]} />
                 {loading ? (
                   <ActivityIndicator color="#121414" size="small" />
                 ) : (
@@ -174,12 +151,6 @@ export default function OTPScreen() {
               </View>
             </View>
           </View>
-
-          <View style={styles.accentBars}>
-            <View style={[styles.bar, { width: '20%', backgroundColor: '#ff525f' }]} />
-            <View style={[styles.bar, { width: '8%', backgroundColor: '#00e3fd' }]} />
-            <View style={[styles.bar, { width: '40%', backgroundColor: 'rgba(255,255,255,0.08)' }]} />
-          </View>
         </View>
       </KeyboardAvoidingView>
 
@@ -201,11 +172,11 @@ const styles = StyleSheet.create({
   backButton: { position: 'absolute', top: 16, left: 16, width: 44, height: 44, justifyContent: 'center', alignItems: 'flex-start', zIndex: 20 },
   headerSection: { marginBottom: 40, paddingTop: 8, paddingLeft: 12 },
   badgeText: { fontSize: 16, fontWeight: '900', color: '#ff525f', letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 12 },
-  mainTitle: { fontSize: 52, fontWeight: '900', color: '#e2e2e2', letterSpacing: -2, textTransform: 'uppercase', lineHeight: 56, fontStyle: 'italic', marginBottom: -35, zIndex: 200 },
-  formCard: { backgroundColor: 'rgba(18,20,20,0.85)', borderWidth: 1, marginTop: -30, zIndex: 1, borderColor: 'rgba(255,179,179,0.15)', padding: 28, marginBottom: 28, transform: [{ translateX: -8 }] },
+  mainTitle: { fontSize: 52, fontWeight: '900', color: '#e2e2e2', letterSpacing: -2, textTransform: 'uppercase', lineHeight: 56, fontStyle: 'italic', marginBottom: 12, zIndex: 200 },
+  formCard: { backgroundColor: 'rgba(18,20,20,0.85)', borderWidth: 1, marginTop: 0, zIndex: 1, borderColor: 'rgba(255,255,255,0.7)', padding: 28, marginBottom: 28 },
   formContent: {},
-  subtitle: { fontSize: 13, color: '#ae8787', marginBottom: 4 },
-  emailText: { fontSize: 14, fontWeight: '700', color: '#ff525f', marginBottom: 24, letterSpacing: 0.3 },
+  subtitle: { fontSize: 15, color: '#ae8787', marginBottom: 4 },
+  emailText: { fontSize: 17, fontWeight: '700', color: '#ff525f', marginBottom: 24, letterSpacing: 0.3 },
   errorBox: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,82,95,0.12)', borderLeftWidth: 4, borderLeftColor: '#ff525f', padding: 12, marginBottom: 20 },
   errorText: { fontSize: 12, color: '#ff9999', fontWeight: '600', flex: 1, textTransform: 'uppercase' },
   fieldLabel: { fontSize: 11, fontWeight: '800', color: '#ae8787', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 12 },
@@ -220,7 +191,7 @@ const styles = StyleSheet.create({
   resendRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   resendLabel: { fontSize: 11, color: '#ae8787', fontWeight: '600' },
   countdown: { fontSize: 11, color: '#ae8787', fontWeight: '700' },
-  resendLink: { fontSize: 11, color: '#00e3fd', fontWeight: '800', letterSpacing: 0.5 },
+  resendLink: { fontSize: 11, color: '#ffffff', fontWeight: '800', letterSpacing: 0.5 },
   accentBars: { flexDirection: 'row', gap: 8 },
   bar: { height: 3, borderRadius: 1.5 },
   bottomStatus: { position: 'absolute', bottom: 20, right: 20, zIndex: 10 },
