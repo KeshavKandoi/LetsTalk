@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigation } from '@react-navigation/native'
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform, Animated, Dimensions
+  ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform, Animated, Dimensions, Linking
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { MaterialIcons, Ionicons } from '@expo/vector-icons'
@@ -305,16 +305,27 @@ export default function SignupScreen() {
               </View>
             )}
 
-            <TouchableOpacity style={styles.checkboxRow} onPress={() => setAgreedToTerms(!agreedToTerms)}>
-              <View style={[styles.checkbox, agreedToTerms && styles.checkboxChecked]}>
-                {agreedToTerms && <MaterialIcons name="check" size={12} color="#121414" />}
-              </View>
+            <View style={styles.checkboxRow}>
+              <TouchableOpacity onPress={() => setAgreedToTerms(!agreedToTerms)}>
+                <View style={[styles.checkbox, agreedToTerms && styles.checkboxChecked]}>
+                  {agreedToTerms && <MaterialIcons name="check" size={12} color="#121414" />}
+                </View>
+              </TouchableOpacity>
               <View style={styles.checkboxLabelRow}>
-                <Text style={styles.checkboxLabel}>I agree to the </Text>
-                <Text style={styles.linkText}>Terms & </Text>
-                <Text style={styles.linkTextAccent}>Conditions</Text>
+                <TouchableOpacity onPress={() => setAgreedToTerms(!agreedToTerms)}>
+                  <Text style={styles.checkboxLabel}>I agree to the </Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => Linking.openURL('https://policy-2epo.onrender.com/Terms_condition.html')}>
+                  <Text style={styles.linkTextAccent}>Terms & Conditions</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setAgreedToTerms(!agreedToTerms)}>
+                  <Text style={styles.checkboxLabel}> and </Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => Linking.openURL('https://policy-2epo.onrender.com/Privacy_policy.html')}>
+                  <Text style={styles.linkTextAccent}>Privacy Policy</Text>
+                </TouchableOpacity>
               </View>
-            </TouchableOpacity>
+            </View>
 
             <TouchableOpacity
               style={[styles.submitButton, loading && { opacity: 0.6 }]}
