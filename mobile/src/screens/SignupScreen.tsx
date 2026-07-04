@@ -183,7 +183,7 @@ export default function SignupScreen() {
             <View style={styles.passwordRow}>
               <TextInput
                 ref={passwordRef}
-                style={[styles.input, { flex: 1 }]}
+                style={[styles.input, { flex: 1, height: '100%', marginBottom: 0 }]}
                 placeholder="••••••••"
                 placeholderTextColor="#999"
                 value={password}
@@ -207,7 +207,7 @@ export default function SignupScreen() {
             <View style={styles.passwordRow}>
               <TextInput
                 ref={confirmRef}
-                style={[styles.input, { flex: 1 }]}
+                style={[styles.input, { flex: 1, height: '100%', marginBottom: 0 }]}
                 placeholder="••••••••"
                 placeholderTextColor="#999"
                 value={confirmPassword}
