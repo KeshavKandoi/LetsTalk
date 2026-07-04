@@ -555,22 +555,23 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderWidth: 2,
-    borderColor: '#ff525f',
+    borderColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkboxChecked: {
-    backgroundColor: '#ff525f',
+    backgroundColor: '#ffffff',
   },
   checkboxLabel: {
     fontSize: 12,
-    color: '#ae8787',
+    color: '#ffffff',
     flex: 1,
     lineHeight: 18,
   },
   linkText: {
-    color: '#00e3fd',
+    color: '#ffffff',
     fontWeight: '700',
+    textDecorationLine: 'underline',
   },
   submitButton: {
     backgroundColor: '#e2e2e2',
@@ -608,13 +609,13 @@ const styles = StyleSheet.create({
   loginLink: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#00e3fd',
+    color: '#ffffff',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
   googleButton: {
     borderWidth: 2,
-    borderColor: '#00e3fd',
+    borderColor: '#ffffff',
     height: 48,
     flexDirection: 'row',
     alignItems: 'center',
@@ -625,12 +626,12 @@ const styles = StyleSheet.create({
   googleLetter: {
     fontSize: 16,
     fontWeight: '900',
-    color: '#00e3fd',
+    color: '#ffffff',
   },
   googleText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#00e3fd',
+    color: '#ffffff',
     letterSpacing: 0.6,
     textTransform: 'uppercase',
   },
