@@ -24,14 +24,6 @@ export default function ForgotPasswordScreen({ route }: any) {
   const [error, setError] = useState('')
   const [countdown, setCountdown] = useState(60)
   const [canResend, setCanResend] = useState(false)
-  const embersAnim = useRef(new Animated.Value(0)).current
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.timing(embersAnim, { toValue: 1, duration: 8000, useNativeDriver: true })
-    ).start()
-  }, [])
-
   useEffect(() => {
     if (countdown <= 0) { setCanResend(true); return }
     const timer = setTimeout(() => setCountdown(c => c - 1), 1000)
@@ -111,16 +103,6 @@ export default function ForgotPasswordScreen({ route }: any) {
         <View style={[styles.bgGradient, { backgroundColor: '#000000', opacity: 0.85 }]} />
       </View>
 
-      <View pointerEvents="none" style={styles.embersContainer}>
-        {[...Array(15)].map((_, i) => (
-          <Animated.View key={i} style={[styles.ember, {
-            left: `${Math.random() * 100}%`,
-            opacity: embersAnim.interpolate({ inputRange: [0, 0.2, 0.8, 1], outputRange: [0, 0.8, 0.8, 0] }),
-            transform: [{ translateY: embersAnim.interpolate({ inputRange: [0, 1], outputRange: [height, -height] }) }],
-          }]} />
-        ))}
-      </View>
-
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
@@ -128,14 +110,13 @@ export default function ForgotPasswordScreen({ route }: any) {
           </TouchableOpacity>
 
           <View style={styles.headerSection}>
-            <Text style={styles.authBadgeText}>SECURE ACCESS</Text>
             <Text style={styles.mainTitle}>{step === 'otp' ? 'Verify\nIdentity' : 'New\nAccess'}</Text>
           </View>
 
           <View style={styles.formCard}>
             <View style={styles.formContent}>
               <Text style={styles.subtitle}>
-                {step === 'otp' ? `Code sent to ${email}` : 'Set your new password'}
+                {step === 'otp' ? `OTP sent to ${email}` : 'Set your new password'}
               </Text>
 
               {error ? (
@@ -149,7 +130,6 @@ export default function ForgotPasswordScreen({ route }: any) {
                 <>
                   <Text style={styles.fieldLabel}>VERIFICATION CODE</Text>
                   <View style={styles.inputBox}>
-                    <MaterialIcons name="code" size={20} color="#121414" style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
                       value={otp}
@@ -167,7 +147,6 @@ export default function ForgotPasswordScreen({ route }: any) {
                     onPress={handleVerifyOTP}
                     disabled={loading}
                   >
-                    <View style={[styles.buttonShade, { position: 'absolute', left: -15, backgroundColor: '#ff525f' }]} />
                     {loading ? <ActivityIndicator color="#121414" /> : (
                       <View style={styles.buttonContent}>
                         <Text style={styles.buttonText}>Verify Code</Text>
@@ -225,7 +204,6 @@ export default function ForgotPasswordScreen({ route }: any) {
                     onPress={handleResetPassword}
                     disabled={loading}
                   >
-                    <View style={[styles.buttonShade, { position: 'absolute', left: -15, backgroundColor: '#ff525f' }]} />
                     {loading ? <ActivityIndicator color="#121414" /> : (
                       <View style={styles.buttonContent}>
                         <Text style={styles.buttonText}>Reset Password</Text>
@@ -236,12 +214,6 @@ export default function ForgotPasswordScreen({ route }: any) {
                 </>
               )}
             </View>
-          </View>
-
-          <View style={styles.accentBars}>
-            <View style={[styles.bar, { width: '20%', backgroundColor: '#ff525f' }]} />
-            <View style={[styles.bar, { width: '8%', backgroundColor: '#00e3fd' }]} />
-            <View style={[styles.bar, { width: '40%', backgroundColor: 'rgba(255,255,255,0.08)' }]} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -264,8 +236,8 @@ const styles = StyleSheet.create({
   backButton: { position: 'absolute', top: 16, left: 16, width: 44, height: 44, justifyContent: 'center', alignItems: 'flex-start', zIndex: 20 },
   headerSection: { marginBottom: 40, paddingTop: 8, paddingLeft: 12 },
   authBadgeText: { fontSize: 16, fontWeight: '900', color: '#ff525f', letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 12 },
-  mainTitle: { fontSize: 56, fontWeight: '900', color: '#e2e2e2', letterSpacing: -2, textTransform: 'uppercase', lineHeight: 60, fontStyle: 'italic', marginBottom: -20, zIndex: 200 },
-  formCard: { backgroundColor: 'rgba(18, 20, 20, 0.85)', borderWidth: 1, marginTop: -30, zIndex: 1, borderColor: 'rgba(255, 179, 179, 0.15)', padding: 28, marginBottom: 28, transform: [{ translateX: -8 }] },
+  mainTitle: { fontSize: 56, fontWeight: '900', color: '#e2e2e2', letterSpacing: -2, textTransform: 'uppercase', lineHeight: 60, fontStyle: 'italic', marginBottom: 12, zIndex: 200 },
+  formCard: { backgroundColor: 'rgba(18, 20, 20, 0.85)', borderWidth: 1, marginTop: 0, zIndex: 1, borderColor: 'rgba(255, 255, 255, 0.7)', padding: 28, marginBottom: 28 },
   formContent: {},
   subtitle: { fontSize: 12, color: '#ae8787', fontWeight: '600', letterSpacing: 0.5, marginBottom: 28, marginTop: 12, textTransform: 'uppercase' },
   errorBox: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255, 82, 95, 0.12)', borderLeftWidth: 4, borderLeftColor: '#ff525f', padding: 12, marginBottom: 20 },
