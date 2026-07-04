@@ -439,11 +439,10 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: 'rgba(18, 20, 20, 0.9)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 179, 179, 0.15)',
+    borderColor: 'rgba(255, 255, 255, 0.6)',
     padding: 24,
     zIndex: 50,
-     marginTop: -50,  
-  paddingTop: 50,   
+    marginTop: 10,
     marginBottom: 40,
     transform: [
     { translateX: 2},
