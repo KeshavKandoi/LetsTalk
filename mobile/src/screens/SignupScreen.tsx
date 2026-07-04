@@ -309,10 +309,11 @@ export default function SignupScreen() {
               <View style={[styles.checkbox, agreedToTerms && styles.checkboxChecked]}>
                 {agreedToTerms && <MaterialIcons name="check" size={12} color="#121414" />}
               </View>
-              <Text style={styles.checkboxLabel}>
-                I agree to the <Text style={styles.linkText}>Terms & Conditions</Text> and{' '}
-                <Text style={styles.linkText}>Privacy Policy</Text>
-              </Text>
+              <View style={styles.checkboxLabelRow}>
+                <Text style={styles.checkboxLabel}>I agree to the </Text>
+                <Text style={styles.linkText}>Terms & </Text>
+                <Text style={styles.linkTextAccent}>Conditions</Text>
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -341,12 +342,6 @@ export default function SignupScreen() {
               <Text style={styles.googleText}>CONTINUE WITH GOOGLE</Text>
             </TouchableOpacity>
             </View>
-          </View>
-
-          <View style={styles.accentBars}>
-            <View style={[styles.bar, { width: '20%', backgroundColor: '#ff525f' }]} />
-            <View style={[styles.bar, { width: '8%', backgroundColor: '#00e3fd' }]} />
-            <View style={[styles.bar, { width: '40%', backgroundColor: 'rgba(255,255,255,0.08)' }]} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -412,8 +407,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 40,
-    paddingBottom: 300,
-    flexGrow: 1,
+    paddingBottom: 40,
   },
   header: {
     marginBottom: 30,
@@ -562,16 +556,32 @@ const styles = StyleSheet.create({
   checkboxChecked: {
     backgroundColor: '#ffffff',
   },
+  checkboxLabelRow: {
+    flex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+  },
   checkboxLabel: {
     fontSize: 12,
     color: '#ffffff',
-    flex: 1,
     lineHeight: 18,
   },
   linkText: {
+    fontSize: 12,
     color: '#ffffff',
     fontWeight: '700',
-    textDecorationLine: 'underline',
+    lineHeight: 18,
+    borderBottomWidth: 1.5,
+    borderBottomColor: '#ffffff',
+  },
+  linkTextAccent: {
+    fontSize: 12,
+    color: '#ffffff',
+    fontWeight: '700',
+    lineHeight: 18,
+    borderBottomWidth: 1.5,
+    borderBottomColor: '#ffffff',
   },
   submitButton: {
     backgroundColor: '#e2e2e2',
@@ -637,14 +647,5 @@ const styles = StyleSheet.create({
   },
   cardContent: {
     zIndex: 5,
-  },
-  accentBars: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 20,
-  },
-  bar: {
-    height: 3,
-    borderRadius: 1.5,
   },
 })
