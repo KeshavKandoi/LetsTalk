@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, Dimensions,
+  TouchableOpacity, Dimensions, Linking,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
@@ -12,13 +12,8 @@ const WHITE = '#ffffff'
 const MUTED = 'rgba(255,255,255,0.6)'
 const CARD = 'rgba(20,12,6,0.9)'
 
-const TERMS = `Terms of Service\n\nLast updated: May 30, 2026\n\n1. Acceptance of Terms\nBy using LetsTalk, you agree to these Terms of Service. If you do not agree, please do not use the app.\n\n2. Description of Service\nLetsTalk is a location-based app that helps people connect and have real conversations at physical places around them.\n\n3. User Accounts\nYou must provide accurate information when creating an account. You are responsible for maintaining the security of your account and password. You must be at least 13 years old to use this service.\n\n4. User Conduct\nYou agree not to:\n- Harass, abuse, or harm other users\n- Use the app for any illegal purpose\n- Share false or misleading information\n- Attempt to gain unauthorized access to the service\n\n5. Privacy\nYour use of LetsTalk is also governed by our Privacy Policy.\n\n6. Termination\nWe reserve the right to suspend or terminate your account at any time for violation of these Terms.\n\n7. Disclaimer\nLetsTalk is provided "as is" without warranties of any kind.\n\n8. Contact\nFor questions, contact us at support@letstalk.app`
-
-const PRIVACY = `Privacy Policy\n\nLast updated: May 30, 2026\n\n1. Information We Collect\n- Account information: email, username, password (encrypted)\n- Profile information: mood, bio, age, gender (optional)\n- Location data: only the place you check into, not your GPS location\n- Usage data: how you interact with the app\n\n2. How We Use Your Information\n- To provide and improve the LetsTalk service\n- To match you with people at the same place\n- To send notifications (only if you enable them)\n- To ensure safety and prevent abuse\n\n3. Information Sharing\nWe do not sell your personal information. We share data only with service providers and when required by law.\n\n4. Data Storage\nYour data is stored securely. Passwords are encrypted and never stored in plain text.\n\n5. Your Rights\nYou can access, edit, or delete your personal data at any time.\n\n6. Contact\nFor privacy concerns, contact us at privacy@letstalk.app`
-
 export default function AboutUsScreen() {
   const navigation = useNavigation<any>()
-  const [section, setSection] = useState<'main' | 'terms' | 'privacy'>('main')
 
   return (
     <View style={s.root}>
@@ -26,15 +21,14 @@ export default function AboutUsScreen() {
 
       <SafeAreaView edges={['top']} style={s.header}>
         <TouchableOpacity
-          onPress={() => section === 'main' ? navigation.goBack() : setSection('main')}
+          onPress={() => navigation.goBack()}
           style={s.backBtn}
         >
           <MaterialIcons name="chevron-left" size={28} color="#ffffff" />
         </TouchableOpacity>
       </SafeAreaView>
 
-      {section === 'main' && (
-        <View style={s.mainContent}>
+      <View style={s.mainContent}>
           {/* Big hero text at bottom like the reference */}
           <View style={s.heroText}>
             <Text style={s.tagSmall}>Real People. Real Places.</Text>
@@ -44,13 +38,13 @@ export default function AboutUsScreen() {
 
           {/* Bottom links */}
           <View style={s.bottomLinks}>
-            <TouchableOpacity style={s.linkRow} onPress={() => setSection('terms')}>
+            <TouchableOpacity style={s.linkRow} onPress={() => Linking.openURL('https://policy-2epo.onrender.com/Terms_condition.html')}>
               <MaterialIcons name="description" size={16} color={MUTED} />
               <Text style={s.linkText}>Terms of Service</Text>
               <MaterialIcons name="chevron-right" size={16} color={MUTED} />
             </TouchableOpacity>
             <View style={s.linkDivider} />
-            <TouchableOpacity style={s.linkRow} onPress={() => setSection('privacy')}>
+            <TouchableOpacity style={s.linkRow} onPress={() => Linking.openURL('https://policy-2epo.onrender.com/Privacy_policy.html')}>
               <MaterialIcons name="lock" size={16} color={MUTED} />
               <Text style={s.linkText}>Privacy Policy</Text>
               <MaterialIcons name="chevron-right" size={16} color={MUTED} />
@@ -58,22 +52,12 @@ export default function AboutUsScreen() {
             <View style={s.linkDivider} />
             <View style={s.linkRow}>
               <MaterialIcons name="email" size={16} color={MUTED} />
-              <Text style={s.linkText}>support@letstalk.app</Text>
+              <Text style={s.linkText}>letstalks.support@gmail.com</Text>
             </View>
           </View>
 
           <Text style={s.versionText}>LetsTalk v1.0.0 </Text>
         </View>
-      )}
-
-      {(section === 'terms' || section === 'privacy') && (
-        <ScrollView contentContainerStyle={s.legalScroll} showsVerticalScrollIndicator={false}>
-          <Text style={s.legalTitle}>{section === 'terms' ? 'Terms of Service' : 'Privacy Policy'}</Text>
-          <View style={s.legalCard}>
-            <Text style={s.legalText}>{section === 'terms' ? TERMS : PRIVACY}</Text>
-          </View>
-        </ScrollView>
-      )}
     </View>
   )
 }
