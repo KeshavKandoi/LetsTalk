@@ -28,7 +28,7 @@
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.CAMERA"
       ],
-      "package": "com.letstalk.app",
+      "package": "com.keshavkandoi.letstalk",
       "googleMapsApiKey": "AIzaSyDS46VSl7BfPncdn9aIIHGKsppZP3ycNF0",
       "usesCleartextTraffic": true
     },
@@ -52,7 +52,7 @@
         }
       ]
     ],
-    "scheme": "com.letstalk.app",
+    "scheme": "com.keshavkandoi.letstalk",
     "extra": {
       "eas": {
         "projectId": "3d1274e5-092e-4a11-a215-b81f7e905ce1"
