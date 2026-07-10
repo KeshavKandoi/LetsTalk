@@ -111,7 +111,7 @@ export default function EditProfileScreen() {
     <SafeAreaView style={s.root} edges={['top']}>
       <View style={s.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
-          <MaterialIcons name="chevron-left" size={28} color={DARK} />
+          <MaterialIcons name="chevron-left" size={28} color="#fff" />
           <Text style={s.backText}>Back</Text>
         </TouchableOpacity>
         <Text style={s.headerTitle}>Edit Profile</Text>
@@ -170,36 +170,36 @@ export default function EditProfileScreen() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0a0704' },
+  root: { flex: 1, backgroundColor: '#000000' },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 12,
-    backgroundColor: '#0a0704',
+    backgroundColor: '#000000',
     borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.15)',
   },
   backBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   backText: { fontSize: 16, fontWeight: '700', color: '#fff' },
   headerTitle: { fontSize: 18, fontWeight: '900', color: '#fff' },
   saveBtn: {
-    backgroundColor: '#F5C500', borderRadius: 50,
+    backgroundColor: '#000000', borderRadius: 50, borderWidth: 1.5, borderColor: '#FFFFFF',
     paddingHorizontal: 20, paddingVertical: 8,
   },
-  saveBtnText: { color: DARK, fontWeight: '800', fontSize: 14 },
+  saveBtnText: { color: '#FFFFFF', fontWeight: '800', fontSize: 14 },
   scroll: { padding: 16, gap: 16, paddingBottom: 60 },
   card: {
-    backgroundColor: 'rgba(20,12,6,0.9)', borderRadius: 20, padding: 20,
+    backgroundColor: 'rgba(20,20,20,0.9)', borderRadius: 20, padding: 20,
     borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)',
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2, shadowRadius: 8, elevation: 3,
   },
-  label: { fontSize: 12, fontWeight: '900', color: '#F0956A', letterSpacing: 1.5, marginBottom: 6 },
+  label: { fontSize: 12, fontWeight: '900', color: '#FFFFFF', letterSpacing: 1.5, marginBottom: 6 },
   sublabel: { fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 14 },
   photoRow: { flexDirection: 'row', alignItems: 'center', gap: 20 },
   photoWrap: { width: 80, height: 80, borderRadius: 40, overflow: 'hidden' },
   photo: { width: 80, height: 80, borderRadius: 40 },
   photoPlaceholder: {
     width: 80, height: 80, borderRadius: 40,
-    backgroundColor: '#F5C500', justifyContent: 'center', alignItems: 'center',
+    backgroundColor: '#000000', borderWidth: 1.5, borderColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center',
   },
   photoInitial: { fontSize: 32, fontWeight: '900', color: DARK },
   photoOverlay: {
@@ -208,10 +208,10 @@ const s = StyleSheet.create({
   },
   changePhotoBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#F5C500', borderRadius: 50,
+    backgroundColor: '#000000', borderRadius: 50, borderWidth: 1.5, borderColor: '#FFFFFF',
     paddingHorizontal: 18, paddingVertical: 12,
   },
-  changePhotoText: { color: DARK, fontWeight: '800', fontSize: 14 },
+  changePhotoText: { color: '#FFFFFF', fontWeight: '800', fontSize: 14 },
   textArea: {
     backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 14,
     borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)',
