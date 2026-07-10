@@ -19,12 +19,12 @@ interface Props {
 }
 
 const MENU_ITEMS = [
-  { icon: 'home',           label: 'HOME',             screen: 'Landing',         color: '#F5C842' },
-  { icon: 'person-outline', label: 'PROFILE',          screen: 'Profile',         color: '#F5C842' },
-  { icon: 'bar-chart',      label: 'ACTIVITY',         screen: 'Friends',         color: '#F0B830' },
-  { icon: 'notifications', label: 'NOTIFICATIONS',   screen: 'Notifications',   color: '#E8A020' },
-  { icon: 'settings',       label: 'ACCOUNT SETTINGS', screen: 'AccountSettings', color: '#E8A020' },
-  { icon: 'info-outline',   label: 'ABOUT US',         screen: 'AboutUs',         color: '#E09060' },
+  { icon: 'home',           label: 'HOME',             screen: 'Landing',         color: '#000000' },
+  { icon: 'person-outline', label: 'PROFILE',          screen: 'Profile',         color: '#000000' },
+  { icon: 'bar-chart',      label: 'FRIENDS',         screen: 'Friends',         color: '#000000' },
+  { icon: 'notifications', label: 'NOTIFICATIONS',   screen: 'Notifications',   color: '#000000' },
+  { icon: 'settings',       label: 'ACCOUNT SETTINGS', screen: 'AccountSettings', color: '#000000' },
+  { icon: 'info-outline',   label: 'ABOUT US',         screen: 'AboutUs',         color: '#000000' },
 ]
 
 export default function DrawerMenu({ visible, onClose }: Props) {
@@ -111,7 +111,7 @@ export default function DrawerMenu({ visible, onClose }: Props) {
           transform: [{ translateX: rowAnims[0] }]
         }]}>
           <TouchableOpacity onPress={onClose} style={s.backBtn}>
-            <MaterialIcons name="arrow-back" size={26} color="#1a1a1a" />
+            <MaterialIcons name="arrow-back" size={26} color="#FFFFFF" />
           </TouchableOpacity>
           <View style={s.avatarWrap}>
             {photoUrl
@@ -132,7 +132,7 @@ export default function DrawerMenu({ visible, onClose }: Props) {
             }
           </View>
           {loading
-            ? <ActivityIndicator color="#1a1a1a" style={{ marginTop: 12 }} />
+            ? <ActivityIndicator color="#FFFFFF" style={{ marginTop: 12 }} />
             : <>
                 <Text style={s.username}>{username || 'Guest'}</Text>
 
@@ -151,7 +151,7 @@ export default function DrawerMenu({ visible, onClose }: Props) {
                 style={[s.menuItem, { backgroundColor: item.color }]}
                 onPress={() => { onClose(); if (item.screen) navigation.navigate(item.screen as never) }}
               >
-                <MaterialIcons name={item.icon as any} size={26} color="#1a1a1a" />
+                <MaterialIcons name={item.icon as any} size={26} color="#FFFFFF" />
                 <Text style={s.menuLabel}>{item.label}</Text>
               </TouchableOpacity>
             </Animated.View>
@@ -164,14 +164,14 @@ export default function DrawerMenu({ visible, onClose }: Props) {
           }}>
             {isLoggedIn ? (
               <TouchableOpacity
-                style={[s.menuItem, { backgroundColor: '#d07050' }]}
+                style={[s.menuItem, { backgroundColor: '#000000' }]}
                 onPress={handleLogout}
               >
-                <MaterialIcons name="logout" size={26} color="#1a1a1a" />
+                <MaterialIcons name="logout" size={26} color="#FFFFFF" />
                 <Text style={s.menuLabel}>LOG OUT</Text>
               </TouchableOpacity>
             ) : (
-              <View style={[s.menuItem, { backgroundColor: '#d07050', gap: 12 }]}>
+              <View style={[s.menuItem, { backgroundColor: '#000000', gap: 12 }]}>
                 <TouchableOpacity style={s.loginBtn} onPress={() => { onClose(); navigation.navigate('Login' as never) }}>
                   <Text style={s.loginTxt}>Log in</Text>
                 </TouchableOpacity>
@@ -194,12 +194,12 @@ const s = StyleSheet.create({
   backdropTouch: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1 },
   drawer: {
     position: 'absolute', top: 0, left: 0, bottom: 0, zIndex: 2,
-    width: DRAWER_WIDTH, backgroundColor: '#F5C842',
+    width: DRAWER_WIDTH, backgroundColor: '#000000',
     shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 20, elevation: 16,
     overflow: 'hidden',
   },
   header: {
-    backgroundColor: '#F5C842',
+    backgroundColor: '#000000',
     paddingTop: 56, paddingBottom: 32, paddingHorizontal: 24,
     minHeight: 240, justifyContent: 'flex-end',
   },
@@ -207,23 +207,23 @@ const s = StyleSheet.create({
   avatarWrap: { marginBottom: 12, width: 72, height: 72, position: 'relative' },
   avatar: {
     width: 72, height: 72, borderRadius: 36,
-    backgroundColor: 'rgba(0,0,0,0.15)',
+    backgroundColor: 'rgba(185,131,255,0.15)',
     justifyContent: 'center', alignItems: 'center',
   },
   avatarImg:  { width: 72, height: 72, borderRadius: 36 },
-  avatarTxt:  { fontSize: 24, fontWeight: '900', color: '#1a1a1a' },
-  username:   { fontSize: 22, fontWeight: '900', color: '#1a1a1a', marginBottom: 2 },
-  email:      { fontSize: 12, color: 'rgba(0,0,0,0.45)' },
+  avatarTxt:  { fontSize: 24, fontWeight: '900', color: '#FFFFFF' },
+  username:   { fontSize: 22, fontWeight: '900', color: '#FFFFFF', marginBottom: 2 },
+  email:      { fontSize: 12, color: 'rgba(185,131,255,0.6)' },
   menuList:   { flex: 1 },
   menuItem: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 24, paddingVertical: 20,
     gap: 16,
-    borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.06)',
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.15)',
   },
-  menuLabel:  { flex: 1, fontSize: 14, fontWeight: '900', color: '#1a1a1a', letterSpacing: 1.2 },
-  loginBtn:   { flex: 1, borderWidth: 2, borderColor: '#1a1a1a', borderRadius: 50, paddingVertical: 8, alignItems: 'center' },
-  loginTxt:   { color: '#1a1a1a', fontWeight: '800', fontSize: 13 },
-  signupBtn:  { flex: 1, backgroundColor: '#1a1a1a', borderRadius: 50, paddingVertical: 8, alignItems: 'center' },
-  signupTxt:  { color: '#F5C842', fontWeight: '800', fontSize: 13 },
+  menuLabel:  { flex: 1, fontSize: 14, fontWeight: '900', color: '#FFFFFF', letterSpacing: 1.2 },
+  loginBtn:   { flex: 1, borderWidth: 2, borderColor: '#FFFFFF', borderRadius: 50, paddingVertical: 8, alignItems: 'center' },
+  loginTxt:   { color: '#FFFFFF', fontWeight: '800', fontSize: 13 },
+  signupBtn:  { flex: 1, backgroundColor: '#FFFFFF', borderRadius: 50, paddingVertical: 8, alignItems: 'center' },
+  signupTxt:  { color: '#000000', fontWeight: '800', fontSize: 13 },
 })
