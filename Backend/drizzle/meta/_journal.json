@@ -64,6 +64,13 @@
       "when": 1783067246535,
       "tag": "0008_breezy_echo",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1783683839394,
+      "tag": "0009_stiff_christian_walker",
+      "breakpoints": true
     }
   ]
 }

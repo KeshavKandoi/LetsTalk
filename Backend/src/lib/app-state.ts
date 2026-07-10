@@ -25,6 +25,7 @@ import {
   userActivity,
   friendMessage,
   place,
+  report,
   user,
   userProfile,
 } from './db/schema'
@@ -1185,6 +1186,44 @@ export async function sendConnectRequest(input: {
   })
 
   return { success: true, requestId }
+}
+
+
+export async function reportUser(input: {
+  reportedUserId: string
+  reason: string
+  details?: string
+  viewerUserId?: string
+}) {
+  const session = input.viewerUserId
+    ? { user: { id: input.viewerUserId } }
+    : await requireCurrentSession()
+  const reportedUserId = input.reportedUserId.trim()
+  if (!reportedUserId) throw new Error('Missing the person to report.')
+  if (reportedUserId === session.user.id) {
+    throw new Error('You cannot report yourself.')
+  }
+  const reason = input.reason.trim()
+  if (!reason) throw new Error('Please choose a reason.')
+  const [viewerProfile] = await db
+    .select()
+    .from(userProfile)
+    .where(eq(userProfile.userId, session.user.id))
+    .limit(1)
+  const now = new Date()
+  const id = crypto.randomUUID()
+  await db.insert(report).values({
+    id,
+    reporterUserId: session.user.id,
+    reportedUserId,
+    placeId: viewerProfile?.currentPlaceId ?? null,
+    reason,
+    details: input.details?.trim() || null,
+    status: 'open',
+    createdAt: now,
+    updatedAt: now,
+  })
+  return { success: true, id }
 }
 
 export async function respondToConnectRequest(input: {

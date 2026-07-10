@@ -114,6 +114,9 @@ export default function PlaceViewScreen() {
   const [customSpot, setCustomSpot] = useState('')
   const [selectedHint, setSelectedHint] = useState<string | null>(null)
   const [myUsername, setMyUsername] = useState<string>('')
+  const [reportModalVisible, setReportModalVisible] = useState(false)
+  const [reportReason, setReportReason] = useState('')
+  const [reportSubmitting, setReportSubmitting] = useState(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const gpsVerifyRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -368,6 +371,24 @@ export default function PlaceViewScreen() {
     finally { setEndingConversation(false) }
   }
 
+  const handleSubmitReport = async () => {
+    if (!activeConnection || !reportReason.trim()) return
+    setReportSubmitting(true); setError('')
+    try {
+      await apiFetch('/api/places/report', {
+        reportedUserId: activeConnection.counterpart.userId,
+        reason: reportReason.trim(),
+      })
+      setReportModalVisible(false)
+      setReportReason('')
+      setNotice('Thanks — your report has been submitted. Our team will review it.')
+    } catch (e: any) {
+      setError(e.message || 'Could not submit report.')
+    } finally {
+      setReportSubmitting(false)
+    }
+  }
+
   const handleFinderToggle = async () => {
     if (!state?.profile) return
     setFinderLoading(true); setError('')
@@ -517,10 +538,19 @@ export default function PlaceViewScreen() {
               <View style={s.divider} />
 
               {activeConnection?.qrVerifiedAt ? (
-                <View style={s.qrVerifiedBox}>
-                  <MaterialIcons name="verified" size={16} color="#4ade80" style={{ marginRight: 6 }} />
-                  <Text style={s.qrVerifiedText}>Connected & Verified</Text>
-                </View>
+                <>
+                  <View style={s.qrVerifiedBox}>
+                    <MaterialIcons name="verified" size={16} color="#4ade80" style={{ marginRight: 6 }} />
+                    <Text style={s.qrVerifiedText}>Connected & Verified</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={s.reportBtn}
+                    onPress={() => setReportModalVisible(true)}
+                  >
+                    <MaterialIcons name="flag" size={14} color="rgba(255,255,255,0.5)" style={{ marginRight: 6 }} />
+                    <Text style={s.reportBtnText}>Report this person</Text>
+                  </TouchableOpacity>
+                </>
               ) : (
                 <View style={s.qrBtnRow}>
                   <TouchableOpacity style={[s.qrBtn, { marginRight: 8 }]} onPress={() => setQrVisible(true)}>
@@ -803,6 +833,40 @@ export default function PlaceViewScreen() {
         />
       )}
 
+      {/* Report Modal */}
+      <Modal visible={reportModalVisible} transparent animationType="fade" onRequestClose={() => setReportModalVisible(false)}>
+        <TouchableOpacity style={s.modalOverlay} activeOpacity={1} onPress={() => setReportModalVisible(false)}>
+          <TouchableOpacity activeOpacity={1} style={s.reportModal}>
+            <Text style={s.reportModalTitle}>Report {activeConnection?.counterpart.username || 'this person'}</Text>
+            <Text style={s.reportModalHint}>Tell us what happened. Our team reviews every report.</Text>
+            {['Inappropriate behavior', 'Made me feel unsafe', 'Fake profile', 'Harassment', 'Other'].map((reason) => (
+              <TouchableOpacity
+                key={reason}
+                style={[s.reportReasonRow, reportReason === reason && s.reportReasonRowActive]}
+                onPress={() => setReportReason(reason)}
+              >
+                <View style={[s.reportRadio, reportReason === reason && s.reportRadioActive]} />
+                <Text style={[s.reportReasonText, reportReason === reason && s.reportReasonTextActive]}>{reason}</Text>
+              </TouchableOpacity>
+            ))}
+            <View style={s.reportModalBtnRow}>
+              <TouchableOpacity style={s.reportCancelBtn} onPress={() => { setReportModalVisible(false); setReportReason('') }}>
+                <Text style={s.reportCancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.reportSubmitBtn, !reportReason && s.reportSubmitBtnDisabled]}
+                onPress={handleSubmitReport}
+                disabled={!reportReason || reportSubmitting}
+              >
+                {reportSubmitting
+                  ? <ActivityIndicator color="#fff" size="small" />
+                  : <Text style={s.reportSubmitBtnText}>Submit Report</Text>}
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
       {/* Person Profile Modal */}
       <Modal visible={!!selectedPerson} transparent animationType="slide" onRequestClose={() => setSelectedPerson(null)}>
         <TouchableOpacity style={s.personOverlay} activeOpacity={1} onPress={() => setSelectedPerson(null)}>
@@ -903,6 +967,23 @@ const s = StyleSheet.create({
   qrBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   endBtn: { borderRadius: 50, paddingVertical: 13, alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.7)', backgroundColor: 'rgba(255,255,255,0.05)', marginTop: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 3 },
   endBtnText: { color: 'rgba(255,255,255,0.7)', fontWeight: '700', fontSize: 14 },
+  reportBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, marginTop: 2 },
+  reportBtnText: { color: 'rgba(255,255,255,0.5)', fontWeight: '600', fontSize: 12 },
+  reportModal: { backgroundColor: '#0f0a06', borderRadius: 24, padding: 24, width: '88%', borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)' },
+  reportModalTitle: { fontSize: 18, fontWeight: '800', color: '#fff', marginBottom: 6 },
+  reportModalHint: { fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 16, lineHeight: 18 },
+  reportReasonRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 11, paddingHorizontal: 4, gap: 12 },
+  reportReasonRowActive: { },
+  reportRadio: { width: 18, height: 18, borderRadius: 9, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.3)' },
+  reportRadioActive: { borderColor: '#4ade80', backgroundColor: '#4ade80' },
+  reportReasonText: { fontSize: 14, color: 'rgba(255,255,255,0.7)', fontWeight: '600' },
+  reportReasonTextActive: { color: '#fff' },
+  reportModalBtnRow: { flexDirection: 'row', gap: 10, marginTop: 14 },
+  reportCancelBtn: { flex: 1, borderRadius: 50, paddingVertical: 13, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  reportCancelBtnText: { color: 'rgba(255,255,255,0.7)', fontWeight: '700', fontSize: 14 },
+  reportSubmitBtn: { flex: 1, borderRadius: 50, paddingVertical: 13, alignItems: 'center', backgroundColor: '#dc2626' },
+  reportSubmitBtnDisabled: { backgroundColor: 'rgba(220,38,38,0.3)' },
+  reportSubmitBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
 
   // Place Card
   placeCard: { backgroundColor: '#000000', borderRadius: 20, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(232,130,74,0.15)' },

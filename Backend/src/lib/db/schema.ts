@@ -263,6 +263,32 @@ export const userActivity = pgTable(
   },
 )
 
+
+export const report = pgTable(
+  'report',
+  {
+    id: text('id').primaryKey(),
+    reporterUserId: text('reporter_user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    reportedUserId: text('reported_user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    placeId: text('place_id').references(() => place.placeId, {
+      onDelete: 'set null',
+    }),
+    reason: text('reason').notNull(),
+    details: text('details'),
+    status: text('status').notNull().default('open'),
+    createdAt: timestamp('created_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
+  },
+  (table) => [
+    index('report_reporter_idx').on(table.reporterUserId),
+    index('report_reported_idx').on(table.reportedUserId),
+  ],
+)
+
 export const userRelations = relations(user, ({ many, one }) => ({
   accounts: many(account),
   sessions: many(session),
