@@ -43,7 +43,7 @@ export default function NotificationsScreen() {
   return (
     <View style={s.root}>
       <LinearGradient
-        colors={['#F5C500', '#F2A96B', '#F0956A', '#EE8A5C']}
+        colors={['#000000', '#000000', '#000000', '#000000']}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
         style={StyleSheet.absoluteFill}
@@ -51,7 +51,7 @@ export default function NotificationsScreen() {
       <SafeAreaView style={s.safe}>
         <View style={s.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
-            <MaterialIcons name="chevron-left" size={28} color="#151515" />
+            <MaterialIcons name="chevron-left" size={28} color="#FFFFFF" />
           </TouchableOpacity>
           <Text style={s.title}>Notifications</Text>
           <View style={{ width: 36 }} />
@@ -63,12 +63,12 @@ export default function NotificationsScreen() {
           </View>
         )}
         {loading ? (
-          <ActivityIndicator color="#151515" style={{ marginTop: 60 }} />
+          <ActivityIndicator color="#FFFFFF" style={{ marginTop: 60 }} />
         ) : error ? (
           <Text style={s.errorText}>{error}</Text>
         ) : notifications.length === 0 ? (
           <View style={s.emptyContainer}>
-            <MaterialIcons name="notifications-none" size={64} color="rgba(21,21,21,0.25)" />
+            <MaterialIcons name="notifications-none" size={64} color="rgba(255,255,255,0.25)" />
             <Text style={s.emptyTitle}>No notifications yet</Text>
             <Text style={s.emptySub}>When you get notifications, they'll show up here.</Text>
           </View>
@@ -100,7 +100,7 @@ const s = StyleSheet.create({
   safe: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 },
   backBtn: { width: 36, height: 36, justifyContent: 'center' },
-  title: { fontSize: 18, fontWeight: '700', color: '#151515' },
+  title: { fontSize: 18, fontWeight: '700', color: '#FFFFFF' },
   list: { padding: 16, gap: 12 },
   card: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(20,12,6,0.9)', borderRadius: 14, padding: 14, gap: 12, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)' },
   iconWrap: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
@@ -108,7 +108,7 @@ const s = StyleSheet.create({
   message: { fontSize: 14, color: '#fff', fontWeight: '500', lineHeight: 20 },
   time: { fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: '700', marginTop: 3 },
   emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: 'rgba(21,21,21,0.7)', marginTop: 16 },
-  emptySub: { fontSize: 14, color: 'rgba(21,21,21,0.5)', textAlign: 'center', marginTop: 8, lineHeight: 20 },
-  errorText: { color: 'rgba(21,21,21,0.6)', textAlign: 'center', marginTop: 60 },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: 'rgba(255,255,255,0.7)', marginTop: 16 },
+  emptySub: { fontSize: 14, color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: 8, lineHeight: 20 },
+  errorText: { color: 'rgba(255,255,255,0.6)', textAlign: 'center', marginTop: 60 },
 })
