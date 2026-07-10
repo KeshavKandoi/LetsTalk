@@ -11,7 +11,7 @@ import { apiFetch } from '../lib/api'
 import { getSession, signOut } from '../lib/auth'
 
 const YELLOW = '#F5C500'
-const DARK = '#151515'
+const DARK = '#FFFFFF'
 
 export default function AccountSettingsScreen() {
   const navigation = useNavigation<any>()
@@ -117,7 +117,7 @@ export default function AccountSettingsScreen() {
   return (
     <View style={s.root}>
       <LinearGradient
-        colors={['#F5C500', '#F2A96B', '#F0956A', '#EE8A5C']}
+        colors={['#000000', '#000000', '#000000', '#000000']}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
         style={StyleSheet.absoluteFill}
@@ -152,7 +152,7 @@ export default function AccountSettingsScreen() {
               </TouchableOpacity>
             </View>
 
-            <Text style={[s.sectionLabel, { color: '#151515', marginTop: 24 }]}>DANGER ZONE</Text>
+            <Text style={[s.sectionLabel, { color: '#FFFFFF', marginTop: 24 }]}>DANGER ZONE</Text>
             <View style={[s.card, { backgroundColor: 'rgba(40,10,10,0.9)', borderWidth: 1.5, borderColor: 'rgba(220,60,60,0.7)' }]}>
               <TouchableOpacity style={s.row} onPress={handleDeleteAccount}>
                 <View style={s.rowLeft}>
