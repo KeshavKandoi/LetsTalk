@@ -10,7 +10,7 @@ import { MaterialIcons } from '@expo/vector-icons'
 const { width, height } = Dimensions.get('window')
 const WHITE = '#ffffff'
 const MUTED = 'rgba(255,255,255,0.6)'
-const CARD = 'rgba(20,12,6,0.9)'
+const CARD = 'rgba(20,20,20,0.9)'
 
 export default function AboutUsScreen() {
   const navigation = useNavigation<any>()
@@ -63,7 +63,7 @@ export default function AboutUsScreen() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0a0704' },
+  root: { flex: 1, backgroundColor: '#000000' },
   header: { paddingHorizontal: 16, paddingBottom: 8 },
   backBtn: {
     width: 44, height: 44, borderRadius: 22,
