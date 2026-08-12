@@ -1,7 +1,6 @@
 [build]
 builder = "nixpacks"
-buildCommand = "corepack enable && corepack prepare pnpm@9 --activate && cd Backend && pnpm install && cd ../Frontend && pnpm install && pnpm run build"
-
+buildCommand = "cd Backend && npm ci && cd ../Frontend && corepack enable && corepack prepare pnpm@9 --activate && pnpm install && pnpm run build"
 [deploy]
 startCommand = "cd Frontend && node start-server.mjs"
 restartPolicyType = "ON_FAILURE"
