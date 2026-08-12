@@ -20,6 +20,7 @@ import { Route as ApiPlacesSpotRouteImport } from './routes/api/places/spot'
 import { Route as ApiPlacesScanPreviewRouteImport } from './routes/api/places/scan-preview'
 import { Route as ApiPlacesScanJoinConnectRouteImport } from './routes/api/places/scan-join-connect'
 import { Route as ApiPlacesScanConnectRouteImport } from './routes/api/places/scan-connect'
+import { Route as ApiPlacesReportRouteImport } from './routes/api/places/report'
 import { Route as ApiPlacesReadyRouteImport } from './routes/api/places/ready'
 import { Route as ApiPlacesPushTokenRouteImport } from './routes/api/places/push-token'
 import { Route as ApiPlacesProfileRouteImport } from './routes/api/places/profile'
@@ -101,6 +102,11 @@ const ApiPlacesScanJoinConnectRoute =
 const ApiPlacesScanConnectRoute = ApiPlacesScanConnectRouteImport.update({
   id: '/api/places/scan-connect',
   path: '/api/places/scan-connect',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPlacesReportRoute = ApiPlacesReportRouteImport.update({
+  id: '/api/places/report',
+  path: '/api/places/report',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPlacesReadyRoute = ApiPlacesReadyRouteImport.update({
@@ -265,6 +271,7 @@ export interface FileRoutesByFullPath {
   '/api/places/profile': typeof ApiPlacesProfileRoute
   '/api/places/push-token': typeof ApiPlacesPushTokenRoute
   '/api/places/ready': typeof ApiPlacesReadyRoute
+  '/api/places/report': typeof ApiPlacesReportRoute
   '/api/places/scan-connect': typeof ApiPlacesScanConnectRoute
   '/api/places/scan-join-connect': typeof ApiPlacesScanJoinConnectRoute
   '/api/places/scan-preview': typeof ApiPlacesScanPreviewRoute
@@ -304,6 +311,7 @@ export interface FileRoutesByTo {
   '/api/places/profile': typeof ApiPlacesProfileRoute
   '/api/places/push-token': typeof ApiPlacesPushTokenRoute
   '/api/places/ready': typeof ApiPlacesReadyRoute
+  '/api/places/report': typeof ApiPlacesReportRoute
   '/api/places/scan-connect': typeof ApiPlacesScanConnectRoute
   '/api/places/scan-join-connect': typeof ApiPlacesScanJoinConnectRoute
   '/api/places/scan-preview': typeof ApiPlacesScanPreviewRoute
@@ -344,6 +352,7 @@ export interface FileRoutesById {
   '/api/places/profile': typeof ApiPlacesProfileRoute
   '/api/places/push-token': typeof ApiPlacesPushTokenRoute
   '/api/places/ready': typeof ApiPlacesReadyRoute
+  '/api/places/report': typeof ApiPlacesReportRoute
   '/api/places/scan-connect': typeof ApiPlacesScanConnectRoute
   '/api/places/scan-join-connect': typeof ApiPlacesScanJoinConnectRoute
   '/api/places/scan-preview': typeof ApiPlacesScanPreviewRoute
@@ -385,6 +394,7 @@ export interface FileRouteTypes {
     | '/api/places/profile'
     | '/api/places/push-token'
     | '/api/places/ready'
+    | '/api/places/report'
     | '/api/places/scan-connect'
     | '/api/places/scan-join-connect'
     | '/api/places/scan-preview'
@@ -424,6 +434,7 @@ export interface FileRouteTypes {
     | '/api/places/profile'
     | '/api/places/push-token'
     | '/api/places/ready'
+    | '/api/places/report'
     | '/api/places/scan-connect'
     | '/api/places/scan-join-connect'
     | '/api/places/scan-preview'
@@ -463,6 +474,7 @@ export interface FileRouteTypes {
     | '/api/places/profile'
     | '/api/places/push-token'
     | '/api/places/ready'
+    | '/api/places/report'
     | '/api/places/scan-connect'
     | '/api/places/scan-join-connect'
     | '/api/places/scan-preview'
@@ -503,6 +515,7 @@ export interface RootRouteChildren {
   ApiPlacesProfileRoute: typeof ApiPlacesProfileRoute
   ApiPlacesPushTokenRoute: typeof ApiPlacesPushTokenRoute
   ApiPlacesReadyRoute: typeof ApiPlacesReadyRoute
+  ApiPlacesReportRoute: typeof ApiPlacesReportRoute
   ApiPlacesScanConnectRoute: typeof ApiPlacesScanConnectRoute
   ApiPlacesScanJoinConnectRoute: typeof ApiPlacesScanJoinConnectRoute
   ApiPlacesScanPreviewRoute: typeof ApiPlacesScanPreviewRoute
@@ -590,6 +603,13 @@ declare module '@tanstack/react-router' {
       path: '/api/places/scan-connect'
       fullPath: '/api/places/scan-connect'
       preLoaderRoute: typeof ApiPlacesScanConnectRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/places/report': {
+      id: '/api/places/report'
+      path: '/api/places/report'
+      fullPath: '/api/places/report'
+      preLoaderRoute: typeof ApiPlacesReportRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/places/ready': {
@@ -807,6 +827,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPlacesProfileRoute: ApiPlacesProfileRoute,
   ApiPlacesPushTokenRoute: ApiPlacesPushTokenRoute,
   ApiPlacesReadyRoute: ApiPlacesReadyRoute,
+  ApiPlacesReportRoute: ApiPlacesReportRoute,
   ApiPlacesScanConnectRoute: ApiPlacesScanConnectRoute,
   ApiPlacesScanJoinConnectRoute: ApiPlacesScanJoinConnectRoute,
   ApiPlacesScanPreviewRoute: ApiPlacesScanPreviewRoute,
