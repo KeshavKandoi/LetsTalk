@@ -124,9 +124,7 @@ export default function EditProfileScreen() {
       <View style={s.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
           <MaterialIcons name="chevron-left" size={28} color="#fff" />
-          <Text style={s.backText}>Back</Text>
         </TouchableOpacity>
-        <Text style={s.headerTitle}>Edit Profile</Text>
         <TouchableOpacity style={s.saveBtn} onPress={handleSave} disabled={saving}>
           {saving ? <ActivityIndicator color={DARK} size="small" /> : <Text style={s.saveBtnText}>Save</Text>}
         </TouchableOpacity>
@@ -136,7 +134,6 @@ export default function EditProfileScreen() {
 
         {/* Photo */}
         <View style={s.card}>
-          <Text style={s.label}>PHOTO</Text>
           <View style={s.photoRow}>
             <View style={s.photoWrap}>
               {photoUrl
