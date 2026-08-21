@@ -142,14 +142,9 @@ export default function LandingScreen() {
           )}
         </TouchableOpacity>
         <View style={s.navBrand}>
-          <View style={s.logoMark}>
-            <Feather name="message-circle" size={15} color="#fff" />
-          </View>
           <Text style={s.navTitle}>Let's Talk</Text>
         </View>
-        <TouchableOpacity activeOpacity={0.7} style={s.navIconBtn} onPress={openProfile}>
-          <Feather name="settings" size={19} color="rgba(255,255,255,0.55)" />
-        </TouchableOpacity>
+        <View style={s.navIconBtn} />
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
@@ -362,7 +357,7 @@ const s = StyleSheet.create({
   nav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 12, zIndex: 10 },
   navBrand: { flexDirection: 'row', alignItems: 'center', gap: 9, flex: 1, justifyContent: 'center', marginLeft: -32 },
   logoMark: { width: 28, height: 28, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: ACCENT },
-  navTitle: { fontSize: 17, fontWeight: '800', color: '#fff', letterSpacing: -0.2 },
+  navTitle: { fontSize: 24, fontWeight: '700', fontStyle: 'italic', color: '#fff', letterSpacing: -0.3 },
   navIconBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.05)' },
 
   scroll: { paddingBottom: 132 },
