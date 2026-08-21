@@ -10,6 +10,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { MaterialIcons, Feather } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
+import { StatusBar } from 'expo-status-bar'
 
 const { width, height } = Dimensions.get('window')
 const AMBER = '#e8824a'
@@ -86,6 +87,7 @@ export default function LandingScreen() {
   return (
     <SafeAreaView style={s.container} edges={['top']}>
       <EmberBackground />
+      <StatusBar style="light" />
 
       {/* Nav */}
       <View style={s.nav}>
@@ -109,14 +111,6 @@ export default function LandingScreen() {
 
         {/* ── HERO ── */}
         <Animated.View style={[s.hero, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-
-          {/* Live pill */}
-          <View style={s.livePill}>
-            <Animated.View style={[s.liveDotRing, { transform: [{ scale: pulseAnim }] }]}>
-              <View style={s.liveDotCore} />
-            </Animated.View>
-            <Text style={s.livePillText}>LIVE NOW IN YOUR CITY</Text>
-          </View>
 
           <Text style={s.heroTitle}>
             <Text style={s.heroTitleLight}>Real people. Real places.{'\n'}</Text>
