@@ -26,15 +26,23 @@ export default function AccountMenuScreen() {
 
   useEffect(() => {
     AsyncStorage.getItem('cached_profile').then(cached => {
-      if (cached) setProfile(JSON.parse(cached))
+      if (cached) {
+        setProfile(JSON.parse(cached))
+        setLoading(false)
+      }
     })
-    apiFetch('/api/places/state', { _t: Date.now() })
+    apiFetch('/api/places/state', {})
       .then(data => {
         setProfile(data)
         AsyncStorage.setItem('cached_profile', JSON.stringify(data))
       })
       .catch(() => {})
       .finally(() => setLoading(false))
+  }, [])
+
+  const [photoTs, setPhotoTs] = useState('1')
+  useEffect(() => {
+    AsyncStorage.getItem('photo_ts').then(ts => setPhotoTs(ts || '1'))
   }, [])
 
   const handleLogout = async () => {
@@ -44,7 +52,7 @@ export default function AccountMenuScreen() {
 
   const username = profile?.session?.user?.username || profile?.session?.user?.name || null
   const rawPhoto = profile?.profile?.photoUrl || profile?.session?.user?.image
-  const photoUrl = rawPhoto ? `${rawPhoto}?t=${Date.now()}` : null
+  const photoUrl = rawPhoto ? `${rawPhoto.split('?')[0]}?t=${photoTs}` : null
   const initials = username ? username.slice(0, 2).toUpperCase() : '?'
   const isLoggedIn = !!profile?.session
 
