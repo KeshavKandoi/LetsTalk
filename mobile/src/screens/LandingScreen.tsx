@@ -144,7 +144,6 @@ export default function LandingScreen() {
         <View style={s.navBrand}>
           <Text style={s.navTitle}>Let's Talk</Text>
         </View>
-        <View style={s.navIconBtn} />
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
@@ -355,7 +354,7 @@ const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#050505' },
 
   nav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 12, zIndex: 10 },
-  navBrand: { flexDirection: 'row', alignItems: 'center', gap: 9, flex: 1, justifyContent: 'center', marginLeft: -32 },
+  navBrand: { flexDirection: 'row', alignItems: 'center', gap: 9, flex: 1, justifyContent: 'center' },
   logoMark: { width: 28, height: 28, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: ACCENT },
   navTitle: { fontSize: 24, fontWeight: '700', fontStyle: 'italic', color: '#fff', letterSpacing: -0.3 },
   navIconBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.05)' },
