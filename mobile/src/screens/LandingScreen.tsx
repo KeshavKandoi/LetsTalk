@@ -362,10 +362,10 @@ const s = StyleSheet.create({
   scroll: { paddingBottom: 132 },
 
   hero: { paddingHorizontal: 24, paddingTop: 28, paddingBottom: 8, alignItems: 'center' },
-  heroTitle: { textAlign: 'center', marginBottom: 10 },
+  heroTitle: { textAlign: 'center', marginBottom: 20 },
   heroTitleLight: { fontSize: 26, fontWeight: '600', color: 'rgba(255,255,255,0.6)', lineHeight: 32, letterSpacing: -0.3 },
   heroTitleBold: { fontSize: 34, fontWeight: '900', color: '#fff', lineHeight: 40, letterSpacing: -0.6 },
-  heroSub: { fontSize: 15, color: MUTED, textAlign: 'center', lineHeight: 21, marginBottom: 26, maxWidth: '82%' },
+  heroSub: { fontSize: 15, color: MUTED, textAlign: 'center', lineHeight: 21, marginBottom: 26, marginTop: 4, maxWidth: '82%' },
 
   ctaBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 56, width: '100%', borderRadius: 999, backgroundColor: ACCENT, marginBottom: 20, shadowColor: ACCENT, shadowOpacity: 0.35, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
   ctaBtnText: { color: '#fff', fontWeight: '700', fontSize: 16, letterSpacing: 0.1 },
