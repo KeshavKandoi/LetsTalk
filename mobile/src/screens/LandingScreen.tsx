@@ -13,6 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
 import { MaterialIcons, Feather } from '@expo/vector-icons'
+import Svg, { Path, Circle, Defs, LinearGradient, RadialGradient, Stop } from 'react-native-svg'
 
 const { width } = Dimensions.get('window')
 const ACCENT = '#7C5CFC'
@@ -41,6 +42,26 @@ function AvatarStack({ pulseAnim }: any) {
           </View>
         ))}
       </View>
+    </View>
+  )
+}
+
+function HeroIllustration() {
+  return (
+    <View style={s.illustrationWrap}>
+      <Svg width={180} height={130} viewBox="0 0 180 130">
+        <Defs>
+          <LinearGradient id="bubbleGrad" x1="0" y1="0" x2="1" y2="1">
+            <Stop offset="0" stopColor="#7C5CFC" stopOpacity="1" />
+            <Stop offset="1" stopColor="#9F7AEA" stopOpacity="1" />
+          </LinearGradient>
+        </Defs>
+        <Path d="M48 18 Q18 18 18 46 Q18 70 38 76 L34 90 L56 74 Q86 72 86 46 Q86 18 58 18 Z" fill="rgba(124,92,252,0.15)" />
+        <Path d="M118 30 Q158 30 158 60 Q158 85 136 91 L140 107 L116 89 Q86 87 86 60 Q86 30 118 30 Z" fill="url(#bubbleGrad)" />
+        <Circle cx="106" cy="60" r="4" fill="#fff" />
+        <Circle cx="120" cy="60" r="4" fill="#fff" />
+        <Circle cx="134" cy="60" r="4" fill="#fff" />
+      </Svg>
     </View>
   )
 }
@@ -150,6 +171,8 @@ export default function LandingScreen() {
           </Text>
           <Text style={s.heroSub}>Meet people nearby who actually want to talk.</Text>
 
+          <HeroIllustration />
+
           <TouchableOpacity activeOpacity={0.88} style={s.ctaBtn} onPress={handleJoin}>
             <Feather name="navigation" size={19} color="#fff" />
             <Text style={s.ctaBtnText}>Find people nearby</Text>
@@ -157,51 +180,8 @@ export default function LandingScreen() {
 
         </Animated.View>
 
-        <View style={s.divider}>
-          <View style={s.divLine} />
-          <Text style={s.divTxt}>HOW IT WORKS</Text>
-          <View style={s.divLine} />
-        </View>
 
-        <View style={s.stepsWrap}>
-          {[
-            { anim: step1, num: '01', icon: <Feather name="smile" size={22} color={ACCENT} />, title: 'Set your vibe', desc: 'Tell the room what you\'re in the mood for.', tag: 'Takes 10 seconds', tagColor: '#3dbf7a' },
-            { anim: step2, num: '02', icon: <Feather name="map-pin" size={22} color={ACCENT} />, title: 'Walk in, check in', desc: 'Arrive at a participating venue and tap in.', tag: 'Location verified', tagColor: '#5b8dee' },
-            { anim: step3, num: '03', icon: <Feather name="message-circle" size={22} color={ACCENT} />, title: 'Say hello for real', desc: 'See who\'s there, break the ice, then talk.', tag: 'No swiping. No matching.', tagColor: AMBER },
-          ].map((step) => (
-            <Animated.View key={step.num} style={[s.stepCard, { opacity: step.anim, transform: [{ scale: step.anim }] }]}>
-              <View style={s.stepTop}>
-                <Text style={s.stepNum}>{step.num}</Text>
-                <View style={s.stepIconBox}>{step.icon}</View>
-              </View>
-              <Text style={s.stepTitle}>{step.title}</Text>
-              <Text style={s.stepDesc}>{step.desc}</Text>
-              <View style={[s.stepTag, { borderColor: step.tagColor + '44', backgroundColor: step.tagColor + '18' }]}>
-                <MaterialIcons name="check-circle" size={11} color={step.tagColor} />
-                <Text style={[s.stepTagTxt, { color: step.tagColor }]}>{step.tag}</Text>
-              </View>
-            </Animated.View>
-          ))}
-        </View>
 
-        <View style={s.whySect}>
-          <Text style={s.whyTitle}>Why Let's Talk?</Text>
-          <Text style={s.whySub}>Real connection happens across a table, not a screen.</Text>
-          <View style={s.whyGrid}>
-          {[
-              { icon: <Feather name="eye-off" size={22} color={ACCENT} />, title: 'No endless scrolling', desc: 'You\'re here to talk, not scroll.' },
-              { icon: <Feather name="shield" size={22} color={ACCENT} />, title: 'No fake profiles', desc: 'Same place, same moment. It\'s real.' },
-              { icon: <Feather name="zap" size={22} color={ACCENT} />, title: 'Instant connection', desc: 'No waiting. People are there now.' },
-              { icon: <Feather name="sliders" size={22} color={ACCENT} />, title: 'You\'re in control', desc: 'Set your mood, choose who to talk to.' },
-            ].map((item, i) => (
-              <View key={i} style={s.whyCard}>
-                <View style={s.whyIconBox}>{item.icon}</View>
-                <Text style={s.whyCardTitle}>{item.title}</Text>
-                <Text style={s.whyCardDesc}>{item.desc}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
 
         <View style={s.finalSect}>
           <View style={s.finalGlow} />
@@ -346,6 +326,7 @@ const s = StyleSheet.create({
   heroTitleLight: { fontSize: 26, fontWeight: '600', color: 'rgba(255,255,255,0.6)', lineHeight: 32, letterSpacing: -0.3 },
   heroTitleBold: { fontSize: 34, fontWeight: '900', color: '#fff', lineHeight: 40, letterSpacing: -0.6 },
   heroSub: { fontSize: 15, color: MUTED, textAlign: 'center', lineHeight: 21, marginBottom: 26, marginTop: 4, maxWidth: '82%' },
+  illustrationWrap: { alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
 
   ctaBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 56, width: '100%', borderRadius: 999, backgroundColor: ACCENT, marginBottom: 20, shadowColor: ACCENT, shadowOpacity: 0.35, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
   ctaBtnText: { color: '#fff', fontWeight: '700', fontSize: 16, letterSpacing: 0.1 },
@@ -377,6 +358,15 @@ const s = StyleSheet.create({
   whyCardTitle: { fontSize: 13, fontWeight: '800', color: '#fff', marginBottom: 5 },
   whyCardDesc: { fontSize: 12, color: MUTED, lineHeight: 17 },
 
+  mapSect: { paddingHorizontal: 18, paddingVertical: 42 },
+  mapCard: { borderRadius: 24, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: BORDER, marginBottom: 18, alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  mapPulseRing: { position: 'absolute', top: '50%', left: '50%', marginLeft: -35, marginTop: -35, width: 70, height: 70, borderRadius: 35, borderWidth: 2, borderColor: 'rgba(124,92,252,0.4)', backgroundColor: 'rgba(124,92,252,0.08)' },
+  mapPin: { position: 'absolute', top: '50%', left: '50%', marginLeft: -20, marginTop: -20, width: 40, height: 40, borderRadius: 20, backgroundColor: ACCENT, alignItems: 'center', justifyContent: 'center', shadowColor: ACCENT, shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 },
+  mapStatsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 20 },
+  mapStatItem: { alignItems: 'center' },
+  mapStatNum: { fontSize: 20, fontWeight: '900', color: '#fff', marginBottom: 2 },
+  mapStatLabel: { fontSize: 12, color: MUTED, fontWeight: '600' },
+  mapStatDivider: { width: 1, height: 30, backgroundColor: BORDER },
   finalSect: { margin: 18, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 26, padding: 28, borderWidth: 1, borderColor: BORDER, alignItems: 'center', overflow: 'hidden', marginBottom: 20 },
   finalGlow: { position: 'absolute', top: -90, left: -90, right: -90, height: 240, borderRadius: 120, backgroundColor: ACCENT_DIM },
   finalPinRing: { width: 68, height: 68, borderRadius: 34, backgroundColor: ACCENT_DIM, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
