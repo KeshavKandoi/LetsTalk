@@ -49,20 +49,47 @@ function AvatarStack({ pulseAnim }: any) {
 function HeroIllustration() {
   return (
     <View style={s.illustrationWrap}>
-      <Svg width={150} height={150} viewBox="0 0 160 160">
+      <Svg width={130} height={130} viewBox="0 0 140 140">
         <Defs>
-          <LinearGradient id="pinGrad" x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0" stopColor="#7C5CFC" stopOpacity="1" />
-            <Stop offset="1" stopColor="#9F7AEA" stopOpacity="1" />
+          <LinearGradient id="orbGrad" x1="0" y1="0" x2="1" y2="1">
+            <Stop offset="0" stopColor="#9F7AEA" stopOpacity="1" />
+            <Stop offset="0.55" stopColor="#7C5CFC" stopOpacity="1" />
+            <Stop offset="1" stopColor="#4C6FFF" stopOpacity="1" />
           </LinearGradient>
-          <RadialGradient id="pinGlow" cx="50%" cy="45%" r="55%">
-            <Stop offset="0" stopColor="#7C5CFC" stopOpacity="0.28" />
+          <RadialGradient id="orbGlow" cx="50%" cy="50%" r="60%">
+            <Stop offset="0" stopColor="#7C5CFC" stopOpacity="0.22" />
             <Stop offset="1" stopColor="#7C5CFC" stopOpacity="0" />
           </RadialGradient>
+          <RadialGradient id="dotGlow" cx="50%" cy="50%" r="60%">
+            <Stop offset="0" stopColor="#9F7AEA" stopOpacity="0.35" />
+            <Stop offset="1" stopColor="#9F7AEA" stopOpacity="0" />
+          </RadialGradient>
         </Defs>
-        <Circle cx="80" cy="80" r="75" fill="url(#pinGlow)" />
-        <Path d="M80 24 C50 24 28 46 28 76 C28 112 80 150 80 150 C80 150 132 112 132 76 C132 46 110 24 80 24 Z" fill="url(#pinGrad)" />
-        <Circle cx="80" cy="74" r="20" fill="#050505" />
+
+        <Circle cx="70" cy="70" r="65" fill="url(#orbGlow)" />
+
+        <Circle cx="70" cy="70" r="52" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+        <Circle cx="70" cy="70" r="38" fill="none" stroke="rgba(255,255,255,0.09)" strokeWidth="1" />
+
+        <Path d="M70 70 L102 40" stroke="rgba(255,255,255,0.14)" strokeWidth="1" />
+        <Path d="M70 70 L33 48" stroke="rgba(255,255,255,0.14)" strokeWidth="1" />
+        <Path d="M70 70 L104 97" stroke="rgba(255,255,255,0.14)" strokeWidth="1" />
+        <Path d="M70 70 L42 101" stroke="rgba(255,255,255,0.14)" strokeWidth="1" />
+
+        <Circle cx="102" cy="40" r="10" fill="url(#dotGlow)" />
+        <Circle cx="102" cy="40" r="4" fill="#9F7AEA" />
+
+        <Circle cx="33" cy="48" r="10" fill="url(#dotGlow)" />
+        <Circle cx="33" cy="48" r="3.5" fill="#7C5CFC" />
+
+        <Circle cx="104" cy="97" r="10" fill="url(#dotGlow)" />
+        <Circle cx="104" cy="97" r="4" fill="#4C6FFF" />
+
+        <Circle cx="42" cy="101" r="9" fill="url(#dotGlow)" />
+        <Circle cx="42" cy="101" r="3" fill="#9F7AEA" />
+
+        <Circle cx="70" cy="70" r="22" fill="url(#orbGrad)" />
+        <Circle cx="63" cy="62" r="8" fill="rgba(255,255,255,0.18)" />
       </Svg>
     </View>
   )
