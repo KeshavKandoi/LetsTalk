@@ -11,12 +11,35 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { getSession, signOut } from '../lib/auth'
 import { apiFetch } from '../lib/api'
 
+const CACHE_KEY = 'cached_profile_screen'
+
 export default function ProfileScreen() {
   const navigation = useNavigation<any>()
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
+  const buildProfile = (u: any, stateData: any, photoTs: string) => ({
+    username: u?.name || u?.username || 'You',
+    full_name: u?.name || 'You',
+    email: u?.email || '',
+    photoUrl: stateData?.profile?.photoUrl ? stateData.profile.photoUrl + '?t=' + photoTs : null,
+    created_at: u?.createdAt || null,
+    gender: stateData?.profile?.gender || null,
+    age: stateData?.profile?.age || null,
+    about: stateData?.profile?.about || '',
+  })
+
   const loadProfile = async () => {
+    // 1. Show cached profile instantly, if we have one
+    try {
+      const cached = await AsyncStorage.getItem(CACHE_KEY)
+      if (cached) {
+        setProfile(JSON.parse(cached))
+        setLoading(false)
+      }
+    } catch {}
+
+    // 2. Fetch fresh data in the background and update once ready
     try {
       const session = await getSession()
       if (!session?.session) { navigation.goBack(); return }
@@ -26,16 +49,9 @@ export default function ProfileScreen() {
       try {
         stateData = await apiFetch('/api/places/state', {})
       } catch {}
-      setProfile({
-        username: u?.name || u?.username || 'You',
-        full_name: u?.name || 'You',
-        email: u?.email || '',
-        photoUrl: stateData?.profile?.photoUrl ? stateData.profile.photoUrl + '?t=' + photoTs : null,
-        created_at: u?.createdAt || null,
-        gender: stateData?.profile?.gender || null,
-        age: stateData?.profile?.age || null,
-        about: stateData?.profile?.about || '',
-      })
+      const fresh = buildProfile(u, stateData, photoTs)
+      setProfile(fresh)
+      AsyncStorage.setItem(CACHE_KEY, JSON.stringify(fresh)).catch(() => {})
     } catch (e) {}
     setLoading(false)
   }
@@ -49,6 +65,7 @@ export default function ProfileScreen() {
       {
         text: 'Log out', style: 'destructive', onPress: async () => {
           await signOut()
+          await AsyncStorage.removeItem(CACHE_KEY)
           navigation.reset({ index: 0, routes: [{ name: 'Login' }] })
         }
       }
@@ -63,7 +80,7 @@ export default function ProfileScreen() {
   const age = profile?.age || null
   const gender = profile?.gender || null
 
-  if (loading) {
+  if (loading && !profile) {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <StatusBar style="light" />
