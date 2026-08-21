@@ -1,28 +1,20 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
-  Animated, Dimensions, ActivityIndicator, Alert,
+  ActivityIndicator, Alert, Image,
 } from 'react-native'
-import { Image } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { LinearGradient } from 'expo-linear-gradient'
-import { MaterialIcons } from '@expo/vector-icons'
+import { StatusBar } from 'expo-status-bar'
+import { MaterialIcons, Feather } from '@expo/vector-icons'
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
-import { useCallback } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { getSession, signOut } from '../lib/auth'
 import { apiFetch } from '../lib/api'
-
-const { height } = Dimensions.get('window')
-const PANEL_COLLAPSED = height * 0.42
-const PANEL_EXPANDED = height * 0.72
 
 export default function ProfileScreen() {
   const navigation = useNavigation<any>()
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const panelY = useRef(new Animated.Value(PANEL_COLLAPSED)).current
-  const [expanded, setExpanded] = useState(false)
 
   const loadProfile = async () => {
     try {
@@ -42,31 +34,22 @@ export default function ProfileScreen() {
         created_at: u?.createdAt || null,
         gender: stateData?.profile?.gender || null,
         age: stateData?.profile?.age || null,
-        intent_text: stateData?.profile?.intentText || '',
         about: stateData?.profile?.about || '',
-        current_place_id: stateData?.profile?.currentPlaceId || null,
       })
-    } catch (e) {
-    }
+    } catch (e) {}
     setLoading(false)
   }
 
   useEffect(() => { loadProfile() }, [])
   useFocusEffect(useCallback(() => { loadProfile() }, []))
 
-  const togglePanel = () => {
-    const toValue = expanded ? PANEL_COLLAPSED : PANEL_EXPANDED
-    Animated.spring(panelY, { toValue, useNativeDriver: false, friction: 8 }).start()
-    setExpanded(!expanded)
-  }
-
   const handleLogout = async () => {
-    Alert.alert('Log out', 'Are you sure?', [
+    Alert.alert('Log out', 'Are you sure you want to log out?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Log out', style: 'destructive', onPress: async () => {
           await signOut()
-          navigation.reset({ index: 0, routes: [{ name: 'Landing' }] })
+          navigation.reset({ index: 0, routes: [{ name: 'Login' }] })
         }
       }
     ])
@@ -76,130 +59,131 @@ export default function ProfileScreen() {
   const username = profile?.username || 'You'
   const displayName = profile?.full_name || username
   const email = profile?.email || ''
-  const intentText = profile?.intent_text || 'Open to a conversation.'
   const about = profile?.about || ''
   const age = profile?.age || null
   const gender = profile?.gender || null
 
-  return (
-    <View style={s.root}>
-      <View style={s.photoSection}>
-        <SafeAreaView edges={['top']} style={s.topBar}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
-            <MaterialIcons name="chevron-left" size={28} color="#000" />
-            <Text style={s.backText}>Profile</Text>
-          </TouchableOpacity>
-        </SafeAreaView>
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <StatusBar style="light" />
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator color="#8B5CF6" size="large" />
+        </View>
+      </SafeAreaView>
+    )
+  }
 
-        {loading ? (
-          <ActivityIndicator color="#F5C500" size="large" style={{ marginTop: 80 }} />
-        ) : photoUrl ? (
-          <Image
-            source={{ uri: photoUrl }}
-            style={s.profilePhoto}
-            resizeMode="cover"
-          />
-        ) : (
-          <View style={s.photoPlaceholder}>
-            <Text style={s.photoInitial}>{displayName[0]?.toUpperCase()}</Text>
-          </View>
-        )}
+  return (
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <StatusBar style="light" />
+
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Feather name="arrow-left" size={24} color="#ffffff" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Profile</Text>
+        <View style={{ width: 24 }} />
       </View>
 
-      <Animated.View style={[s.panel, { top: panelY }]}>
-        <LinearGradient
-          colors={['#F5C500', '#F2A96B', '#F0956A', '#EE8A5C']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-        <TouchableOpacity style={s.handleArea} onPress={togglePanel} activeOpacity={0.8}>
-          <MaterialIcons name={expanded ? 'keyboard-arrow-down' : 'keyboard-arrow-up'} size={22} color="#151515" style={{ marginTop: 2 }} />
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+
+        <View style={styles.avatarBlock}>
+          {photoUrl ? (
+            <Image source={{ uri: photoUrl }} style={styles.avatarImage} resizeMode="cover" />
+          ) : (
+            <View style={styles.avatarPlaceholder}>
+              <Text style={styles.avatarInitial}>{displayName[0]?.toUpperCase()}</Text>
+            </View>
+          )}
+          <Text style={styles.displayName}>{displayName}</Text>
+          {email ? <Text style={styles.email}>{email}</Text> : null}
+        </View>
+
+        <View style={styles.statsRow}>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{age || '—'}</Text>
+            <Text style={styles.statLabel}>Age</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{gender ? gender[0].toUpperCase() + gender.slice(1) : '—'}</Text>
+            <Text style={styles.statLabel}>Gender</Text>
+          </View>
+        </View>
+
+        <TouchableOpacity style={styles.editButton} onPress={() => navigation.navigate('EditProfile' as never)} activeOpacity={0.85}>
+          <Text style={styles.editButtonText}>Edit Profile</Text>
         </TouchableOpacity>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-          <View style={s.nameRow}>
-            <Text style={s.displayName}>{displayName}</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>About</Text>
+          <View style={styles.card}>
+            <Text style={styles.cardBody}>{about || 'No about yet. Edit your profile to add one.'}</Text>
           </View>
+        </View>
 
-          <View style={s.section}>
-            <Text style={s.sectionTitle}>ABOUT</Text>
-            <Text style={s.sectionBody}>{about || 'No about yet. Edit your profile to add one.'}</Text>
-          </View>
-
-          <View style={s.statsRow}>
-            <View style={s.statItem}>
-              <Text style={s.statNum}>{age || '—'}</Text>
-              <Text style={s.statLabel}>Age</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Account</Text>
+          <View style={styles.card}>
+            <View style={styles.row}>
+              <MaterialIcons name="person-outline" size={18} color="rgba(255,255,255,0.5)" />
+              <Text style={styles.rowText}>{username}</Text>
             </View>
-            <View style={s.statDivider} />
-            <View style={s.statItem}>
-              <Text style={s.statNum}>{gender ? gender[0].toUpperCase() + gender.slice(1) : '—'}</Text>
-              <Text style={s.statLabel}>Gender</Text>
+            <View style={styles.rowDivider} />
+            <View style={styles.row}>
+              <MaterialIcons name="mail-outline" size={18} color="rgba(255,255,255,0.5)" />
+              <Text style={styles.rowText}>{email || 'No email'}</Text>
             </View>
-          </View>
-
-          <TouchableOpacity style={s.editBtn} onPress={() => navigation.navigate('EditProfile' as never)}>
-            <Text style={s.editBtnText}>Edit Profile</Text>
-          </TouchableOpacity>
-
-          <View style={s.section}>
-            <Text style={s.sectionTitle}>ACCOUNT</Text>
-            <View style={s.accountRow}>
-              <MaterialIcons name="person" size={16} color="#151515" />
-              <Text style={s.accountText}>{username}</Text>
-            </View>
-            <View style={s.accountRow}>
-              <MaterialIcons name="email" size={16} color="#151515" />
-              <Text style={s.accountText}>{email || 'No email'}</Text>
-            </View>
-            <View style={s.accountRow}>
-              <MaterialIcons name="calendar-today" size={16} color="#151515" />
-              <Text style={s.accountText}>Joined {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Recently'}</Text>
+            <View style={styles.rowDivider} />
+            <View style={styles.row}>
+              <MaterialIcons name="calendar-today" size={18} color="rgba(255,255,255,0.5)" />
+              <Text style={styles.rowText}>
+                Joined {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Recently'}
+              </Text>
             </View>
           </View>
+        </View>
 
-          <TouchableOpacity style={s.logoutBtn} onPress={handleLogout}>
-            <Text style={s.logoutText}>Log out</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </Animated.View>
-    </View>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.85}>
+          <Text style={styles.logoutText}>Log out</Text>
+        </TouchableOpacity>
+
+      </ScrollView>
+    </SafeAreaView>
   )
 }
 
-const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#fff' },
-  photoSection: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#f5ead0', overflow: 'hidden' },
-  topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, zIndex: 10 },
-  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  backText: { fontSize: 17, fontWeight: '800', color: '#151515' },
-  profilePhoto: { width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 },
-  photoPlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  photoInitial: { fontSize: 80, fontWeight: '900', color: '#D06010' },
-  panel: {
-    position: 'absolute', left: 0, right: 0, bottom: 0,
-    minHeight: height * 0.65,
-    backgroundColor: '#F5C500',
-    borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    paddingHorizontal: 24, overflow: 'hidden',
-  },
-  handleArea: { alignItems: 'center', paddingVertical: 12 },
-  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: 'rgba(21,21,21,0.3)' },
-  nameRow: { marginBottom: 20 },
-  displayName: { fontSize: 38, fontWeight: '900', color: '#151515', letterSpacing: -1, lineHeight: 42 },
-  statsRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, backgroundColor: 'rgba(21,21,21,0.08)', borderRadius: 16, padding: 16 },
-  statItem: { flex: 1, alignItems: 'center' },
-  statNum: { fontSize: 22, fontWeight: '900', color: '#151515' },
-  statLabel: { fontSize: 11, color: 'rgba(21,21,21,0.55)', marginTop: 2, fontWeight: '600' },
-  statDivider: { width: 1, height: 36, backgroundColor: 'rgba(21,21,21,0.2)' },
-  editBtn: { backgroundColor: '#1A1A1A', borderRadius: 50, paddingVertical: 15, alignItems: 'center', marginBottom: 24 },
-  editBtnText: { color: '#fff', fontWeight: '800', fontSize: 16 },
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#000000' },
+  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
+  headerTitle: { fontSize: 16, fontWeight: '700', color: '#fff' },
+  scrollContent: { paddingHorizontal: 24, paddingBottom: 48 },
+
+  avatarBlock: { alignItems: 'center', marginBottom: 24, marginTop: 8 },
+  avatarImage: { width: 92, height: 92, borderRadius: 46, marginBottom: 14 },
+  avatarPlaceholder: { width: 92, height: 92, borderRadius: 46, backgroundColor: 'rgba(139,92,246,0.15)', alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
+  avatarInitial: { fontSize: 34, fontWeight: '800', color: '#8B5CF6' },
+  displayName: { fontSize: 22, fontWeight: '800', color: '#fff', marginBottom: 4 },
+  email: { fontSize: 13, color: 'rgba(255,255,255,0.5)' },
+
+  statsRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
+  statCard: { flex: 1, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', borderRadius: 12, paddingVertical: 16, alignItems: 'center' },
+  statValue: { fontSize: 18, fontWeight: '800', color: '#fff', marginBottom: 4 },
+  statLabel: { fontSize: 12, color: 'rgba(255,255,255,0.5)' },
+
+  editButton: { height: 48, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center', marginBottom: 28 },
+  editButtonText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+
   section: { marginBottom: 20 },
-  sectionTitle: { fontSize: 14, fontWeight: '900', color: '#151515', letterSpacing: 1.5, marginBottom: 12 },
-  sectionBody: { fontSize: 14, color: 'rgba(0,0,0,0.85)', lineHeight: 22 },
-  accountRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6 },
-  accountText: { fontSize: 14, color: '#151515', flex: 1, fontWeight: '700' },
-  logoutBtn: { borderWidth: 1.5, borderColor: '#151515', borderRadius: 50, paddingVertical: 14, alignItems: 'center', marginTop: 24, marginBottom: 40 },
-  logoutText: { color: '#c0392b', fontWeight: '700', fontSize: 15 },
+  sectionTitle: { fontSize: 12, fontWeight: '700', color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 },
+  card: { borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', borderRadius: 12, padding: 16 },
+  cardBody: { fontSize: 14, color: 'rgba(255,255,255,0.75)', lineHeight: 21 },
+
+  row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 4 },
+  rowText: { fontSize: 14, color: '#fff', flex: 1 },
+  rowDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.08)', marginVertical: 10 },
+
+  logoutButton: { height: 48, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,90,90,0.4)', alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+  logoutText: { color: '#ff6b6b', fontWeight: '700', fontSize: 14 },
 })
