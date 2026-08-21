@@ -1,14 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ActivityIndicator, KeyboardAvoidingView, Platform, Animated, Dimensions
+  ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation, useRoute } from '@react-navigation/native'
-import { MaterialIcons } from '@expo/vector-icons'
-import { verifyOTP, sendOTP, signIn } from '../lib/auth'
-
-const { height } = Dimensions.get('window')
+import { StatusBar } from 'expo-status-bar'
+import { MaterialIcons, Feather } from '@expo/vector-icons'
+import { verifyOTP, sendOTP, signIn, hasCompletedOnboarding } from '../lib/auth'
 
 export default function OTPScreen() {
   const navigation = useNavigation<any>()
@@ -20,6 +19,7 @@ export default function OTPScreen() {
   const [error, setError] = useState('')
   const [countdown, setCountdown] = useState(60)
   const inputs = useRef<any[]>([])
+
   useEffect(() => {
     sendOTP(email).catch(() => {})
   }, [])
@@ -54,7 +54,8 @@ export default function OTPScreen() {
       if (password) {
         try { await signIn(email, password) } catch {}
       }
-      navigation.reset({ index: 0, routes: [{ name: 'Landing' }] })
+      const alreadyOnboarded = await hasCompletedOnboarding(email)
+      navigation.reset({ index: 0, routes: [{ name: alreadyOnboarded ? 'Landing' : 'Tutorial' }] })
     } catch (e: any) {
       setError(e.message || 'Invalid OTP')
     } finally {
@@ -78,122 +79,84 @@ export default function OTPScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.bgContainer}>
-        <View style={[styles.bgGradient, { backgroundColor: '#121414' }]} />
-        <View style={[styles.bgGradient, { backgroundColor: '#000000', opacity: 0.85 }]} />
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <StatusBar style="light" />
+
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Feather name="arrow-left" size={24} color="#ffffff" />
+        </TouchableOpacity>
       </View>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
-        <View style={styles.inner}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <MaterialIcons name="chevron-left" size={28} color="#ffffff" />
+
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+
+          <Text style={styles.title}>Check your email</Text>
+          <Text style={styles.subtitle}>
+            We sent a 6-digit code to <Text style={styles.subtitleHighlight}>{email}</Text>
+          </Text>
+
+          {error ? (
+            <View style={styles.errorBox}>
+              <MaterialIcons name="info-outline" size={16} color="#ffb020" />
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
+
+          <View style={styles.otpRow}>
+            {otp.map((digit, index) => (
+              <TextInput
+                key={index}
+                ref={(r) => (inputs.current[index] = r)}
+                style={[styles.otpBox, digit ? styles.otpBoxFilled : null]}
+                value={digit}
+                onChangeText={(t) => handleChange(t.slice(-1), index)}
+                onKeyPress={(e) => handleKeyPress(e, index)}
+                keyboardType="numeric"
+                maxLength={1}
+                selectTextOnFocus
+                editable={!loading}
+              />
+            ))}
+          </View>
+
+          <TouchableOpacity style={styles.primaryButton} onPress={handleVerify} disabled={loading} activeOpacity={0.85}>
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Verify email</Text>}
           </TouchableOpacity>
 
-          <View style={styles.headerSection}>
-            <Text style={styles.mainTitle}>Check{'\n'}your{'\n'}email</Text>
-          </View>
+          <TouchableOpacity onPress={handleResend} disabled={countdown > 0 || resending} style={styles.resendWrap}>
+            <Text style={[styles.resendText, countdown === 0 && styles.resendTextActive]}>
+              {resending ? 'Sending...' : countdown > 0 ? `Resend in ${countdown}s` : 'Resend code'}
+            </Text>
+          </TouchableOpacity>
 
-          <View style={styles.formCard}>
-            <View style={styles.formContent}>
-              <Text style={styles.subtitle}>We sent a 6-digit code to</Text>
-              <Text style={styles.emailText}>{email}</Text>
-
-              {error ? (
-                <View style={styles.errorBox}>
-                  <MaterialIcons name="error-outline" size={16} color="#ff5555" />
-                  <Text style={styles.errorText}>{error}</Text>
-                </View>
-              ) : null}
-
-              <Text style={styles.fieldLabel}>VERIFICATION CODE</Text>
-              <View style={styles.otpRow}>
-                {otp.map((digit, index) => (
-                  <TextInput
-                    key={index}
-                    ref={(r) => (inputs.current[index] = r)}
-                    style={[styles.otpBox, digit ? styles.otpBoxFilled : null]}
-                    value={digit}
-                    onChangeText={(t) => handleChange(t.slice(-1), index)}
-                    onKeyPress={(e) => handleKeyPress(e, index)}
-                    keyboardType="numeric"
-                    maxLength={1}
-                    selectTextOnFocus
-                  />
-                ))}
-              </View>
-
-              <TouchableOpacity
-                style={styles.verifyButton}
-                onPress={handleVerify}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#121414" size="small" />
-                ) : (
-                  <View style={styles.buttonContent}>
-                    <Text style={styles.buttonText}>Verify Email</Text>
-                    <MaterialIcons name="verified" size={18} color="#121414" style={{ marginLeft: 12 }} />
-                  </View>
-                )}
-              </TouchableOpacity>
-
-              <View style={styles.dividerLine} />
-
-              <View style={styles.resendRow}>
-                <Text style={styles.resendLabel}>DIDN'T RECEIVE CODE? </Text>
-                {countdown > 0 ? (
-                  <Text style={styles.countdown}>RESEND IN {countdown}S</Text>
-                ) : (
-                  <TouchableOpacity onPress={handleResend} disabled={resending}>
-                    <Text style={styles.resendLink}>{resending ? 'SENDING...' : 'RESEND'}</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
-          </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
-
-      <View style={styles.bottomStatus}>
-        <Text style={styles.statusText}>UPLINK: ACTIVE [99.2%]</Text>
-      </View>
     </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#121414', overflow: 'hidden' },
-  bgContainer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0 },
-  bgGradient: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  embersContainer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1 },
-  ember: { position: 'absolute', width: 2, height: 2, backgroundColor: '#ff525f', borderRadius: 1 },
-  flex: { flex: 1, zIndex: 5 },
-  inner: { flex: 1, paddingHorizontal: 16, paddingTop: 60, paddingBottom: 20 },
-  backButton: { position: 'absolute', top: 16, left: 16, width: 44, height: 44, justifyContent: 'center', alignItems: 'flex-start', zIndex: 20 },
-  headerSection: { marginBottom: 40, paddingTop: 8, paddingLeft: 12 },
-  badgeText: { fontSize: 16, fontWeight: '900', color: '#ff525f', letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 12 },
-  mainTitle: { fontSize: 52, fontWeight: '900', color: '#e2e2e2', letterSpacing: -2, textTransform: 'uppercase', lineHeight: 56, fontStyle: 'italic', marginBottom: 12, zIndex: 200 },
-  formCard: { backgroundColor: 'rgba(18,20,20,0.85)', borderWidth: 1, marginTop: 0, zIndex: 1, borderColor: 'rgba(255,255,255,0.7)', padding: 28, marginBottom: 28 },
-  formContent: {},
-  subtitle: { fontSize: 15, color: '#ae8787', marginBottom: 4 },
-  emailText: { fontSize: 17, fontWeight: '700', color: '#ff525f', marginBottom: 24, letterSpacing: 0.3 },
-  errorBox: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,82,95,0.12)', borderLeftWidth: 4, borderLeftColor: '#ff525f', padding: 12, marginBottom: 20 },
-  errorText: { fontSize: 12, color: '#ff9999', fontWeight: '600', flex: 1, textTransform: 'uppercase' },
-  fieldLabel: { fontSize: 11, fontWeight: '800', color: '#ae8787', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 12 },
-  otpRow: { flexDirection: 'row', gap: 8, marginBottom: 28 },
-  otpBox: { flex: 1, height: 56, borderWidth: 2, borderColor: 'rgba(255,179,179,0.3)', backgroundColor: '#1a1a1a', textAlign: 'center', fontSize: 22, fontWeight: '700', color: '#e2e2e2' },
-  otpBoxFilled: { borderColor: '#ff525f', backgroundColor: '#2a1a1a' },
-  verifyButton: { backgroundColor: '#e2e2e2', paddingVertical: 16, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 24, position: 'relative', overflow: 'visible' },
-  buttonShade: { top: 0, height: '100%', width: 12, zIndex: -1 },
-  buttonContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  buttonText: { color: '#121414', fontWeight: '900', fontSize: 15, letterSpacing: 1.2, textTransform: 'uppercase' },
-  dividerLine: { height: 1, backgroundColor: 'rgba(255,255,255,0.12)', marginVertical: 16 },
-  resendRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  resendLabel: { fontSize: 11, color: '#ae8787', fontWeight: '600' },
-  countdown: { fontSize: 11, color: '#ae8787', fontWeight: '700' },
-  resendLink: { fontSize: 11, color: '#ffffff', fontWeight: '800', letterSpacing: 0.5 },
-  accentBars: { flexDirection: 'row', gap: 8 },
-  bar: { height: 3, borderRadius: 1.5 },
-  bottomStatus: { position: 'absolute', bottom: 20, right: 20, zIndex: 10 },
-  statusText: { fontSize: 10, color: '#ff525f', fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', fontFamily: 'monospace' },
+  container: { flex: 1, backgroundColor: '#000000' },
+  flex: { flex: 1 },
+  header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4 },
+  scrollContent: { paddingHorizontal: 24, paddingTop: 32, paddingBottom: 40 },
+
+  title: { fontSize: 28, fontWeight: '800', color: '#fff', marginBottom: 8, letterSpacing: -0.3 },
+  subtitle: { fontSize: 14, color: 'rgba(255,255,255,0.55)', marginBottom: 24, lineHeight: 20 },
+  subtitleHighlight: { color: '#fff', fontWeight: '700' },
+
+  errorBox: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,176,32,0.35)', borderRadius: 10, padding: 12, marginBottom: 20 },
+  errorText: { color: 'rgba(255,255,255,0.85)', fontSize: 13, flex: 1 },
+
+  otpRow: { flexDirection: 'row', gap: 8, marginBottom: 24 },
+  otpBox: { flex: 1, height: 56, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', borderRadius: 10, textAlign: 'center', fontSize: 20, fontWeight: '700', color: '#fff' },
+  otpBoxFilled: { borderColor: '#8B5CF6', backgroundColor: 'rgba(139,92,246,0.08)' },
+
+  primaryButton: { backgroundColor: '#8B5CF6', height: 50, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
+  primaryButtonText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+
+  resendWrap: { alignItems: 'center', marginTop: 16 },
+  resendText: { fontSize: 13, color: 'rgba(255,255,255,0.4)', fontWeight: '600' },
+  resendTextActive: { color: '#8B5CF6' },
 })
