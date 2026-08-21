@@ -41,12 +41,6 @@ function AvatarStack({ pulseAnim }: any) {
           </View>
         ))}
       </View>
-      <View style={as.textCol}>
-        <View style={as.liveRow}>
-          <Animated.View style={[as.liveDot, { transform: [{ scale: pulseAnim }] }]} />
-          <Text style={as.liveTxt}>12 people nearby</Text>
-        </View>
-      </View>
     </View>
   )
 }
@@ -340,7 +334,7 @@ export default function LandingScreen() {
 }
 
 const as = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 24 },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
   stack: { flexDirection: 'row', alignItems: 'center' },
   avatar: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#050505' },
   avatarTxt: { fontSize: 12, fontWeight: '800', color: '#fff' },
