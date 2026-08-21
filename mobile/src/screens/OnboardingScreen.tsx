@@ -9,6 +9,7 @@ import { MaterialIcons } from '@expo/vector-icons'
 import * as Location from 'expo-location'
 import { LinearGradient } from 'expo-linear-gradient'
 import { apiFetch } from '../lib/api'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 const AMBER = '#e8824a'
 const AMBER_LIGHT = 'rgba(232,130,74,0.7)'
@@ -52,7 +53,6 @@ export default function OnboardingScreen() {
   const fetchNearbyPlaces = async () => {
     setPlacesLoading(true)
     setError('')
-    setPlaces([])
     setSelectedPlace(null)
     try {
       const { status } = await Location.requestForegroundPermissionsAsync()
@@ -73,7 +73,9 @@ export default function OnboardingScreen() {
         latitude: coords.latitude,
         longitude: coords.longitude,
       })
-      setPlaces(Array.isArray(result) ? result : [])
+      const list = Array.isArray(result) ? result : []
+      setPlaces(list)
+      AsyncStorage.setItem('cached_nearby_places', JSON.stringify(list)).catch(() => {})
     } catch (e: any) {
       setError(e.message || 'Could not load nearby places.')
     } finally {
@@ -98,6 +100,11 @@ export default function OnboardingScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      AsyncStorage.getItem('cached_nearby_places').then(cached => {
+        if (cached) {
+          try { setPlaces(JSON.parse(cached)) } catch {}
+        }
+      })
       fetchNearbyPlaces()
       const interval = setInterval(() => {
         if (!selectedPlace) fetchNearbyPlaces()
