@@ -6,8 +6,10 @@ import DrawerMenu from './DrawerMenu'
 import { useEffect, useRef, useState } from 'react'
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, Animated, Modal, ActivityIndicator, Dimensions, Image,
+  ScrollView, Animated, Modal, ActivityIndicator, Dimensions,
 } from 'react-native'
+import { Image } from 'expo-image'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
 import { MaterialIcons, Feather } from '@expo/vector-icons'
@@ -68,13 +70,21 @@ export default function LandingScreen() {
 
   useEffect(() => {
     (async () => {
+      // Show cached avatar instantly (no network wait)
+      try {
+        const cached = await AsyncStorage.getItem('avatar_profile_cache')
+        if (cached) setAvatarProfile(JSON.parse(cached))
+      } catch {}
+      // Then refresh in the background
       try {
         const data = await apiFetch('/api/places/state', {}).catch(() => null)
         const user = data?.session?.user
         if (user) {
           const name = user.username || user.name || '?'
           const rawUrl = data?.profile?.photoUrl || user.image || null
-          setAvatarProfile({ photoUrl: rawUrl, initials: name.slice(0, 2).toUpperCase() })
+          const fresh = { photoUrl: rawUrl, initials: name.slice(0, 2).toUpperCase() }
+          setAvatarProfile(fresh)
+          AsyncStorage.setItem('avatar_profile_cache', JSON.stringify(fresh)).catch(() => {})
         }
       } catch {}
     })()
@@ -124,7 +134,7 @@ export default function LandingScreen() {
       <View style={s.nav}>
         <TouchableOpacity activeOpacity={0.7} onPress={() => navigation.navigate('AccountMenu' as never)}>
           {avatarProfile?.photoUrl ? (
-            <Image source={{ uri: avatarProfile.photoUrl }} style={s.headerAvatarImg} />
+            <Image source={{ uri: avatarProfile.photoUrl }} style={s.headerAvatarImg} cachePolicy="disk" transition={150} />
           ) : (
             <View style={s.headerAvatarFallback}>
               <Text style={s.headerAvatarTxt}>{avatarProfile?.initials || '?'}</Text>
