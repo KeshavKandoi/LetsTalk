@@ -1,26 +1,51 @@
 import { useNavigation } from '@react-navigation/native'
 import { useNetworkCheck } from '../hooks/useNetworkCheck'
 import { getSession, signOut } from '../lib/auth'
+import { apiFetch } from '../lib/api'
 import DrawerMenu from './DrawerMenu'
 import { useEffect, useRef, useState } from 'react'
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, Animated, Modal, ActivityIndicator, Dimensions,
+  ScrollView, Animated, Modal, ActivityIndicator, Dimensions, Image,
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
-import { MaterialIcons, Feather } from '@expo/vector-icons'
-import { LinearGradient } from 'expo-linear-gradient'
 import { StatusBar } from 'expo-status-bar'
+import { MaterialIcons, Feather } from '@expo/vector-icons'
 
-const { width, height } = Dimensions.get('window')
+const { width } = Dimensions.get('window')
+const ACCENT = '#7C5CFC'
+const ACCENT_DIM = 'rgba(124,92,252,0.15)'
+const MUTED = 'rgba(255,255,255,0.55)'
+const BORDER = 'rgba(255,255,255,0.08)'
 const AMBER = '#e8824a'
-const AMBER_DIM = 'rgba(232,130,74,0.15)'
-const MUTED = 'rgba(255,180,100,0.55)'
-const DARK = '#050302'
 
 function EmberBackground() {
+  return <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#050505' }]} pointerEvents="none" />
+}
+
+function AvatarStack({ pulseAnim }: any) {
+  const avatars = [
+    { l: 'R', c: '#7C5CFC' },
+    { l: 'P', c: '#9F7AEA' },
+    { l: 'A', c: '#6D5BD0' },
+    { l: 'K', c: '#5B4BC4' },
+  ]
   return (
-    <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#000000' }]} pointerEvents="none" />
+    <View style={as.row}>
+      <View style={as.stack}>
+        {avatars.map((a, i) => (
+          <View key={a.l} style={[as.avatar, { backgroundColor: a.c, marginLeft: i === 0 ? 0 : -12, zIndex: avatars.length - i }]}>
+            <Text style={as.avatarTxt}>{a.l}</Text>
+          </View>
+        ))}
+      </View>
+      <View style={as.textCol}>
+        <View style={as.liveRow}>
+          <Animated.View style={[as.liveDot, { transform: [{ scale: pulseAnim }] }]} />
+          <Text style={as.liveTxt}>12 people nearby</Text>
+        </View>
+      </View>
+    </View>
   )
 }
 
@@ -32,33 +57,40 @@ export default function LandingScreen() {
   const [drawerVisible, setDrawerVisible] = useState(false)
   const [profile, setProfile] = useState<any>(null)
   const [profileLoading, setProfileLoading] = useState(false)
+  const [avatarProfile, setAvatarProfile] = useState<{ photoUrl?: string; initials: string } | null>(null)
 
   const fadeAnim = useRef(new Animated.Value(0)).current
   const slideAnim = useRef(new Animated.Value(50)).current
-  const floatAnim = useRef(new Animated.Value(0)).current
   const pulseAnim = useRef(new Animated.Value(1)).current
   const step1 = useRef(new Animated.Value(0)).current
   const step2 = useRef(new Animated.Value(0)).current
   const step3 = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
+    (async () => {
+      try {
+        const data = await apiFetch('/api/places/state', {}).catch(() => null)
+        const user = data?.session?.user
+        if (user) {
+          const name = user.username || user.name || '?'
+          const rawUrl = data?.profile?.photoUrl || user.image || null
+          setAvatarProfile({ photoUrl: rawUrl, initials: name.slice(0, 2).toUpperCase() })
+        }
+      } catch {}
+    })()
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 1200, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 1000, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 900, useNativeDriver: true }),
     ]).start()
     Animated.loop(Animated.sequence([
-      Animated.timing(floatAnim, { toValue: -14, duration: 3000, useNativeDriver: true }),
-      Animated.timing(floatAnim, { toValue: 0, duration: 3000, useNativeDriver: true }),
-    ])).start()
-    Animated.loop(Animated.sequence([
-      Animated.timing(pulseAnim, { toValue: 1.04, duration: 1400, useNativeDriver: true }),
-      Animated.timing(pulseAnim, { toValue: 1, duration: 1400, useNativeDriver: true }),
+      Animated.timing(pulseAnim, { toValue: 1.15, duration: 1200, useNativeDriver: true }),
+      Animated.timing(pulseAnim, { toValue: 1, duration: 1200, useNativeDriver: true }),
     ])).start()
     const bounce = (anim: Animated.Value, delay: number) => setTimeout(() =>
       Animated.spring(anim, { toValue: 1, useNativeDriver: true, friction: 7, tension: 60 }).start(), delay)
-    bounce(step1, 600)
-    bounce(step2, 850)
-    bounce(step3, 1100)
+    bounce(step1, 500)
+    bounce(step2, 700)
+    bounce(step3, 900)
   }, [])
 
   const openProfile = async () => {
@@ -89,121 +121,69 @@ export default function LandingScreen() {
       <EmberBackground />
       <StatusBar style="light" />
 
-      {/* Nav */}
       <View style={s.nav}>
+        <TouchableOpacity activeOpacity={0.7} onPress={() => navigation.navigate('AccountMenu' as never)}>
+          {avatarProfile?.photoUrl ? (
+            <Image source={{ uri: avatarProfile.photoUrl }} style={s.headerAvatarImg} />
+          ) : (
+            <View style={s.headerAvatarFallback}>
+              <Text style={s.headerAvatarTxt}>{avatarProfile?.initials || '?'}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
         <View style={s.navBrand}>
-          <Feather name="message-circle" size={22} color="#8B5CF6" />
+          <View style={s.logoMark}>
+            <Feather name="message-circle" size={15} color="#fff" />
+          </View>
           <Text style={s.navTitle}>Let's Talk</Text>
         </View>
-        <TouchableOpacity activeOpacity={0.88} style={s.joinBtnWrap} onPress={handleJoin}>
-          <LinearGradient
-            colors={['#EC4899', '#8B5CF6', '#6366F1']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={s.joinBtn}
-          >
-            <Text style={s.joinBtnText}>Join Now</Text>
-          </LinearGradient>
+        <TouchableOpacity activeOpacity={0.7} style={s.navIconBtn} onPress={openProfile}>
+          <Feather name="settings" size={19} color="rgba(255,255,255,0.55)" />
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* ── HERO ── */}
         <Animated.View style={[s.hero, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
 
           <Text style={s.heroTitle}>
-            <Text style={s.heroTitleLight}>Real people. Real places.{'\n'}</Text>
+            <Text style={s.heroTitleLight}>Real people.{'\n'}</Text>
             <Text style={s.heroTitleBold}>Real conversations.</Text>
           </Text>
           <Text style={s.heroSub}>Meet people nearby who actually want to talk.</Text>
 
-          {/* Feature strip */}
-          <View style={s.featureStrip}>
+          <AvatarStack pulseAnim={pulseAnim} />
+
+          <TouchableOpacity activeOpacity={0.88} style={s.ctaBtn} onPress={handleJoin}>
+            <Feather name="navigation" size={19} color="#fff" />
+            <Text style={s.ctaBtnText}>Find people nearby</Text>
+          </TouchableOpacity>
+
+          <View style={s.benefitsRow}>
             {[
-              { icon: <Feather name="zap" size={14} color={MUTED} />, text: 'No swiping' },
-              { icon: <Feather name="map-pin" size={14} color={MUTED} />, text: 'Real venues' },
-              { icon: <Feather name="message-circle" size={14} color={MUTED} />, text: 'In-person talk' },
+              { icon: 'zap', text: 'No swiping' },
+              { icon: 'map-pin', text: 'Real venues' },
+              { icon: 'message-circle', text: 'Talk in person' },
             ].map((f, i) => (
-              <View key={i} style={s.featureItem}>
-                {f.icon}
-                <Text style={s.featureText}>{f.text}</Text>
+              <View key={i} style={s.benefitItem}>
+                <Feather name={f.icon as any} size={13} color="rgba(255,255,255,0.6)" />
+                <Text style={s.benefitText}>{f.text}</Text>
               </View>
             ))}
           </View>
-
-          {/* CTA */}
-          <Animated.View style={[s.ctaBtnWrap, { transform: [{ scale: pulseAnim }] }]}>
-            <TouchableOpacity activeOpacity={0.88} style={s.ctaBtnOuter} onPress={handleJoin}>
-              <LinearGradient
-                colors={['#EC4899', '#8B5CF6', '#6366F1']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={s.ctaBtn}
-              >
-                <Feather name="navigation" size={20} color="#fffaf6" />
-                <Text style={s.ctaBtnText}>Find People Nearby</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </Animated.View>
-
-          {/* Activity card */}
-          <Animated.View style={[s.actCard, { transform: [{ translateY: floatAnim }] }]}>
-            <View style={s.actLeft}>
-              <View style={s.actAvatarRow}>
-                {['R','P','A','K'].map((l, i) => (
-                  <View key={l} style={[s.actAvatar, { marginLeft: i === 0 ? 0 : -10, backgroundColor: ['#e8824a','#5b8dee','#3dbf7a','#d45b8a'][i] }]}>
-                    <Text style={s.actAvatarTxt}>{l}</Text>
-                  </View>
-                ))}
-              </View>
-              <Text style={s.actTitle}>A live room feels better than a feed</Text>
-              <View style={s.actVenueRow}>
-                <Feather name="map-pin" size={11} color={MUTED} />
-                <Text style={s.actVenue}>CHECK IN, SEE WHO'S OPEN TO CHAT</Text>
-              </View>
-            </View>
-            <View style={s.actPing}>
-              <Animated.View style={[s.actPingRing, { transform: [{ scale: pulseAnim }] }]} />
-              <View style={s.actPingDot} />
-            </View>
-          </Animated.View>
         </Animated.View>
 
-        {/* ── DIVIDER ── */}
         <View style={s.divider}>
           <View style={s.divLine} />
           <Text style={s.divTxt}>HOW IT WORKS</Text>
           <View style={s.divLine} />
         </View>
 
-        {/* ── STEPS ── */}
         <View style={s.stepsWrap}>
           {[
-            {
-              anim: step1, num: '01',
-              icon: <Feather name="smile" size={25} color="#8B5CF6" />,
-              title: 'Set your vibe',
-              desc: 'Tell the room what you\'re in the mood for — deep talk, casual chat, or just good company.',
-              tag: 'Takes 10 seconds',
-              tagColor: '#3dbf7a',
-            },
-            {
-              anim: step2, num: '02',
-              icon: <Feather name="map-pin" size={25} color="#8B5CF6" />,
-              title: 'Walk in, check in',
-              desc: 'Arrive at any participating cafe or venue. One tap puts you on the live map.',
-              tag: 'Location verified',
-              tagColor: '#5b8dee',
-            },
-            {
-              anim: step3, num: '03',
-              icon: <Feather name="message-circle" size={25} color="#8B5CF6" />,
-              title: 'Say hello for real',
-              desc: 'See who\'s there, break the ice digitally, then look up and actually talk.',
-              tag: 'No swiping. No matching.',
-              tagColor: AMBER,
-            },
+            { anim: step1, num: '01', icon: <Feather name="smile" size={22} color={ACCENT} />, title: 'Set your vibe', desc: 'Tell the room what you\'re in the mood for.', tag: 'Takes 10 seconds', tagColor: '#3dbf7a' },
+            { anim: step2, num: '02', icon: <Feather name="map-pin" size={22} color={ACCENT} />, title: 'Walk in, check in', desc: 'Arrive at a participating venue and tap in.', tag: 'Location verified', tagColor: '#5b8dee' },
+            { anim: step3, num: '03', icon: <Feather name="message-circle" size={22} color={ACCENT} />, title: 'Say hello for real', desc: 'See who\'s there, break the ice, then talk.', tag: 'No swiping. No matching.', tagColor: AMBER },
           ].map((step) => (
             <Animated.View key={step.num} style={[s.stepCard, { opacity: step.anim, transform: [{ scale: step.anim }] }]}>
               <View style={s.stepTop}>
@@ -220,16 +200,15 @@ export default function LandingScreen() {
           ))}
         </View>
 
-        {/* ── WHY ── */}
         <View style={s.whySect}>
           <Text style={s.whyTitle}>Why Let's Talk?</Text>
-          <Text style={s.whySub}>Because real connection doesn't happen on a screen — it happens across a table.</Text>
+          <Text style={s.whySub}>Real connection happens across a table, not a screen.</Text>
           <View style={s.whyGrid}>
           {[
-              { icon: <Feather name="eye-off" size={24} color="#8B5CF6" />, title: 'No endless scrolling', desc: 'You\'re not here to scroll. You\'re here to talk.' },
-              { icon: <Feather name="shield" size={24} color="#8B5CF6" />, title: 'No fake profiles', desc: 'You\'re physically at the same place. It\'s real.' },
-              { icon: <Feather name="zap" size={24} color="#8B5CF6" />, title: 'Instant connection', desc: 'No waiting. People are there right now.' },
-              { icon: <Feather name="sliders" size={24} color="#8B5CF6" />, title: 'You\'re in control', desc: 'Set your mood, choose who to talk to.' },
+              { icon: <Feather name="eye-off" size={22} color={ACCENT} />, title: 'No endless scrolling', desc: 'You\'re here to talk, not scroll.' },
+              { icon: <Feather name="shield" size={22} color={ACCENT} />, title: 'No fake profiles', desc: 'Same place, same moment. It\'s real.' },
+              { icon: <Feather name="zap" size={22} color={ACCENT} />, title: 'Instant connection', desc: 'No waiting. People are there now.' },
+              { icon: <Feather name="sliders" size={22} color={ACCENT} />, title: 'You\'re in control', desc: 'Set your mood, choose who to talk to.' },
             ].map((item, i) => (
               <View key={i} style={s.whyCard}>
                 <View style={s.whyIconBox}>{item.icon}</View>
@@ -240,33 +219,30 @@ export default function LandingScreen() {
           </View>
         </View>
 
-        {/* ── QUOTE ── */}
         <View style={s.finalSect}>
           <View style={s.finalGlow} />
           <View style={s.finalPinRing}>
-            <LinearGradient colors={['#8B5CF6', '#6366F1']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.finalPinBadge}>
-              <Feather name="map-pin" size={26} color="#fff" />
-            </LinearGradient>
+            <View style={s.finalPinBadge}>
+              <Feather name="map-pin" size={24} color="#fff" />
+            </View>
           </View>
           <Text style={s.finalTitle}>Your next real conversation is <Text style={s.finalTitleHighlight}>nearby</Text>.</Text>
           <Text style={s.finalSub}>Step into a small, growing network of people who came here to talk face to face.</Text>
-          <TouchableOpacity activeOpacity={0.88} style={s.finalBtnWrap} onPress={handleJoin}>
-            <LinearGradient colors={['#EC4899', '#8B5CF6', '#6366F1']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.finalBtn}>
-              <Text style={s.finalBtnTxt}>Start Now — It's Free</Text>
-              <Feather name="arrow-right" size={18} color="#fffaf6" />
-            </LinearGradient>
+          <TouchableOpacity activeOpacity={0.88} style={s.finalBtn} onPress={handleJoin}>
+            <Text style={s.finalBtnTxt}>Start now — it's free</Text>
+            <Feather name="arrow-right" size={18} color="#fff" />
           </TouchableOpacity>
           <View style={s.finalIconRow}>
             <View style={s.finalIconItem}>
-              <Feather name="credit-card" size={18} color="rgba(255,255,255,0.65)" />
+              <Feather name="credit-card" size={16} color="rgba(255,255,255,0.5)" />
               <Text style={s.finalIconLabel}>No credit card</Text>
             </View>
             <View style={s.finalIconItem}>
-              <Feather name="message-circle" size={18} color="#FF8C42" />
+              <Feather name="message-circle" size={16} color="rgba(255,255,255,0.5)" />
               <Text style={s.finalIconLabel}>No algorithm</Text>
             </View>
             <View style={s.finalIconItem}>
-              <Feather name="users" size={18} color="#8B5CF6" />
+              <Feather name="users" size={16} color="rgba(255,255,255,0.5)" />
               <Text style={s.finalIconLabel}>Just people</Text>
             </View>
           </View>
@@ -276,13 +252,12 @@ export default function LandingScreen() {
 
       <DrawerMenu visible={drawerVisible} onClose={() => setDrawerVisible(false)} />
 
-      {/* Profile modal */}
       <Modal visible={profileVisible} transparent animationType="slide" onRequestClose={() => setProfileVisible(false)}>
         <TouchableOpacity style={ps.overlay} activeOpacity={1} onPress={() => setProfileVisible(false)}>
           <TouchableOpacity activeOpacity={1} style={ps.sheet}>
             <View style={ps.handle} />
             {profileLoading ? (
-              <ActivityIndicator color={AMBER} size="large" style={{ marginVertical: 40 }} />
+              <ActivityIndicator color={ACCENT} size="large" style={{ marginVertical: 40 }} />
             ) : profile?.session ? (
               <>
                 <View style={ps.avatarRow}>
@@ -302,7 +277,7 @@ export default function LandingScreen() {
                     : <View style={ps.tag}><Text style={ps.tagTxt}>🏠 Not checked in</Text></View>}
                 </View>
                 <TouchableOpacity style={ps.fullBtn} onPress={() => { setProfileVisible(false); navigation.navigate('Profile' as never) }}>
-                  <Text style={ps.fullBtnTxt}>View Full Profile</Text>
+                  <Text style={ps.fullBtnTxt}>View full profile</Text>
                   <MaterialIcons name="arrow-forward" size={16} color="#fff" />
                 </TouchableOpacity>
                 <TouchableOpacity style={ps.logoutBtn} onPress={handleLogout}>
@@ -326,156 +301,138 @@ export default function LandingScreen() {
         </TouchableOpacity>
       </Modal>
 
-      {/* Bottom nav */}
       <View style={[s.bottomNav, { paddingBottom: insets.bottom + 8 }]}>
-          {[
-          { icon: 'compass', label: 'Explore', active: true, guard: false, badge: 0 },
-          { icon: 'map-pin', label: 'Nearby', active: false, guard: true, badge: 0 },
-          { icon: 'message-circle', label: 'Chats', active: false, guard: true, badge: 0 },
-          { icon: 'user', label: 'Profile', active: false, guard: false, badge: 0 },
-        ].map(item => (
-          <TouchableOpacity
-            key={item.label}
-            style={[s.navItem, item.active && s.navItemActive]}
-            onPress={async () => {
-              if (item.label === 'Profile') { setDrawerVisible(true); return }
-              if (item.guard) {
-                if (!isConnected) return
-                try {
-                  const session = await getSession()
-                  if (!session?.session) { navigation.navigate('Signup' as never); return }
-                  if (item.label === 'Chats') { navigation.navigate('Friends' as never); return }
-                  navigation.navigate('Onboarding' as never)
-                } catch { navigation.navigate('Signup' as never) }
-              }
-            }}
-          >
-            <Feather name={item.icon as any} size={22} color={item.active ? '#FF8C42' : 'rgba(255,255,255,0.38)'} />
-            <Text style={[s.navItemLabel, item.active && s.navItemLabelActive]}>{item.label}</Text>
-          </TouchableOpacity>
-        ))}
+        <TouchableOpacity style={[s.navItem, s.navItemActive]}>
+          <Feather name="compass" size={22} color={ACCENT} />
+          <Text style={[s.navItemLabel, s.navItemLabelActive]}>Explore</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={s.navItem} onPress={async () => {
+          if (!isConnected) return
+          try {
+            const session = await getSession()
+            if (!session?.session) { navigation.navigate('Signup' as never); return }
+            navigation.navigate('Onboarding' as never)
+          } catch { navigation.navigate('Signup' as never) }
+        }}>
+          <Feather name="map-pin" size={22} color="rgba(255,255,255,0.38)" />
+          <Text style={s.navItemLabel}>Nearby</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={s.navItem} onPress={async () => {
+          if (!isConnected) return
+          try {
+            const session = await getSession()
+            if (!session?.session) { navigation.navigate('Signup' as never); return }
+            navigation.navigate('Friends' as never)
+          } catch { navigation.navigate('Signup' as never) }
+        }}>
+          <Feather name="message-circle" size={22} color="rgba(255,255,255,0.38)" />
+          <Text style={s.navItemLabel}>Chats</Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   )
 }
 
-const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#090909' },
+const as = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 24 },
+  stack: { flexDirection: 'row', alignItems: 'center' },
+  avatar: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#050505' },
+  avatarTxt: { fontSize: 12, fontWeight: '800', color: '#fff' },
+  textCol: { justifyContent: 'center' },
+  liveRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  liveDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#3dbf7a' },
+  liveTxt: { fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.75)' },
+})
 
-  nav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 22, paddingTop: 14, paddingBottom: 12, backgroundColor: 'rgba(20,20,20,0.85)', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)', zIndex: 10, shadowColor: '#000', shadowOpacity: 0.22, shadowRadius: 24, elevation: 6 },
-  navBrand: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  navTitle: { fontSize: 19, fontWeight: '900', color: '#fff', letterSpacing: -0.2 },
-  joinBtnWrap: { borderRadius: 999, overflow: 'hidden', shadowColor: '#FF8C42', shadowOpacity: 0.28, shadowRadius: 30, elevation: 8 },
-  joinBtn: { borderRadius: 999, paddingHorizontal: 18, paddingVertical: 10, minWidth: 104, alignItems: 'center', justifyContent: 'center' },
-  joinBtnText: { color: '#fff', fontWeight: '800', fontSize: 13, letterSpacing: 0.2 },
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#050505' },
+
+  nav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 12, zIndex: 10 },
+  navBrand: { flexDirection: 'row', alignItems: 'center', gap: 9, flex: 1, justifyContent: 'center', marginLeft: -32 },
+  logoMark: { width: 28, height: 28, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: ACCENT },
+  navTitle: { fontSize: 17, fontWeight: '800', color: '#fff', letterSpacing: -0.2 },
+  navIconBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.05)' },
 
   scroll: { paddingBottom: 132 },
 
-  // HERO
-  hero: { paddingHorizontal: 18, paddingTop: 32, paddingBottom: 20, alignItems: 'center' },
-  livePill: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(17,17,17,0.74)', borderWidth: 1, borderColor: 'rgba(139,92,246,0.35)', borderRadius: 999, paddingHorizontal: 13, paddingVertical: 7, marginBottom: 28, shadowColor: '#000', shadowOpacity: 0.16, shadowRadius: 14, elevation: 2 },
-  liveDotRing: { width: 12, height: 12, borderRadius: 6, backgroundColor: 'rgba(139,92,246,0.22)', justifyContent: 'center', alignItems: 'center' },
-  liveDotCore: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#8B5CF6' },
-  livePillText: { fontSize: 10, fontWeight: '900', color: '#fff', letterSpacing: 2.2 },
+  hero: { paddingHorizontal: 24, paddingTop: 28, paddingBottom: 8, alignItems: 'center' },
+  heroTitle: { textAlign: 'center', marginBottom: 10 },
+  heroTitleLight: { fontSize: 26, fontWeight: '600', color: 'rgba(255,255,255,0.6)', lineHeight: 32, letterSpacing: -0.3 },
+  heroTitleBold: { fontSize: 34, fontWeight: '900', color: '#fff', lineHeight: 40, letterSpacing: -0.6 },
+  heroSub: { fontSize: 15, color: MUTED, textAlign: 'center', lineHeight: 21, marginBottom: 26, maxWidth: '82%' },
 
-  heroTitle: { textAlign: 'center', marginBottom: 28 },
-  heroTitleLight: { fontSize: 24, fontWeight: '600', color: 'rgba(255,255,255,0.65)', lineHeight: 32, letterSpacing: -0.2 },
-  heroTitleBold: { fontSize: 34, fontWeight: '900', color: '#fff', lineHeight: 42, letterSpacing: -0.6 },
-  heroSub: { fontSize: 16, color: 'rgba(255,255,255,0.65)', textAlign: 'center', lineHeight: 22, marginBottom: 38, paddingHorizontal: 8, maxWidth: '86%' },
-  featureStrip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 42, flexWrap: 'wrap' },
-  featureItem: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 6 },
-  featureText: { fontSize: 11, color: 'rgba(255,255,255,0.65)', fontWeight: '600' },
+  ctaBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 56, width: '100%', borderRadius: 999, backgroundColor: ACCENT, marginBottom: 20, shadowColor: ACCENT, shadowOpacity: 0.35, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
+  ctaBtnText: { color: '#fff', fontWeight: '700', fontSize: 16, letterSpacing: 0.1 },
 
-  statsRow: { flexDirection: 'row', width: '100%', backgroundColor: 'rgba(17,17,17,0.88)', borderRadius: 24, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)', marginBottom: 26, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 24, elevation: 4 },
-  statBox: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 26, paddingHorizontal: 10, backgroundColor: 'rgba(255,255,255,0.01)' },
-  statBorder: { borderRightWidth: 1, borderRightColor: 'rgba(255,255,255,0.08)' },
-  statTitle: { fontSize: 19, fontWeight: '800', color: '#fff', textAlign: 'center', lineHeight: 23, marginBottom: 8, letterSpacing: -0.3 },
-  statLbl: { fontSize: 11, color: 'rgba(255,255,255,0.65)', fontWeight: '600', letterSpacing: 0.1, textAlign: 'center', lineHeight: 15 },
+  benefitsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' },
+  benefitItem: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderColor: BORDER, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 999, paddingHorizontal: 11, paddingVertical: 7 },
+  benefitText: { fontSize: 12, color: 'rgba(255,255,255,0.65)', fontWeight: '600' },
 
-  ctaBtnWrap: { width: '100%', marginBottom: 28 },
-  ctaBtnOuter: { borderRadius: 999, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.16, shadowRadius: 24, elevation: 10 },
-  ctaBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderRadius: 999, height: 58, paddingHorizontal: 26, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
-  ctaBtnText: { color: '#fffaf6', fontWeight: '700', fontSize: 16, letterSpacing: 0.1 },
-  signinHint: { fontSize: 13, color: 'rgba(255,255,255,0.65)', marginBottom: 26 },
+  divider: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 22, marginVertical: 42, gap: 14 },
+  divLine: { flex: 1, height: 1, backgroundColor: BORDER },
+  divTxt: { fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.4)', letterSpacing: 3 },
 
-  actCard: { width: '100%', backgroundColor: 'rgba(17,17,17,0.92)', borderRadius: 24, padding: 18, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 24, elevation: 4 },
-  actLeft: { flex: 1 },
-  actAvatarRow: { flexDirection: 'row', marginBottom: 10 },
-  actAvatar: { width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#111111' },
-  actAvatarTxt: { fontSize: 11, fontWeight: '900', color: '#fff' },
-  actTitle: { fontSize: 15, fontWeight: '800', color: '#fff', marginBottom: 5, letterSpacing: -0.1 },
-  actVenueRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  actVenue: { fontSize: 10, color: 'rgba(255,255,255,0.65)', letterSpacing: 1, fontWeight: '600' },
-  actPing: { width: 22, height: 22, justifyContent: 'center', alignItems: 'center' },
-  actPingRing: { position: 'absolute', width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(255,140,66,0.16)' },
-  actPingDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#3dbf7a' },
-
-  // DIVIDER
-  divider: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 22, marginVertical: 48, gap: 14 },
-  divLine: { flex: 1, height: 1.5, backgroundColor: 'rgba(255,255,255,0.6)' },
-  divTxt: { fontSize: 10, fontWeight: '900', color: 'rgba(255,255,255,0.65)', letterSpacing: 3.2 },
-
-  // STEPS
   stepsWrap: { paddingHorizontal: 18, gap: 14, marginBottom: 18 },
-  stepCard: { backgroundColor: 'rgba(17,17,17,0.92)', borderRadius: 26, padding: 24, borderWidth: 2, borderColor: '#ffffff', shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 24, elevation: 4 },
-  stepTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
-  stepNum: { fontSize: 50, fontWeight: '900', color: 'rgba(255,255,255,0.08)', lineHeight: 54, letterSpacing: -1 },
-  stepIconBox: { width: 54, height: 54, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.03)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
-  stepTitle: { fontSize: 22, fontWeight: '800', color: '#fff', marginBottom: 8, letterSpacing: -0.3 },
-  stepDesc: { fontSize: 14, color: 'rgba(255,255,255,0.65)', lineHeight: 23, marginBottom: 16 },
+  stepCard: { backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 22, padding: 22, borderWidth: 1, borderColor: BORDER },
+  stepTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 },
+  stepNum: { fontSize: 44, fontWeight: '900', color: 'rgba(255,255,255,0.06)', lineHeight: 48, letterSpacing: -1 },
+  stepIconBox: { width: 48, height: 48, borderRadius: 16, backgroundColor: ACCENT_DIM, justifyContent: 'center', alignItems: 'center' },
+  stepTitle: { fontSize: 20, fontWeight: '800', color: '#fff', marginBottom: 6, letterSpacing: -0.3 },
+  stepDesc: { fontSize: 13, color: MUTED, lineHeight: 20, marginBottom: 14 },
   stepTag: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6, alignSelf: 'flex-start', borderWidth: 1 },
   stepTagTxt: { fontSize: 11, fontWeight: '800' },
 
-  // WHY
-  whySect: { paddingHorizontal: 18, paddingVertical: 48 },
-  whyTitle: { fontSize: 30, fontWeight: '900', color: '#fff', marginBottom: 10, letterSpacing: -0.8 },
-  whySub: { fontSize: 15, color: 'rgba(255,255,255,0.65)', lineHeight: 24, marginBottom: 24 },
+  whySect: { paddingHorizontal: 18, paddingVertical: 42 },
+  whyTitle: { fontSize: 26, fontWeight: '900', color: '#fff', marginBottom: 8, letterSpacing: -0.6 },
+  whySub: { fontSize: 14, color: MUTED, lineHeight: 21, marginBottom: 20 },
   whyGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  whyCard: { width: (width - 48) / 2, backgroundColor: 'rgba(17,17,17,0.92)', borderRadius: 22, padding: 18, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)', shadowColor: '#000', shadowOpacity: 0.22, shadowRadius: 18, elevation: 3 },
-  whyIconBox: { width: 48, height: 48, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.03)', justifyContent: 'center', alignItems: 'center', marginBottom: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
-  whyCardTitle: { fontSize: 13, fontWeight: '800', color: '#fff', marginBottom: 6 },
-  whyCardDesc: { fontSize: 12, color: 'rgba(255,255,255,0.65)', lineHeight: 18 },
+  whyCard: { width: (width - 48) / 2, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 20, padding: 16, borderWidth: 1, borderColor: BORDER },
+  whyIconBox: { width: 42, height: 42, borderRadius: 13, backgroundColor: ACCENT_DIM, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
+  whyCardTitle: { fontSize: 13, fontWeight: '800', color: '#fff', marginBottom: 5 },
+  whyCardDesc: { fontSize: 12, color: MUTED, lineHeight: 17 },
 
-  // QUOTE
-
-  // FINAL CTA
-  finalSect: { margin: 18, backgroundColor: 'rgba(17,17,17,0.92)', borderRadius: 28, padding: 30, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)', alignItems: 'center', overflow: 'hidden', marginBottom: 20, shadowColor: '#000', shadowOpacity: 0.24, shadowRadius: 24, elevation: 4 },
-  finalGlow: { position: 'absolute', top: -90, left: -90, right: -90, height: 240, borderRadius: 120, backgroundColor: 'rgba(139,92,246,0.10)' },
-  finalPinRing: { width: 72, height: 72, borderRadius: 36, backgroundColor: 'rgba(139,92,246,0.15)', justifyContent: 'center', alignItems: 'center', marginBottom: 18 },
-  finalPinBadge: { width: 54, height: 54, borderRadius: 27, justifyContent: 'center', alignItems: 'center' },
-  finalTitleHighlight: { color: '#A78BFA' },
-  finalIconRow: { flexDirection: 'row', justifyContent: 'center', gap: 28, marginTop: 22 },
+  finalSect: { margin: 18, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 26, padding: 28, borderWidth: 1, borderColor: BORDER, alignItems: 'center', overflow: 'hidden', marginBottom: 20 },
+  finalGlow: { position: 'absolute', top: -90, left: -90, right: -90, height: 240, borderRadius: 120, backgroundColor: ACCENT_DIM },
+  finalPinRing: { width: 68, height: 68, borderRadius: 34, backgroundColor: ACCENT_DIM, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  finalPinBadge: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center', backgroundColor: ACCENT },
+  finalTitleHighlight: { color: ACCENT },
+  finalIconRow: { flexDirection: 'row', justifyContent: 'center', gap: 26, marginTop: 20 },
   finalIconItem: { alignItems: 'center', gap: 6 },
-  finalIconLabel: { fontSize: 11, color: 'rgba(255,255,255,0.6)', fontWeight: '600' },
-  finalTitle: { fontSize: 26, fontWeight: '800', color: '#fff', textAlign: 'center', lineHeight: 34, marginBottom: 12, letterSpacing: -0.4 },
-  finalSub: { fontSize: 14, color: 'rgba(255,255,255,0.65)', textAlign: 'center', lineHeight: 22, marginBottom: 24 },
-  finalBtnWrap: { width: '100%', borderRadius: 999, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 24, elevation: 8, marginBottom: 14 },
-  finalBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 999, paddingHorizontal: 28, paddingVertical: 16, width: '100%', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
-  finalBtnTxt: { color: '#fffaf6', fontWeight: '900', fontSize: 16 },
-  finalNote: { fontSize: 11, color: 'rgba(255,255,255,0.65)', textAlign: 'center', letterSpacing: 0.5 },
+  finalIconLabel: { fontSize: 11, color: 'rgba(255,255,255,0.5)', fontWeight: '600' },
+  finalTitle: { fontSize: 24, fontWeight: '800', color: '#fff', textAlign: 'center', lineHeight: 32, marginBottom: 10, letterSpacing: -0.4 },
+  finalSub: { fontSize: 13, color: MUTED, textAlign: 'center', lineHeight: 20, marginBottom: 22 },
+  finalBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 999, paddingHorizontal: 26, paddingVertical: 16, width: '100%', justifyContent: 'center', backgroundColor: ACCENT, shadowColor: ACCENT, shadowOpacity: 0.3, shadowRadius: 18, elevation: 8, marginBottom: 4 },
+  finalBtnTxt: { color: '#fff', fontWeight: '800', fontSize: 15 },
 
-  // BOTTOM NAV
-  bottomNav: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', backgroundColor: '#0a0a0a', paddingTop: 10, paddingHorizontal: 14, justifyContent: 'space-around', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)', shadowColor: '#000', shadowOpacity: 0.24, shadowRadius: 24, elevation: 8 },
+  bottomNav: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', backgroundColor: '#0a0a0a', paddingTop: 10, paddingHorizontal: 14, justifyContent: 'space-around', borderTopWidth: 1, borderTopColor: BORDER },
   navItem: { alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, minWidth: 66 },
-  navItemActive: { backgroundColor: 'rgba(255,140,66,0.12)', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 8, borderWidth: 1, borderColor: 'rgba(255,140,66,0.14)' },
-  navItemLabel: { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.65)', marginTop: 2, letterSpacing: 0.2 },
-  navItemLabelActive: { color: '#FF8C42' },
+  navItemActive: { backgroundColor: ACCENT_DIM, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 8 },
+  navItemLabel: { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.4)', marginTop: 2, letterSpacing: 0.2 },
+  navItemLabelActive: { color: ACCENT },
+  navAvatarImg: { width: 22, height: 22, borderRadius: 11 },
+  navAvatarFallback: { width: 22, height: 22, borderRadius: 11, backgroundColor: ACCENT, alignItems: 'center', justifyContent: 'center' },
+  navAvatarTxt: { fontSize: 9, fontWeight: '800', color: '#fff' },
+  headerAvatarImg: { width: 32, height: 32, borderRadius: 16 },
+  headerAvatarFallback: { width: 32, height: 32, borderRadius: 16, backgroundColor: ACCENT, alignItems: 'center', justifyContent: 'center' },
+  headerAvatarTxt: { fontSize: 12, fontWeight: '800', color: '#fff' },
 })
 
 const ps = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: 'rgba(12,8,4,0.98)', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 40, borderTopWidth: 1, borderTopColor: 'rgba(232,130,74,0.15)' },
-  handle: { width: 40, height: 4, backgroundColor: 'rgba(232,130,74,0.2)', borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
+  sheet: { backgroundColor: 'rgba(10,10,10,0.98)', borderTopLeftRadius: 26, borderTopRightRadius: 26, padding: 24, paddingBottom: 40, borderTopWidth: 1, borderTopColor: BORDER },
+  handle: { width: 40, height: 4, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
   avatarRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 12 },
-  avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#0d0a06', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: 'rgba(232,130,74,0.3)' },
+  avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: ACCENT_DIM },
   avatarTxt: { fontSize: 22, fontWeight: '800', color: '#fff' },
   name: { fontSize: 20, fontWeight: '800', color: '#fff' },
   email: { fontSize: 13, color: MUTED, marginTop: 2 },
   bio: { fontSize: 14, color: MUTED, lineHeight: 20, marginBottom: 14 },
   tagsRow: { flexDirection: 'row', gap: 8, marginBottom: 20, flexWrap: 'wrap' },
-  tag: { backgroundColor: 'rgba(232,130,74,0.12)', borderRadius: 50, paddingHorizontal: 14, paddingVertical: 6 },
+  tag: { backgroundColor: ACCENT_DIM, borderRadius: 50, paddingHorizontal: 14, paddingVertical: 6 },
   tagTxt: { fontSize: 13, fontWeight: '600', color: '#fff' },
-  fullBtn: { backgroundColor: AMBER, borderRadius: 50, paddingVertical: 14, alignItems: 'center', marginBottom: 10, flexDirection: 'row', justifyContent: 'center', gap: 8 },
+  fullBtn: { backgroundColor: ACCENT, borderRadius: 50, paddingVertical: 14, alignItems: 'center', marginBottom: 10, flexDirection: 'row', justifyContent: 'center', gap: 8 },
   fullBtnTxt: { color: '#fff', fontWeight: '800', fontSize: 15 },
   logoutBtn: { borderWidth: 1.5, borderColor: 'rgba(186,26,26,0.4)', borderRadius: 50, paddingVertical: 13, alignItems: 'center' },
   logoutTxt: { color: '#ff6b6b', fontWeight: '700', fontSize: 15 },
