@@ -134,27 +134,28 @@ export default function EditProfileScreen() {
 
         {/* Photo */}
         <View style={s.card}>
-          <View style={s.photoRow}>
-            <View style={s.photoWrap}>
-              {photoUrl
-                ? <Image
-                source={{ uri: photoUrl }}
-                style={s.photo}
-                contentFit="cover"
-                placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
-                transition={200}
-              />
-                : <View style={s.photoPlaceholder}><Text style={s.photoInitial}>{username[0]?.toUpperCase() || '?'}</Text></View>
-              }
-              {uploadingPhoto && (
-                <View style={s.photoOverlay}>
-                  <ActivityIndicator color="#fff" />
+          <View style={s.photoCenter}>
+            <TouchableOpacity onPress={pickPhoto} disabled={uploadingPhoto} activeOpacity={0.85}>
+              <View style={s.photoWrap}>
+                {photoUrl
+                  ? <Image
+                  source={{ uri: photoUrl }}
+                  style={s.photo}
+                  contentFit="cover"
+                  placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+                  transition={200}
+                />
+                  : <View style={s.photoPlaceholder}><Text style={s.photoInitial}>{username[0]?.toUpperCase() || '?'}</Text></View>
+                }
+                {uploadingPhoto && (
+                  <View style={s.photoOverlay}>
+                    <ActivityIndicator color="#fff" />
+                  </View>
+                )}
+                <View style={s.cameraBadge}>
+                  <MaterialIcons name="camera-alt" size={16} color="#000" />
                 </View>
-              )}
-            </View>
-            <TouchableOpacity style={s.changePhotoBtn} onPress={pickPhoto} disabled={uploadingPhoto}>
-              <MaterialIcons name="camera-alt" size={18} color={DARK} />
-              <Text style={s.changePhotoText}>{uploadingPhoto ? 'Uploading...' : 'Change Photo'}</Text>
+              </View>
             </TouchableOpacity>
           </View>
         </View>
@@ -204,8 +205,14 @@ const s = StyleSheet.create({
   label: { fontSize: 12, fontWeight: '700', color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 },
   sectionDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.08)', marginVertical: 20 },
   sublabel: { fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 14 },
-  photoRow: { flexDirection: 'row', alignItems: 'center', gap: 20 },
-  photoWrap: { width: 80, height: 80, borderRadius: 40, overflow: 'hidden' },
+  photoCenter: { alignItems: 'center', paddingVertical: 8 },
+  cameraBadge: {
+    position: 'absolute', bottom: 0, right: 0,
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: '#000000',
+  },
+  photoWrap: { width: 80, height: 80, borderRadius: 40, position: 'relative' },
   photo: { width: 80, height: 80, borderRadius: 40 },
   photoPlaceholder: {
     width: 80, height: 80, borderRadius: 40,
@@ -216,12 +223,7 @@ const s = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center',
   },
-  changePhotoBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)',
-    paddingHorizontal: 18, paddingVertical: 12,
-  },
-  changePhotoText: { color: '#FFFFFF', fontWeight: '800', fontSize: 14 },
+
   textArea: {
     borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
     padding: 14, fontSize: 14, color: '#fff',
