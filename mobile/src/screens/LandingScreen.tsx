@@ -150,8 +150,6 @@ export default function LandingScreen() {
           </Text>
           <Text style={s.heroSub}>Meet people nearby who actually want to talk.</Text>
 
-          <AvatarStack pulseAnim={pulseAnim} />
-
           <TouchableOpacity activeOpacity={0.88} style={s.ctaBtn} onPress={handleJoin}>
             <Feather name="navigation" size={19} color="#fff" />
             <Text style={s.ctaBtnText}>Find people nearby</Text>
