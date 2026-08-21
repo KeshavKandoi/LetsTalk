@@ -210,7 +210,7 @@ export default function LandingScreen() {
           <Text style={s.finalTitle}>Your next real conversation is <Text style={s.finalTitleHighlight}>nearby</Text>.</Text>
           <Text style={s.finalSub}>Step into a small, growing network of people who came here to talk face to face.</Text>
           <TouchableOpacity activeOpacity={0.88} style={s.finalBtn} onPress={handleJoin}>
-            <Text style={s.finalBtnTxt}>Start now — it's free</Text>
+            <Text style={s.finalBtnTxt}>Start now</Text>
             <Feather name="arrow-right" size={18} color="#fff" />
           </TouchableOpacity>
         </View>
