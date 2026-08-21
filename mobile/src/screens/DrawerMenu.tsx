@@ -86,7 +86,7 @@ export default function DrawerMenu({ visible, onClose }: Props) {
   const handleLogout = async () => {
     await signOut()
     onClose()
-    navigation.reset({ index: 0, routes: [{ name: 'Landing' }] })
+    navigation.reset({ index: 0, routes: [{ name: 'Login' }] })
   }
 
   const username   = profile?.session?.user?.username || profile?.session?.user?.name || null
