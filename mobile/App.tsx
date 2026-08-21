@@ -12,6 +12,7 @@ import SignupScreen from './src/screens/SignupScreen'
 import OnboardingScreen from './src/screens/OnboardingScreen'
 import PlaceViewScreen from './src/screens/PlaceViewScreen'
 import ProfileScreen from './src/screens/ProfileScreen'
+import AccountMenuScreen from './src/screens/AccountMenuScreen'
 import EditProfileScreen from './src/screens/EditProfileScreen'
 import AccountSettingsScreen from './src/screens/AccountSettingsScreen'
 import NotificationsScreen from './src/screens/NotificationsScreen'
@@ -90,6 +91,7 @@ export default function App() {
           <Stack.Screen name="Onboarding" component={OnboardingScreen} />
           <Stack.Screen name="PlaceView" component={PlaceViewScreen} />
           <Stack.Screen name="Profile" component={ProfileScreen} />
+          <Stack.Screen name="AccountMenu" component={AccountMenuScreen} />
           <Stack.Screen name="EditProfile" component={EditProfileScreen} />
           <Stack.Screen name="AccountSettings" component={AccountSettingsScreen} />
           <Stack.Screen name="Notifications" component={NotificationsScreen} />
