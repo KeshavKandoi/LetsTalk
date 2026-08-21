@@ -138,7 +138,6 @@ export default function ForgotPasswordScreen({ route }: any) {
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
-          <View style={styles.titleAccent} />
           <Text style={styles.title}>{step === 'otp' ? 'Verify identity' : 'Set new password'}</Text>
           <Text style={styles.subtitle}>
             {step === 'otp' ? (
@@ -252,7 +251,6 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4 },
   scrollContent: { paddingHorizontal: 24, paddingTop: 32, paddingBottom: 40 },
 
-  titleAccent: { width: 36, height: 4, borderRadius: 2, backgroundColor: '#8B5CF6', marginBottom: 16 },
   title: { fontSize: 28, fontWeight: '800', color: '#fff', marginBottom: 8, letterSpacing: -0.3 },
   subtitle: { fontSize: 14, color: 'rgba(255,255,255,0.55)', marginBottom: 24, lineHeight: 20 },
   subtitleHighlight: { color: '#fff', fontWeight: '700' },
