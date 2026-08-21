@@ -117,13 +117,33 @@ export default function FriendsScreen() {
       apiFetch('/api/friends/list', {}),
       apiFetch('/api/places/state', {}),
     ])
-    setFriends(friendsData.friends ?? [])
-    setIncoming(friendsData.incoming ?? [])
-    setPending(friendsData.pending ?? [])
-    setRejected(friendsData.rejected ?? [])
+    const next = {
+      friends: friendsData.friends ?? [],
+      incoming: friendsData.incoming ?? [],
+      pending: friendsData.pending ?? [],
+      rejected: friendsData.rejected ?? [],
+    }
+    setFriends(next.friends)
+    setIncoming(next.incoming)
+    setPending(next.pending)
+    setRejected(next.rejected)
+    AsyncStorage.setItem('cached_friends_data', JSON.stringify(next)).catch(() => {})
   }
 
   useEffect(() => {
+    AsyncStorage.getItem('cached_friends_data').then(cached => {
+      if (cached) {
+        try {
+          const c = JSON.parse(cached)
+          setFriends(c.friends || [])
+          setIncoming(c.incoming || [])
+          setPending(c.pending || [])
+          setRejected(c.rejected || [])
+          setLoading(false)
+        } catch {}
+      }
+    })
+
     load().catch(() => {}).finally(() => setLoading(false))
     const interval = setInterval(() => { load().catch(() => {}) }, 5000)
     return () => clearInterval(interval)
