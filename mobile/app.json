@@ -50,7 +50,8 @@
         {
           "googleMapsApiKey": "AIzaSyDS46VSl7BfPncdn9aIIHGKsppZP3ycNF0"
         }
-      ]
+      ],
+      "expo-status-bar"
     ],
     "scheme": "com.keshavkandoi.letstalk",
     "extra": {
