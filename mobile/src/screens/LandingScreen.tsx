@@ -69,6 +69,7 @@ export default function LandingScreen() {
   const [profile, setProfile] = useState<any>(null)
   const [profileLoading, setProfileLoading] = useState(false)
   const [avatarProfile, setAvatarProfile] = useState<{ photoUrl?: string; initials: string } | null>(null)
+  const [activeTab, setActiveTab] = useState<'nearby' | 'chats' | 'profile'>('nearby')
 
   const fadeAnim = useRef(new Animated.Value(0)).current
   const slideAnim = useRef(new Animated.Value(50)).current
@@ -257,12 +258,8 @@ export default function LandingScreen() {
       </Modal>
 
       <View style={[s.bottomNav, { paddingBottom: insets.bottom + 8 }]}>
-        <TouchableOpacity style={[s.navItem, s.navItemActive]}>
-          <Feather name="compass" size={22} color={ACCENT} />
-          <Text style={[s.navItemLabel, s.navItemLabelActive]}>Explore</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={s.navItem} onPress={async () => {
+        <TouchableOpacity style={[s.navItem, activeTab === 'nearby' && s.navItemActive]} onPress={async () => {
+          setActiveTab('nearby')
           if (!isConnected) return
           try {
             const session = await getSession()
@@ -270,11 +267,12 @@ export default function LandingScreen() {
             navigation.navigate('Onboarding' as never)
           } catch { navigation.navigate('Signup' as never) }
         }}>
-          <Feather name="map-pin" size={22} color="rgba(255,255,255,0.38)" />
-          <Text style={s.navItemLabel}>Nearby</Text>
+          <Feather name="map-pin" size={22} color={activeTab === 'nearby' ? ACCENT : 'rgba(255,255,255,0.38)'} />
+          <Text style={[s.navItemLabel, activeTab === 'nearby' && s.navItemLabelActive]}>Nearby</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={s.navItem} onPress={async () => {
+        <TouchableOpacity style={[s.navItem, activeTab === 'chats' && s.navItemActive]} onPress={async () => {
+          setActiveTab('chats')
           if (!isConnected) return
           try {
             const session = await getSession()
@@ -282,8 +280,21 @@ export default function LandingScreen() {
             navigation.navigate('Friends' as never)
           } catch { navigation.navigate('Signup' as never) }
         }}>
-          <Feather name="message-circle" size={22} color="rgba(255,255,255,0.38)" />
-          <Text style={s.navItemLabel}>Chats</Text>
+          <Feather name="message-circle" size={22} color={activeTab === 'chats' ? ACCENT : 'rgba(255,255,255,0.38)'} />
+          <Text style={[s.navItemLabel, activeTab === 'chats' && s.navItemLabelActive]}>Chats</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={[s.navItem, activeTab === 'profile' && s.navItemActive]} onPress={async () => {
+          setActiveTab('profile')
+          if (!isConnected) return
+          try {
+            const session = await getSession()
+            if (!session?.session) { navigation.navigate('Signup' as never); return }
+            navigation.navigate('Profile' as never)
+          } catch { navigation.navigate('Signup' as never) }
+        }}>
+          <Feather name="user" size={22} color={activeTab === 'profile' ? ACCENT : 'rgba(255,255,255,0.38)'} />
+          <Text style={[s.navItemLabel, activeTab === 'profile' && s.navItemLabelActive]}>Profile</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
