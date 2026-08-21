@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNetworkCheck } from './src/hooks/useNetworkCheck'
 import { NavigationContainer } from '@react-navigation/native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
-import { getSession, signOut } from './src/lib/auth'
+import { getSession, signOut, hasCompletedOnboarding } from './src/lib/auth'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { StatusBar } from 'expo-status-bar'
 import { View, Text, ActivityIndicator } from 'react-native'
@@ -10,6 +10,7 @@ import LandingScreen from './src/screens/LandingScreen'
 import LoginScreen from './src/screens/LoginScreen'
 import SignupScreen from './src/screens/SignupScreen'
 import OnboardingScreen from './src/screens/OnboardingScreen'
+import TutorialScreen from './src/screens/TutorialScreen'
 import PlaceViewScreen from './src/screens/PlaceViewScreen'
 import ProfileScreen from './src/screens/ProfileScreen'
 import AccountMenuScreen from './src/screens/AccountMenuScreen'
@@ -37,7 +38,8 @@ export default function App() {
         const session = await getSession()
         // ✅ Only auto-login if session exists AND email is verified
         if (session?.session && session?.user?.emailVerified) {
-          setInitialRoute('Landing')
+          const completed = await hasCompletedOnboarding(session.user.email)
+          setInitialRoute(completed ? 'Landing' : 'Tutorial')
         } else {
           await signOut()
           setInitialRoute('Login')
@@ -89,6 +91,7 @@ export default function App() {
           <Stack.Screen name="OTP" component={OTPScreen} />
           <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
           <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+          <Stack.Screen name="Tutorial" component={TutorialScreen} />
           <Stack.Screen name="PlaceView" component={PlaceViewScreen} />
           <Stack.Screen name="Profile" component={ProfileScreen} />
           <Stack.Screen name="AccountMenu" component={AccountMenuScreen} />
