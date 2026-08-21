@@ -71,7 +71,7 @@ export default function LandingScreen() {
     await signOut()
     setProfileVisible(false)
     setProfile(null)
-    navigation.reset({ index: 0, routes: [{ name: 'Landing' }] })
+    navigation.reset({ index: 0, routes: [{ name: 'Login' }] })
   }
 
   const handleJoin = async () => {
