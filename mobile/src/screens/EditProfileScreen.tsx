@@ -27,6 +27,18 @@ export default function EditProfileScreen() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
 
   useEffect(() => {
+    AsyncStorage.getItem('cached_profile_screen').then(cached => {
+      if (cached) {
+        try {
+          const c = JSON.parse(cached)
+          setAbout(c.about || '')
+          setUsername(c.username || '')
+          if (c.photoUrl) setPhotoUrl(c.photoUrl)
+          setLoading(false)
+        } catch {}
+      }
+    })
+
     Promise.all([apiFetch('/api/places/state', {}), getSession()])
       .then(([data, session]) => {
         setIntentText(data?.profile?.intentText || '')
@@ -149,6 +161,9 @@ export default function EditProfileScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        <View style={s.sectionDivider} />
+
         {/* About */}
         <View style={s.card}>
           <Text style={s.label}>ABOUT</Text>
@@ -187,12 +202,10 @@ const s = StyleSheet.create({
   saveBtnText: { color: '#FFFFFF', fontWeight: '800', fontSize: 14 },
   scroll: { padding: 16, gap: 16, paddingBottom: 60 },
   card: {
-    backgroundColor: 'rgba(20,20,20,0.9)', borderRadius: 20, padding: 20,
-    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2, shadowRadius: 8, elevation: 3,
+    marginBottom: 4,
   },
-  label: { fontSize: 12, fontWeight: '900', color: '#FFFFFF', letterSpacing: 1.5, marginBottom: 6 },
+  label: { fontSize: 12, fontWeight: '700', color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 },
+  sectionDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.08)', marginVertical: 20 },
   sublabel: { fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 14 },
   photoRow: { flexDirection: 'row', alignItems: 'center', gap: 20 },
   photoWrap: { width: 80, height: 80, borderRadius: 40, overflow: 'hidden' },
@@ -208,13 +221,12 @@ const s = StyleSheet.create({
   },
   changePhotoBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#000000', borderRadius: 50, borderWidth: 1.5, borderColor: '#FFFFFF',
+    borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)',
     paddingHorizontal: 18, paddingVertical: 12,
   },
   changePhotoText: { color: '#FFFFFF', fontWeight: '800', fontSize: 14 },
   textArea: {
-    backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 14,
-    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
     padding: 14, fontSize: 14, color: '#fff',
     minHeight: 100, textAlignVertical: 'top',
   },
