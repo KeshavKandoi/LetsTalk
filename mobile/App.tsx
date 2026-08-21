@@ -26,7 +26,7 @@ const Stack = createNativeStackNavigator()
 
 export default function App() {
   const [loading, setLoading] = useState(true)
-  const [initialRoute, setInitialRoute] = useState('Landing')
+  const [initialRoute, setInitialRoute] = useState('Login')
   const [showSplash, setShowSplash] = useState(true)
 
   const isConnected = useNetworkCheck()
@@ -39,11 +39,11 @@ export default function App() {
           setInitialRoute('Landing')
         } else {
           await signOut()
-          setInitialRoute('Landing')
+          setInitialRoute('Login')
         }
       } catch {
         await signOut()
-        setInitialRoute('Landing')
+        setInitialRoute('Login')
       }
       setLoading(false)
     }
