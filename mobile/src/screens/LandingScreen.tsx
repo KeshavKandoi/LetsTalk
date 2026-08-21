@@ -202,7 +202,6 @@ export default function LandingScreen() {
         </View>
 
         <View style={s.finalSect}>
-          <View style={s.finalGlow} />
           <View style={s.finalPinRing}>
             <View style={s.finalPinBadge}>
               <Feather name="map-pin" size={24} color="#fff" />
@@ -214,20 +213,6 @@ export default function LandingScreen() {
             <Text style={s.finalBtnTxt}>Start now — it's free</Text>
             <Feather name="arrow-right" size={18} color="#fff" />
           </TouchableOpacity>
-          <View style={s.finalIconRow}>
-            <View style={s.finalIconItem}>
-              <Feather name="credit-card" size={16} color="rgba(255,255,255,0.5)" />
-              <Text style={s.finalIconLabel}>No credit card</Text>
-            </View>
-            <View style={s.finalIconItem}>
-              <Feather name="message-circle" size={16} color="rgba(255,255,255,0.5)" />
-              <Text style={s.finalIconLabel}>No algorithm</Text>
-            </View>
-            <View style={s.finalIconItem}>
-              <Feather name="users" size={16} color="rgba(255,255,255,0.5)" />
-              <Text style={s.finalIconLabel}>Just people</Text>
-            </View>
-          </View>
         </View>
 
       </ScrollView>
@@ -391,11 +376,11 @@ const s = StyleSheet.create({
   venueIconBox: { width: 44, height: 44, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
   venueLabel: { fontSize: 15, fontWeight: '800', color: '#fff', marginBottom: 4 },
   venueTag: { fontSize: 12, color: MUTED, fontWeight: '600' },
-  finalSect: { margin: 18, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 26, padding: 28, borderWidth: 1, borderColor: BORDER, alignItems: 'center', overflow: 'hidden', marginBottom: 20 },
+  finalSect: { margin: 18, backgroundColor: '#000000', borderRadius: 26, padding: 28, borderWidth: 1, borderColor: BORDER, alignItems: 'center', overflow: 'hidden', marginBottom: 20 },
   finalGlow: { position: 'absolute', top: -90, left: -90, right: -90, height: 240, borderRadius: 120, backgroundColor: ACCENT_DIM },
   finalPinRing: { width: 68, height: 68, borderRadius: 34, backgroundColor: ACCENT_DIM, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
   finalPinBadge: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center', backgroundColor: ACCENT },
-  finalTitleHighlight: { color: ACCENT },
+  finalTitleHighlight: { color: '#fff' },
   finalIconRow: { flexDirection: 'row', justifyContent: 'center', gap: 26, marginTop: 20 },
   finalIconItem: { alignItems: 'center', gap: 6 },
   finalIconLabel: { fontSize: 11, color: 'rgba(255,255,255,0.5)', fontWeight: '600' },
