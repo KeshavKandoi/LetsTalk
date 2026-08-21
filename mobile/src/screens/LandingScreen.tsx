@@ -49,18 +49,20 @@ function AvatarStack({ pulseAnim }: any) {
 function HeroIllustration() {
   return (
     <View style={s.illustrationWrap}>
-      <Svg width={180} height={130} viewBox="0 0 180 130">
+      <Svg width={150} height={150} viewBox="0 0 160 160">
         <Defs>
-          <LinearGradient id="bubbleGrad" x1="0" y1="0" x2="1" y2="1">
+          <LinearGradient id="pinGrad" x1="0" y1="0" x2="1" y2="1">
             <Stop offset="0" stopColor="#7C5CFC" stopOpacity="1" />
             <Stop offset="1" stopColor="#9F7AEA" stopOpacity="1" />
           </LinearGradient>
+          <RadialGradient id="pinGlow" cx="50%" cy="45%" r="55%">
+            <Stop offset="0" stopColor="#7C5CFC" stopOpacity="0.28" />
+            <Stop offset="1" stopColor="#7C5CFC" stopOpacity="0" />
+          </RadialGradient>
         </Defs>
-        <Path d="M48 18 Q18 18 18 46 Q18 70 38 76 L34 90 L56 74 Q86 72 86 46 Q86 18 58 18 Z" fill="rgba(124,92,252,0.15)" />
-        <Path d="M118 30 Q158 30 158 60 Q158 85 136 91 L140 107 L116 89 Q86 87 86 60 Q86 30 118 30 Z" fill="url(#bubbleGrad)" />
-        <Circle cx="106" cy="60" r="4" fill="#fff" />
-        <Circle cx="120" cy="60" r="4" fill="#fff" />
-        <Circle cx="134" cy="60" r="4" fill="#fff" />
+        <Circle cx="80" cy="80" r="75" fill="url(#pinGlow)" />
+        <Path d="M80 24 C50 24 28 46 28 76 C28 112 80 150 80 150 C80 150 132 112 132 76 C132 46 110 24 80 24 Z" fill="url(#pinGrad)" />
+        <Circle cx="80" cy="74" r="20" fill="#050505" />
       </Svg>
     </View>
   )
