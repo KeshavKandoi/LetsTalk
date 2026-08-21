@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { useNavigation } from '@react-navigation/native'
 import { MaterialIcons } from '@expo/vector-icons'
 import { apiFetch } from '../lib/api'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useNetworkCheck } from '../hooks/useNetworkCheck'
 
 type Notification = { id: string; type: string; message: string; time: string }
@@ -34,8 +35,18 @@ export default function NotificationsScreen() {
   const isConnected = useNetworkCheck()
 
   useEffect(() => {
+    AsyncStorage.getItem('cached_notifications').then(cached => {
+      if (cached) {
+        try { setNotifications(JSON.parse(cached)); setLoading(false) } catch {}
+      }
+    })
+
     apiFetch('/api/friends/notifications', {})
-      .then((data: any) => setNotifications(data.notifications || []))
+      .then((data: any) => {
+        const list = data.notifications || []
+        setNotifications(list)
+        AsyncStorage.setItem('cached_notifications', JSON.stringify(list)).catch(() => {})
+      })
       .catch((e: any) => setError(e.message || 'Failed to load'))
       .finally(() => setLoading(false))
   }, [])
