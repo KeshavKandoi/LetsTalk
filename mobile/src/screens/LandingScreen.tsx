@@ -155,18 +155,6 @@ export default function LandingScreen() {
             <Text style={s.ctaBtnText}>Find people nearby</Text>
           </TouchableOpacity>
 
-          <View style={s.benefitsRow}>
-            {[
-              { icon: 'zap', text: 'No swiping' },
-              { icon: 'map-pin', text: 'Real venues' },
-              { icon: 'message-circle', text: 'Talk in person' },
-            ].map((f, i) => (
-              <View key={i} style={s.benefitItem}>
-                <Feather name={f.icon as any} size={13} color="rgba(255,255,255,0.6)" />
-                <Text style={s.benefitText}>{f.text}</Text>
-              </View>
-            ))}
-          </View>
         </Animated.View>
 
         <View style={s.divider}>
