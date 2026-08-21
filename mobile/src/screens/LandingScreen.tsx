@@ -180,8 +180,26 @@ export default function LandingScreen() {
 
         </Animated.View>
 
-
-
+        <View style={s.venueSect}>
+          <Text style={s.whyTitle}>Explore nearby</Text>
+          <Text style={s.whySub}>Real venues where conversations happen.</Text>
+          <View style={s.venueGrid}>
+            {[
+              { icon: 'coffee', label: 'Cafes', color: '#7C5CFC' },
+              { icon: 'moon', label: 'Bars & Lounges', color: '#9F7AEA' },
+              { icon: 'book-open', label: 'Study Spots', color: '#5B4BC4' },
+              { icon: 'sun', label: 'Rooftop Hangouts', color: AMBER },
+            ].map((v, i) => (
+              <View key={i} style={s.venueCard}>
+                <View style={[s.venueIconBox, { backgroundColor: v.color + '22' }]}>
+                  <Feather name={v.icon as any} size={20} color={v.color} />
+                </View>
+                <Text style={s.venueLabel}>{v.label}</Text>
+                <Text style={s.venueTag}>Tap to explore</Text>
+              </View>
+            ))}
+          </View>
+        </View>
 
         <View style={s.finalSect}>
           <View style={s.finalGlow} />
@@ -367,6 +385,12 @@ const s = StyleSheet.create({
   mapStatNum: { fontSize: 20, fontWeight: '900', color: '#fff', marginBottom: 2 },
   mapStatLabel: { fontSize: 12, color: MUTED, fontWeight: '600' },
   mapStatDivider: { width: 1, height: 30, backgroundColor: BORDER },
+  venueSect: { paddingHorizontal: 18, paddingVertical: 42 },
+  venueGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  venueCard: { width: (width - 48) / 2, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 20, padding: 18, borderWidth: 1, borderColor: BORDER },
+  venueIconBox: { width: 44, height: 44, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+  venueLabel: { fontSize: 15, fontWeight: '800', color: '#fff', marginBottom: 4 },
+  venueTag: { fontSize: 12, color: MUTED, fontWeight: '600' },
   finalSect: { margin: 18, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 26, padding: 28, borderWidth: 1, borderColor: BORDER, alignItems: 'center', overflow: 'hidden', marginBottom: 20 },
   finalGlow: { position: 'absolute', top: -90, left: -90, right: -90, height: 240, borderRadius: 120, backgroundColor: ACCENT_DIM },
   finalPinRing: { width: 68, height: 68, borderRadius: 34, backgroundColor: ACCENT_DIM, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
