@@ -107,3 +107,16 @@ export async function signOut() {
   } catch {}
   await AsyncStorage.removeItem(SESSION_TOKEN_KEY)
 }
+
+const ONBOARDING_PREFIX = 'onboarding_completed:'
+
+export async function hasCompletedOnboarding(email: string) {
+  if (!email) return true
+  const val = await AsyncStorage.getItem(ONBOARDING_PREFIX + email.toLowerCase())
+  return val === 'true'
+}
+
+export async function markOnboardingCompleted(email: string) {
+  if (!email) return
+  await AsyncStorage.setItem(ONBOARDING_PREFIX + email.toLowerCase(), 'true')
+}
