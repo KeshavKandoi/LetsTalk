@@ -149,7 +149,7 @@ export default function OnboardingScreen() {
         intentText: fullIntent,
         currentPlaceId: selectedPlace.placeId,
       })
-      navigation.navigate('PlaceView')
+      navigation.navigate('PlaceView', { place: selectedPlace })
     } catch (e: any) {
       setError(e.message || 'Could not join this place.')
     } finally {
