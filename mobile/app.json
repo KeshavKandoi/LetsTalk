@@ -11,7 +11,8 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "LetsTalk needs your location to find nearby places.",
         "NSLocationAlwaysUsageDescription": "LetsTalk needs your location to find nearby places."
-      }
+      },
+      "bundleIdentifier": "com.keshavkandoi.letstalk"
     },
     "android": {
       "adaptiveIcon": {
