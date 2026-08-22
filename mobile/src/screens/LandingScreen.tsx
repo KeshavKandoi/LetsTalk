@@ -1,9 +1,9 @@
-import { useNavigation } from '@react-navigation/native'
+import { useNavigation, useFocusEffect } from '@react-navigation/native'
 import { useNetworkCheck } from '../hooks/useNetworkCheck'
 import { getSession, signOut } from '../lib/auth'
 import { apiFetch } from '../lib/api'
 import DrawerMenu from './DrawerMenu'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   View, Text, TouchableOpacity, StyleSheet,
   ScrollView, Modal, ActivityIndicator, Dimensions, Animated,
@@ -154,6 +154,12 @@ export default function LandingScreen() {
     else if (tab === 'chats') navigation.navigate('Friends' as never)
     else navigation.navigate('Profile' as never)
   }
+
+  useFocusEffect(
+    useCallback(() => {
+      setActiveTab('explore')
+    }, [])
+  )
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
