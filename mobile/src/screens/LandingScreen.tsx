@@ -69,7 +69,7 @@ export default function LandingScreen() {
   const [profile, setProfile] = useState<any>(null)
   const [profileLoading, setProfileLoading] = useState(false)
   const [avatarProfile, setAvatarProfile] = useState<{ photoUrl?: string; initials: string } | null>(null)
-  const [activeTab, setActiveTab] = useState<'nearby' | 'chats' | 'profile'>('nearby')
+  const [activeTab, setActiveTab] = useState<'nearby' | 'chats' | 'profile' | null>(null)
 
   const fadeAnim = useRef(new Animated.Value(0)).current
   const slideAnim = useRef(new Animated.Value(50)).current
