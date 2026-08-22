@@ -6,7 +6,7 @@ import DrawerMenu from './DrawerMenu'
 import { useEffect, useRef, useState } from 'react'
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, Animated, Modal, ActivityIndicator, Dimensions,
+  ScrollView, Modal, ActivityIndicator, Dimensions,
 } from 'react-native'
 import { Image } from 'expo-image'
 import AsyncStorage from '@react-native-async-storage/async-storage'
@@ -70,24 +70,15 @@ export default function LandingScreen() {
   const [profileLoading, setProfileLoading] = useState(false)
   const [avatarProfile, setAvatarProfile] = useState<{ photoUrl?: string; initials: string } | null>(null)
   const [activeTab, setActiveTab] = useState<'nearby' | 'chats' | 'profile' | null>(null)
+  const [session, setSession] = useState<any>(null)
 
-  const fadeAnim = useRef(new Animated.Value(0)).current
-  const slideAnim = useRef(new Animated.Value(50)).current
-  const pulseAnim = useRef(new Animated.Value(1)).current
-  const step1 = useRef(new Animated.Value(0)).current
-  const step2 = useRef(new Animated.Value(0)).current
-  const step3 = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
-    (async () => {
-      // Show cached avatar instantly (no network wait)
-      try {
-        const cached = await AsyncStorage.getItem('avatar_profile_cache')
-        if (cached) setAvatarProfile(JSON.parse(cached))
-      } catch {}
-      // Then refresh in the background
-      try {
-        const data = await apiFetch('/api/places/state', {}).catch(() => null)
+    AsyncStorage.getItem('avatar_profile_cache')
+      .then((cached) => { if (cached) setAvatarProfile(JSON.parse(cached)) })
+      .catch(() => {})
+      .then(() => apiFetch('/api/places/state', {}).catch(() => null))
+      .then((data) => {
         const user = data?.session?.user
         if (user) {
           const name = user.username || user.name || '?'
@@ -96,21 +87,12 @@ export default function LandingScreen() {
           setAvatarProfile(fresh)
           AsyncStorage.setItem('avatar_profile_cache', JSON.stringify(fresh)).catch(() => {})
         }
-      } catch {}
-    })()
-    Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 900, useNativeDriver: true }),
-    ]).start()
-    Animated.loop(Animated.sequence([
-      Animated.timing(pulseAnim, { toValue: 1.15, duration: 1200, useNativeDriver: true }),
-      Animated.timing(pulseAnim, { toValue: 1, duration: 1200, useNativeDriver: true }),
-    ])).start()
-    const bounce = (anim: Animated.Value, delay: number) => setTimeout(() =>
-      Animated.spring(anim, { toValue: 1, useNativeDriver: true, friction: 7, tension: 60 }).start(), delay)
-    bounce(step1, 500)
-    bounce(step2, 700)
-    bounce(step3, 900)
+      })
+      .catch(() => {})
+
+    getSession()
+      .then((s) => setSession(s))
+      .catch(() => setSession(null))
   }, [])
 
   const openProfile = async () => {
@@ -136,6 +118,15 @@ export default function LandingScreen() {
     } catch { await signOut(); navigation.navigate('Signup' as never) }
   }
 
+  const handleTabPress = (tab: 'nearby' | 'chats' | 'profile') => {
+    setActiveTab(tab)
+    if (!isConnected) return
+    if (!session?.session) { navigation.navigate('Signup' as never); return }
+    if (tab === 'nearby') navigation.navigate('Onboarding' as never)
+    else if (tab === 'chats') navigation.navigate('Friends' as never)
+    else navigation.navigate('Profile' as never)
+  }
+
   return (
     <SafeAreaView style={s.container} edges={['top']}>
       <EmberBackground />
@@ -158,7 +149,7 @@ export default function LandingScreen() {
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
-        <Animated.View style={[s.hero, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+        <View style={s.hero}>
 
           <Text style={s.heroTitle}>
             <Text style={s.heroTitleLight}>Real people.{'\n'}</Text>
@@ -173,7 +164,7 @@ export default function LandingScreen() {
             <Text style={s.ctaBtnText}>Find people nearby</Text>
           </TouchableOpacity>
 
-        </Animated.View>
+        </View>
 
         <View style={s.venueSect}>
           <Text style={s.whyTitle}>Explore nearby</Text>
@@ -258,41 +249,17 @@ export default function LandingScreen() {
       </Modal>
 
       <View style={[s.bottomNav, { paddingBottom: insets.bottom + 8 }]}>
-        <TouchableOpacity style={[s.navItem, activeTab === 'nearby' && s.navItemActive]} onPress={async () => {
-          setActiveTab('nearby')
-          if (!isConnected) return
-          try {
-            const session = await getSession()
-            if (!session?.session) { navigation.navigate('Signup' as never); return }
-            navigation.navigate('Onboarding' as never)
-          } catch { navigation.navigate('Signup' as never) }
-        }}>
+        <TouchableOpacity style={[s.navItem, activeTab === 'nearby' && s.navItemActive]} onPress={() => handleTabPress('nearby')}>
           <Feather name="map-pin" size={22} color={activeTab === 'nearby' ? ACCENT : 'rgba(255,255,255,0.38)'} />
           <Text style={[s.navItemLabel, activeTab === 'nearby' && s.navItemLabelActive]}>Nearby</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={[s.navItem, activeTab === 'chats' && s.navItemActive]} onPress={async () => {
-          setActiveTab('chats')
-          if (!isConnected) return
-          try {
-            const session = await getSession()
-            if (!session?.session) { navigation.navigate('Signup' as never); return }
-            navigation.navigate('Friends' as never)
-          } catch { navigation.navigate('Signup' as never) }
-        }}>
+        <TouchableOpacity style={[s.navItem, activeTab === 'chats' && s.navItemActive]} onPress={() => handleTabPress('chats')}>
           <Feather name="message-circle" size={22} color={activeTab === 'chats' ? ACCENT : 'rgba(255,255,255,0.38)'} />
           <Text style={[s.navItemLabel, activeTab === 'chats' && s.navItemLabelActive]}>Chats</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={[s.navItem, activeTab === 'profile' && s.navItemActive]} onPress={async () => {
-          setActiveTab('profile')
-          if (!isConnected) return
-          try {
-            const session = await getSession()
-            if (!session?.session) { navigation.navigate('Signup' as never); return }
-            navigation.navigate('Profile' as never)
-          } catch { navigation.navigate('Signup' as never) }
-        }}>
+        <TouchableOpacity style={[s.navItem, activeTab === 'profile' && s.navItemActive]} onPress={() => handleTabPress('profile')}>
           <Feather name="user" size={22} color={activeTab === 'profile' ? ACCENT : 'rgba(255,255,255,0.38)'} />
           <Text style={[s.navItemLabel, activeTab === 'profile' && s.navItemLabelActive]}>Profile</Text>
         </TouchableOpacity>
