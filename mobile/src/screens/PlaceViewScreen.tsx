@@ -5,7 +5,7 @@ import {
   ScrollView, ActivityIndicator, RefreshControl, Alert, Modal, Image, AppState, BackHandler, TextInput,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useNavigation } from '@react-navigation/native'
+import { useNavigation, useRoute } from '@react-navigation/native'
 import * as Location from 'expo-location'
 import QRCode from 'react-native-qrcode-svg'
 import ScannerModal from './ScannerModal'
@@ -92,6 +92,8 @@ interface PlaceViewState {
 
 export default function PlaceViewScreen() {
   const navigation = useNavigation<any>()
+  const route = useRoute<any>()
+  const passedPlace = route.params?.place || null
   const [state, setState] = useState<PlaceViewState | null>(null)
   const [participants, setParticipants] = useState<Participant[]>([])
   const [checkedInCount, setCheckedInCount] = useState(0)
@@ -206,6 +208,8 @@ export default function PlaceViewScreen() {
   const loadState = async (silent = false) => {
     if (!silent) setLoading(true)
     try {
+      const earlyPlaceId = passedPlace?.placeId || null
+      const previewPromise = earlyPlaceId ? apiFetch('/api/places/preview', { placeId: earlyPlaceId }).catch(() => null) : null
       const data: PlaceViewState = await apiFetch('/api/places/state', {})
       if (!data.profile?.currentPlaceId) {
         navigation.reset({ index: 0, routes: [{ name: 'Onboarding' }] })
@@ -218,7 +222,14 @@ export default function PlaceViewScreen() {
         else if (data.session?.user?.name) setMyUsername(data.session.user.name)
       }
       if (data.currentPlace?.place?.placeId) {
-        const preview = await apiFetch('/api/places/preview', { placeId: data.currentPlace.place.placeId })
+        const actualPlaceId = data.currentPlace.place.placeId
+        let preview
+        if (earlyPlaceId === actualPlaceId && previewPromise) {
+          preview = await previewPromise
+          if (!preview) preview = await apiFetch('/api/places/preview', { placeId: actualPlaceId })
+        } else {
+          preview = await apiFetch('/api/places/preview', { placeId: actualPlaceId })
+        }
         const allParticipants = preview.participants ?? []
         const nextActiveConnection = data.activeConnection ?? preview.activeConnection ?? null
         setParticipants(allParticipants)
@@ -443,7 +454,22 @@ export default function PlaceViewScreen() {
 
   if (loading) return (
     <View style={s.root}>
-      <View style={s.centered}><ActivityIndicator size="large" color={AMBER} /></View>
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        <View style={s.header}>
+          <View style={s.leaveBtn} />
+          <Text style={s.logo}>Let's Talk</Text>
+          <View style={{ width: 90 }} />
+        </View>
+        <View style={s.centered}>
+          {passedPlace ? (
+            <>
+              <Text style={{ color: '#fff', fontSize: 18, fontWeight: '800', marginBottom: 6 }}>{passedPlace.name}</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginBottom: 20 }}>{passedPlace.address}</Text>
+            </>
+          ) : null}
+          <ActivityIndicator size="large" color={AMBER} />
+        </View>
+      </SafeAreaView>
     </View>
   )
 
