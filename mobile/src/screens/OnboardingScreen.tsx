@@ -116,10 +116,21 @@ export default function OnboardingScreen() {
   useEffect(() => {
     if (!selectedPlace) { setPreview(null); setError(''); return }
     let cancelled = false
+    const cacheKey = 'cached_preview_' + selectedPlace.placeId
+    AsyncStorage.getItem(cacheKey).then(cached => {
+      if (cached && !cancelled) {
+        try { setPreview(JSON.parse(cached)) } catch {}
+      }
+    })
     setPreviewLoading(true)
     apiFetch('/api/places/preview', { placeId: selectedPlace.placeId })
-      .then((data) => { if (!cancelled) setPreview(data) })
-      .catch(() => { if (!cancelled) setPreview(null) })
+      .then((data) => {
+        if (!cancelled) {
+          setPreview(data)
+          AsyncStorage.setItem(cacheKey, JSON.stringify(data)).catch(() => {})
+        }
+      })
+      .catch(() => {})
       .finally(() => { if (!cancelled) setPreviewLoading(false) })
     return () => { cancelled = true }
   }, [selectedPlace])
@@ -269,7 +280,7 @@ export default function OnboardingScreen() {
             </View>
 
             {/* Stats */}
-            {previewLoading && <ActivityIndicator color={AMBER} style={{ marginVertical: 12 }} />}
+            {previewLoading && !preview && <ActivityIndicator color={AMBER} style={{ marginVertical: 12 }} />}
             {preview && (
               <View style={s.statsRow}>
                 {[
