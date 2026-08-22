@@ -6,56 +6,77 @@ import DrawerMenu from './DrawerMenu'
 import { useEffect, useRef, useState } from 'react'
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, Modal, ActivityIndicator, Dimensions,
+  ScrollView, Modal, ActivityIndicator, Dimensions, Animated,
 } from 'react-native'
 import { Image } from 'expo-image'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
 import { MaterialIcons, Feather } from '@expo/vector-icons'
-import Svg, { Path, Circle, Defs, LinearGradient, RadialGradient, Stop } from 'react-native-svg'
+import { LinearGradient } from 'expo-linear-gradient'
+import Svg, { Line } from 'react-native-svg'
 
 const { width } = Dimensions.get('window')
+const BLUE = '#4E7FFF'
+const PINK = '#FF5FA8'
+const PURPLE = '#9C6BFF'
 const ACCENT = '#7C5CFC'
 const ACCENT_DIM = 'rgba(124,92,252,0.15)'
 const MUTED = 'rgba(255,255,255,0.55)'
 const BORDER = 'rgba(255,255,255,0.08)'
-const AMBER = '#e8824a'
+const BG = '#050505'
 
-function EmberBackground() {
-  return <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#050505' }]} pointerEvents="none" />
+function MapGrid({ w, h }: { w: number; h: number }) {
+  const cols = 6
+  const rows = 5
+  const lines = []
+  for (let i = 1; i < cols; i++) {
+    const x = (w / cols) * i
+    lines.push(<Line key={`v${i}`} x1={x} y1={0} x2={x} y2={h} stroke="#fff" strokeOpacity={0.05} strokeWidth={1} />)
+  }
+  for (let i = 1; i < rows; i++) {
+    const y = (h / rows) * i
+    lines.push(<Line key={`h${i}`} x1={0} y1={y} x2={w} y2={y} stroke="#fff" strokeOpacity={0.05} strokeWidth={1} />)
+  }
+  return <Svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={StyleSheet.absoluteFillObject}>{lines}</Svg>
 }
 
-function AvatarStack({ pulseAnim }: any) {
+function NearbyMap({ pulseAnim }: any) {
+  const w = Math.min(width - 48, 320)
+  const h = 200
+
   const avatars = [
-    { l: 'R', c: '#7C5CFC' },
-    { l: 'P', c: '#9F7AEA' },
-    { l: 'A', c: '#6D5BD0' },
-    { l: 'K', c: '#5B4BC4' },
+    { label: 'A', color: PINK, top: 22, left: 26 },
+    { label: 'B', color: BLUE, top: 46, right: 30 },
+    { label: 'C', color: '#e8b33d', bottom: 26, left: 34 },
+    { label: 'D', color: '#3dbf9a', bottom: 22, right: 26 },
   ]
-  return (
-    <View style={as.row}>
-      <View style={as.stack}>
-        {avatars.map((a, i) => (
-          <View key={a.l} style={[as.avatar, { backgroundColor: a.c, marginLeft: i === 0 ? 0 : -12, zIndex: avatars.length - i }]}>
-            <Text style={as.avatarTxt}>{a.l}</Text>
-          </View>
-        ))}
-      </View>
-    </View>
-  )
-}
 
-function HeroIllustration() {
   return (
-    <View style={s.illustrationWrap}>
-      <View style={s.heroImageWrap}>
-        <Image
-          source={require('../../assets/landing.jpeg')}
-          style={s.heroImage}
-          contentFit="cover"
-        />
+    <View style={[ns.mapCard, { width: w, height: h }]}>
+      <MapGrid w={w} h={h} />
+
+      <View style={ns.centerDotWrap}>
+        <Animated.View style={[ns.centerRing, { transform: [{ scale: pulseAnim }] }]} />
+        <View style={ns.centerDot} />
       </View>
+
+      {avatars.map((a, i) => (
+        <View
+          key={i}
+          style={[
+            ns.avatarDot,
+            { backgroundColor: a.color },
+            a.top !== undefined ? { top: a.top } : {},
+            a.bottom !== undefined ? { bottom: a.bottom } : {},
+            a.left !== undefined ? { left: a.left } : {},
+            a.right !== undefined ? { right: a.right } : {},
+          ]}
+        >
+          <Text style={ns.avatarDotTxt}>{a.label}</Text>
+          <View style={ns.avatarOnlineDot} />
+        </View>
+      ))}
     </View>
   )
 }
@@ -69,9 +90,10 @@ export default function LandingScreen() {
   const [profile, setProfile] = useState<any>(null)
   const [profileLoading, setProfileLoading] = useState(false)
   const [avatarProfile, setAvatarProfile] = useState<{ photoUrl?: string; initials: string } | null>(null)
-  const [activeTab, setActiveTab] = useState<'nearby' | 'chats' | 'profile' | null>(null)
+  const [activeTab, setActiveTab] = useState<'explore' | 'nearby' | 'chats' | 'profile'>('explore')
   const [session, setSession] = useState<any>(null)
 
+  const pulseAnim = useRef(new Animated.Value(1)).current
 
   useEffect(() => {
     AsyncStorage.getItem('avatar_profile_cache')
@@ -93,6 +115,11 @@ export default function LandingScreen() {
     getSession()
       .then((s) => setSession(s))
       .catch(() => setSession(null))
+
+    Animated.loop(Animated.sequence([
+      Animated.timing(pulseAnim, { toValue: 1.25, duration: 1200, useNativeDriver: true }),
+      Animated.timing(pulseAnim, { toValue: 1, duration: 1200, useNativeDriver: true }),
+    ])).start()
   }, [])
 
   const openProfile = async () => {
@@ -112,14 +139,15 @@ export default function LandingScreen() {
   const handleJoin = async () => {
     if (!isConnected) return
     try {
-      const session = await getSession()
-      if (session?.session) navigation.navigate('Onboarding' as never)
+      const s = await getSession()
+      if (s?.session) navigation.navigate('Onboarding' as never)
       else { await signOut(); navigation.navigate('Signup' as never) }
     } catch { await signOut(); navigation.navigate('Signup' as never) }
   }
 
-  const handleTabPress = (tab: 'nearby' | 'chats' | 'profile') => {
+  const handleTabPress = (tab: 'explore' | 'nearby' | 'chats' | 'profile') => {
     setActiveTab(tab)
+    if (tab === 'explore') return
     if (!isConnected) return
     if (!session?.session) { navigation.navigate('Signup' as never); return }
     if (tab === 'nearby') navigation.navigate('Onboarding' as never)
@@ -129,7 +157,6 @@ export default function LandingScreen() {
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
-      <EmberBackground />
       <StatusBar style="light" />
 
       <View style={s.nav}>
@@ -145,54 +172,54 @@ export default function LandingScreen() {
         <View style={s.navBrand}>
           <Text style={s.navTitle}>Let's Talk</Text>
         </View>
+        <View style={{ width: 32 }} />
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
         <View style={s.hero}>
-
           <Text style={s.heroTitle}>
             <Text style={s.heroTitleLight}>Real people.{'\n'}</Text>
             <Text style={s.heroTitleBold}>Real conversations.</Text>
           </Text>
           <Text style={s.heroSub}>Meet people nearby who actually want to talk.</Text>
 
-          <HeroIllustration />
+          <NearbyMap pulseAnim={pulseAnim} />
 
-          <TouchableOpacity activeOpacity={0.88} style={s.ctaBtn} onPress={handleJoin}>
-            <Feather name="navigation" size={19} color="#fff" />
-            <Text style={s.ctaBtnText}>Find people nearby</Text>
+          <TouchableOpacity activeOpacity={0.9} onPress={handleJoin} style={{ width: '100%' }}>
+            <LinearGradient colors={[BLUE, PURPLE, PINK]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.ctaBtn}>
+              <Feather name="search" size={18} color="#fff" />
+              <Text style={s.ctaBtnText}>Find People Nearby</Text>
+            </LinearGradient>
           </TouchableOpacity>
 
-        </View>
-
-        <View style={s.venueSect}>
-          <Text style={s.whyTitle}>Explore nearby</Text>
-          <Text style={s.whySub}>Real venues where conversations happen.</Text>
-          <View style={s.venueGrid}>
+          <View style={s.benefitsRow}>
             {[
-              { icon: 'coffee', label: 'Cafes', color: '#7C5CFC' },
-              { icon: 'moon', label: 'Bars & Lounges', color: '#9F7AEA' },
-              { icon: 'book-open', label: 'Study Spots', color: '#5B4BC4' },
-              { icon: 'sun', label: 'Rooftop Hangouts', color: AMBER },
-            ].map((v, i) => (
-              <View key={i} style={s.venueCard}>
-                <View style={[s.venueIconBox, { backgroundColor: v.color + '22' }]}>
-                  <Feather name={v.icon as any} size={20} color={v.color} />
-                </View>
-                <Text style={s.venueLabel}>{v.label}</Text>
-                <Text style={s.venueTag}>Tap to explore</Text>
+              { icon: 'message-square', text: 'Talk in person' },
+              { icon: 'zap', text: 'People nearby' },
+              { icon: 'map-pin', text: 'Real places' },
+            ].map((f, i) => (
+              <View key={i} style={s.benefitItem}>
+                <Feather name={f.icon as any} size={13} color="rgba(255,255,255,0.6)" />
+                <Text style={s.benefitText}>{f.text}</Text>
               </View>
             ))}
           </View>
         </View>
 
-        <View style={s.finalSect}>
-          <Text style={s.finalTitle}>Your next real conversation is <Text style={s.finalTitleHighlight}>nearby</Text>.</Text>
-          <Text style={s.finalSub}>Step into a small, growing network of people who came here to talk face to face.</Text>
-          <TouchableOpacity activeOpacity={0.88} style={s.finalBtn} onPress={handleJoin}>
-            <Text style={s.finalBtnTxt}>Start now</Text>
+        <View style={s.peopleSection}>
+          <Text style={s.peopleSectionTitle}>People around you</Text>
+          <TouchableOpacity activeOpacity={0.85} style={s.peopleCard} onPress={() => handleTabPress('nearby')}>
+            <View style={s.peopleCardIcon}>
+              <Feather name="user" size={20} color={ACCENT} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.peopleCardTitle}>People nearby</Text>
+              <Text style={s.peopleCardDesc}>Find people around you who are open to talk.</Text>
+            </View>
+            <Feather name="chevron-right" size={18} color="rgba(255,255,255,0.3)" />
           </TouchableOpacity>
+          <Text style={s.locationNote}>Your location is only used to find people nearby.</Text>
         </View>
 
       </ScrollView>
@@ -249,18 +276,20 @@ export default function LandingScreen() {
       </Modal>
 
       <View style={[s.bottomNav, { paddingBottom: insets.bottom + 8 }]}>
+        <TouchableOpacity style={[s.navItem, activeTab === 'explore' && s.navItemActive]} onPress={() => handleTabPress('explore')}>
+          <Feather name="compass" size={21} color={activeTab === 'explore' ? ACCENT : 'rgba(255,255,255,0.38)'} />
+          <Text style={[s.navItemLabel, activeTab === 'explore' && s.navItemLabelActive]}>Explore</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={[s.navItem, activeTab === 'nearby' && s.navItemActive]} onPress={() => handleTabPress('nearby')}>
-          <Feather name="map-pin" size={22} color={activeTab === 'nearby' ? ACCENT : 'rgba(255,255,255,0.38)'} />
+          <Feather name="map-pin" size={21} color={activeTab === 'nearby' ? ACCENT : 'rgba(255,255,255,0.38)'} />
           <Text style={[s.navItemLabel, activeTab === 'nearby' && s.navItemLabelActive]}>Nearby</Text>
         </TouchableOpacity>
-
         <TouchableOpacity style={[s.navItem, activeTab === 'chats' && s.navItemActive]} onPress={() => handleTabPress('chats')}>
-          <Feather name="message-circle" size={22} color={activeTab === 'chats' ? ACCENT : 'rgba(255,255,255,0.38)'} />
+          <Feather name="message-circle" size={21} color={activeTab === 'chats' ? ACCENT : 'rgba(255,255,255,0.38)'} />
           <Text style={[s.navItemLabel, activeTab === 'chats' && s.navItemLabelActive]}>Chats</Text>
         </TouchableOpacity>
-
         <TouchableOpacity style={[s.navItem, activeTab === 'profile' && s.navItemActive]} onPress={() => handleTabPress('profile')}>
-          <Feather name="user" size={22} color={activeTab === 'profile' ? ACCENT : 'rgba(255,255,255,0.38)'} />
+          <Feather name="user" size={21} color={activeTab === 'profile' ? ACCENT : 'rgba(255,255,255,0.38)'} />
           <Text style={[s.navItemLabel, activeTab === 'profile' && s.navItemLabelActive]}>Profile</Text>
         </TouchableOpacity>
       </View>
@@ -268,103 +297,51 @@ export default function LandingScreen() {
   )
 }
 
-const as = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
-  stack: { flexDirection: 'row', alignItems: 'center' },
-  avatar: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#050505' },
-  avatarTxt: { fontSize: 12, fontWeight: '800', color: '#fff' },
-  textCol: { justifyContent: 'center' },
-  liveRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  liveDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#3dbf7a' },
-  liveTxt: { fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.75)' },
+const ns = StyleSheet.create({
+  mapCard: { borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: BORDER, overflow: 'hidden', marginBottom: 20, position: 'relative' },
+  centerDotWrap: { position: 'absolute', top: '50%', left: '50%', marginLeft: -18, marginTop: -18, width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  centerRing: { position: 'absolute', width: 36, height: 36, borderRadius: 18, backgroundColor: ACCENT, opacity: 0.18 },
+  centerDot: { width: 16, height: 16, borderRadius: 8, backgroundColor: ACCENT, borderWidth: 2, borderColor: '#fff' },
+  avatarDot: { position: 'absolute', width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: BG },
+  avatarDotTxt: { fontSize: 12, fontWeight: '800', color: '#fff' },
+  avatarOnlineDot: { position: 'absolute', top: -2, right: -2, width: 9, height: 9, borderRadius: 4.5, backgroundColor: '#3dbf7a', borderWidth: 1.5, borderColor: BG },
 })
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#050505' },
+  container: { flex: 1, backgroundColor: BG },
 
   nav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 12, zIndex: 10 },
-  navBrand: { flexDirection: 'row', alignItems: 'center', gap: 9, flex: 1, justifyContent: 'center' },
-  logoMark: { width: 28, height: 28, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: ACCENT },
-  navTitle: { fontSize: 24, fontWeight: '700', fontStyle: 'italic', color: '#fff', letterSpacing: -0.3 },
-  navIconBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.05)' },
+  navBrand: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  navTitle: { fontSize: 20, fontWeight: '700', fontStyle: 'italic', color: '#fff', letterSpacing: -0.2 },
 
   scroll: { paddingBottom: 132 },
 
-  hero: { paddingHorizontal: 24, paddingTop: 28, paddingBottom: 8, alignItems: 'center' },
-  heroTitle: { textAlign: 'center', marginBottom: 20 },
-  heroTitleLight: { fontSize: 26, fontWeight: '600', color: 'rgba(255,255,255,0.6)', lineHeight: 32, letterSpacing: -0.3 },
-  heroTitleBold: { fontSize: 34, fontWeight: '900', color: '#fff', lineHeight: 40, letterSpacing: -0.6 },
-  heroSub: { fontSize: 15, color: MUTED, textAlign: 'center', lineHeight: 21, marginBottom: 26, marginTop: 4, maxWidth: '82%' },
-  illustrationWrap: { alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
-  heroImageWrap: { width: 170, height: 140, borderRadius: 24, overflow: 'hidden', alignSelf: 'center', justifyContent: 'flex-start', alignItems: 'center' },
-  heroImage: { width: 170, height: 172 },
+  hero: { paddingHorizontal: 24, paddingTop: 20, paddingBottom: 8, alignItems: 'center' },
+  heroTitle: { textAlign: 'center', marginBottom: 10 },
+  heroTitleLight: { fontSize: 24, fontWeight: '600', color: 'rgba(255,255,255,0.6)', lineHeight: 30, letterSpacing: -0.3 },
+  heroTitleBold: { fontSize: 32, fontWeight: '900', color: '#fff', lineHeight: 38, letterSpacing: -0.6 },
+  heroSub: { fontSize: 15, color: MUTED, textAlign: 'center', lineHeight: 21, marginBottom: 18, maxWidth: '85%' },
 
-  ctaBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 56, width: '100%', borderRadius: 999, backgroundColor: ACCENT, marginBottom: 20, shadowColor: ACCENT, shadowOpacity: 0.35, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
+  ctaBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 56, width: '100%', borderRadius: 999, marginBottom: 20, shadowColor: PURPLE, shadowOpacity: 0.35, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
   ctaBtnText: { color: '#fff', fontWeight: '700', fontSize: 16, letterSpacing: 0.1 },
 
-  benefitsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' },
+  benefitsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' },
   benefitItem: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderColor: BORDER, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 999, paddingHorizontal: 11, paddingVertical: 7 },
   benefitText: { fontSize: 12, color: 'rgba(255,255,255,0.65)', fontWeight: '600' },
 
-  divider: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 22, marginVertical: 42, gap: 14 },
-  divLine: { flex: 1, height: 1, backgroundColor: BORDER },
-  divTxt: { fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.4)', letterSpacing: 3 },
-
-  stepsWrap: { paddingHorizontal: 18, gap: 14, marginBottom: 18 },
-  stepCard: { backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 22, padding: 22, borderWidth: 1, borderColor: BORDER },
-  stepTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 },
-  stepNum: { fontSize: 44, fontWeight: '900', color: 'rgba(255,255,255,0.06)', lineHeight: 48, letterSpacing: -1 },
-  stepIconBox: { width: 48, height: 48, borderRadius: 16, backgroundColor: ACCENT_DIM, justifyContent: 'center', alignItems: 'center' },
-  stepTitle: { fontSize: 20, fontWeight: '800', color: '#fff', marginBottom: 6, letterSpacing: -0.3 },
-  stepDesc: { fontSize: 13, color: MUTED, lineHeight: 20, marginBottom: 14 },
-  stepTag: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6, alignSelf: 'flex-start', borderWidth: 1 },
-  stepTagTxt: { fontSize: 11, fontWeight: '800' },
-
-  whySect: { paddingHorizontal: 18, paddingVertical: 42 },
-  whyTitle: { fontSize: 26, fontWeight: '900', color: '#fff', marginBottom: 8, letterSpacing: -0.6 },
-  whySub: { fontSize: 14, color: MUTED, lineHeight: 21, marginBottom: 20 },
-  whyGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  whyCard: { width: (width - 48) / 2, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 20, padding: 16, borderWidth: 1, borderColor: BORDER },
-  whyIconBox: { width: 42, height: 42, borderRadius: 13, backgroundColor: ACCENT_DIM, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
-  whyCardTitle: { fontSize: 13, fontWeight: '800', color: '#fff', marginBottom: 5 },
-  whyCardDesc: { fontSize: 12, color: MUTED, lineHeight: 17 },
-
-  mapSect: { paddingHorizontal: 18, paddingVertical: 42 },
-  mapCard: { borderRadius: 24, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: BORDER, marginBottom: 18, alignItems: 'center', justifyContent: 'center', position: 'relative' },
-  mapPulseRing: { position: 'absolute', top: '50%', left: '50%', marginLeft: -35, marginTop: -35, width: 70, height: 70, borderRadius: 35, borderWidth: 2, borderColor: 'rgba(124,92,252,0.4)', backgroundColor: 'rgba(124,92,252,0.08)' },
-  mapPin: { position: 'absolute', top: '50%', left: '50%', marginLeft: -20, marginTop: -20, width: 40, height: 40, borderRadius: 20, backgroundColor: ACCENT, alignItems: 'center', justifyContent: 'center', shadowColor: ACCENT, shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 },
-  mapStatsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 20 },
-  mapStatItem: { alignItems: 'center' },
-  mapStatNum: { fontSize: 20, fontWeight: '900', color: '#fff', marginBottom: 2 },
-  mapStatLabel: { fontSize: 12, color: MUTED, fontWeight: '600' },
-  mapStatDivider: { width: 1, height: 30, backgroundColor: BORDER },
-  venueSect: { paddingHorizontal: 18, paddingVertical: 42 },
-  venueGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  venueCard: { width: (width - 48) / 2, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 20, padding: 18, borderWidth: 1, borderColor: BORDER },
-  venueIconBox: { width: 44, height: 44, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
-  venueLabel: { fontSize: 15, fontWeight: '800', color: '#fff', marginBottom: 4 },
-  venueTag: { fontSize: 12, color: MUTED, fontWeight: '600' },
-  finalSect: { margin: 18, backgroundColor: '#000000', borderRadius: 26, padding: 28, borderWidth: 1, borderColor: BORDER, alignItems: 'center', overflow: 'hidden', marginBottom: 20 },
-  finalGlow: { position: 'absolute', top: -90, left: -90, right: -90, height: 240, borderRadius: 120, backgroundColor: ACCENT_DIM },
-  finalPinRing: { width: 68, height: 68, borderRadius: 34, backgroundColor: ACCENT_DIM, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
-  finalPinBadge: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center', backgroundColor: ACCENT },
-  finalTitleHighlight: { color: '#fff' },
-  finalIconRow: { flexDirection: 'row', justifyContent: 'center', gap: 26, marginTop: 20 },
-  finalIconItem: { alignItems: 'center', gap: 6 },
-  finalIconLabel: { fontSize: 11, color: 'rgba(255,255,255,0.5)', fontWeight: '600' },
-  finalTitle: { fontSize: 24, fontWeight: '800', color: '#fff', textAlign: 'center', lineHeight: 32, marginBottom: 10, letterSpacing: -0.4 },
-  finalSub: { fontSize: 13, color: MUTED, textAlign: 'center', lineHeight: 20, marginBottom: 22 },
-  finalBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 999, paddingHorizontal: 26, paddingVertical: 16, width: '100%', justifyContent: 'center', backgroundColor: ACCENT, shadowColor: ACCENT, shadowOpacity: 0.3, shadowRadius: 18, elevation: 8, marginBottom: 4 },
-  finalBtnTxt: { color: '#fff', fontWeight: '800', fontSize: 15 },
+  peopleSection: { paddingHorizontal: 20, marginTop: 28 },
+  peopleSectionTitle: { fontSize: 15, fontWeight: '800', color: '#fff', marginBottom: 10, letterSpacing: -0.2 },
+  peopleCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: BORDER },
+  peopleCardIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: ACCENT_DIM, alignItems: 'center', justifyContent: 'center' },
+  peopleCardTitle: { fontSize: 14, fontWeight: '800', color: '#fff', marginBottom: 2 },
+  peopleCardDesc: { fontSize: 12, color: MUTED, lineHeight: 16 },
+  locationNote: { fontSize: 11, color: 'rgba(255,255,255,0.35)', textAlign: 'center', marginTop: 14 },
 
   bottomNav: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', backgroundColor: '#0a0a0a', paddingTop: 10, paddingHorizontal: 14, justifyContent: 'space-around', borderTopWidth: 1, borderTopColor: BORDER },
-  navItem: { alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, minWidth: 66 },
-  navItemActive: { backgroundColor: ACCENT_DIM, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 8 },
+  navItem: { alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, minWidth: 60 },
+  navItemActive: { backgroundColor: ACCENT_DIM, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8 },
   navItemLabel: { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.4)', marginTop: 2, letterSpacing: 0.2 },
   navItemLabelActive: { color: ACCENT },
-  navAvatarImg: { width: 22, height: 22, borderRadius: 11 },
-  navAvatarFallback: { width: 22, height: 22, borderRadius: 11, backgroundColor: ACCENT, alignItems: 'center', justifyContent: 'center' },
-  navAvatarTxt: { fontSize: 9, fontWeight: '800', color: '#fff' },
   headerAvatarImg: { width: 32, height: 32, borderRadius: 16 },
   headerAvatarFallback: { width: 32, height: 32, borderRadius: 16, backgroundColor: ACCENT, alignItems: 'center', justifyContent: 'center' },
   headerAvatarTxt: { fontSize: 12, fontWeight: '800', color: '#fff' },
