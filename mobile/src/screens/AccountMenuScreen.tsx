@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Modal, Pressable } from 'react-native'
 import { Image as ExpoImage } from 'expo-image'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
@@ -23,6 +23,7 @@ export default function AccountMenuScreen() {
   const navigation = useNavigation<any>()
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [photoViewerVisible, setPhotoViewerVisible] = useState(false)
 
   useEffect(() => {
     AsyncStorage.getItem('cached_profile').then(cached => {
@@ -65,7 +66,12 @@ export default function AccountMenuScreen() {
       </View>
 
       <View style={s.profileBlock}>
-        <View style={s.avatarWrap}>
+        <TouchableOpacity
+          style={s.avatarWrap}
+          activeOpacity={photoUrl ? 0.85 : 1}
+          disabled={!photoUrl}
+          onPress={() => setPhotoViewerVisible(true)}
+        >
           {photoUrl ? (
             <ExpoImage source={{ uri: photoUrl }} style={s.avatarImg} transition={150} cachePolicy="memory-disk" />
           ) : (
@@ -73,7 +79,7 @@ export default function AccountMenuScreen() {
               <Text style={s.avatarTxt}>{initials}</Text>
             </View>
           )}
-        </View>
+        </TouchableOpacity>
         {loading
           ? <ActivityIndicator color={ACCENT} style={{ marginTop: 12 }} />
           : <Text style={s.username}>{username || 'Guest'}</Text>}
@@ -108,6 +114,17 @@ export default function AccountMenuScreen() {
           </View>
         )}
       </View>
+
+      <Modal visible={photoViewerVisible} transparent animationType="fade" onRequestClose={() => setPhotoViewerVisible(false)}>
+        <Pressable style={v.backdrop} onPress={() => setPhotoViewerVisible(false)}>
+          <TouchableOpacity style={v.closeBtn} onPress={() => setPhotoViewerVisible(false)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <MaterialIcons name="close" size={26} color="#fff" />
+          </TouchableOpacity>
+          {photoUrl && (
+            <ExpoImage source={{ uri: photoUrl }} style={v.fullImage} contentFit="contain" transition={150} />
+          )}
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   )
 }
@@ -130,4 +147,10 @@ const s = StyleSheet.create({
   loginTxt: { color: '#fff', fontWeight: '700', fontSize: 14 },
   signupBtn: { flex: 1, backgroundColor: ACCENT, borderRadius: 50, paddingVertical: 12, alignItems: 'center' },
   signupTxt: { color: '#fff', fontWeight: '700', fontSize: 14 },
+})
+
+const v = StyleSheet.create({
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', alignItems: 'center', justifyContent: 'center' },
+  closeBtn: { position: 'absolute', top: 60, right: 20, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center', zIndex: 10 },
+  fullImage: { width: '100%', height: '80%' },
 })
