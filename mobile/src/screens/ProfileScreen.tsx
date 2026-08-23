@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
-  ActivityIndicator, Alert, Image,
+  ActivityIndicator, Alert, Image, Modal, Pressable,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
@@ -17,6 +17,7 @@ export default function ProfileScreen() {
   const navigation = useNavigation<any>()
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [photoViewerVisible, setPhotoViewerVisible] = useState(false)
 
   const buildProfile = (u: any, stateData: any, photoTs: string) => ({
     username: u?.name || u?.username || 'You',
@@ -106,13 +107,19 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
         <View style={styles.avatarBlock}>
-          {photoUrl ? (
-            <Image source={{ uri: photoUrl }} style={styles.avatarImage} resizeMode="cover" />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarInitial}>{displayName[0]?.toUpperCase()}</Text>
-            </View>
-          )}
+          <TouchableOpacity
+            activeOpacity={photoUrl ? 0.85 : 1}
+            disabled={!photoUrl}
+            onPress={() => setPhotoViewerVisible(true)}
+          >
+            {photoUrl ? (
+              <Image source={{ uri: photoUrl }} style={styles.avatarImage} resizeMode="cover" />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Text style={styles.avatarInitial}>{displayName[0]?.toUpperCase()}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
           <Text style={styles.displayName}>{displayName}</Text>
           {email ? <Text style={styles.email}>{email}</Text> : null}
         </View>
@@ -166,6 +173,17 @@ export default function ProfileScreen() {
         </TouchableOpacity>
 
       </ScrollView>
+
+      <Modal visible={photoViewerVisible} transparent animationType="fade" onRequestClose={() => setPhotoViewerVisible(false)}>
+        <Pressable style={viewerStyles.backdrop} onPress={() => setPhotoViewerVisible(false)}>
+          <TouchableOpacity style={viewerStyles.closeBtn} onPress={() => setPhotoViewerVisible(false)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <MaterialIcons name="close" size={26} color="#fff" />
+          </TouchableOpacity>
+          {photoUrl && (
+            <Image source={{ uri: photoUrl }} style={viewerStyles.fullImage} resizeMode="contain" />
+          )}
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   )
 }
@@ -189,11 +207,11 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 18, fontWeight: '800', color: '#fff', marginBottom: 4 },
   statLabel: { fontSize: 12, color: 'rgba(255,255,255,0.5)' },
 
-  editButton: { height: 48, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center', marginBottom: 28 },
+  editButton: { height: 48, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center',marginBottom: 28 },
   editButtonText: { color: '#fff', fontWeight: '700', fontSize: 14 },
 
   section: { marginBottom: 20 },
-  sectionTitle: { fontSize: 12, fontWeight: '700', color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 },
+  sectionTitle: { fontSize: 12, fontWeight: '700', color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10},
   card: { borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', borderRadius: 12, padding: 16 },
   cardBody: { fontSize: 14, color: 'rgba(255,255,255,0.75)', lineHeight: 21 },
 
@@ -203,4 +221,10 @@ const styles = StyleSheet.create({
 
   logoutButton: { height: 48, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,90,90,0.4)', alignItems: 'center', justifyContent: 'center', marginTop: 8 },
   logoutText: { color: '#ff6b6b', fontWeight: '700', fontSize: 14 },
+})
+
+const viewerStyles = StyleSheet.create({
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', alignItems: 'center', justifyContent: 'center' },
+  closeBtn: { position: 'absolute', top: 60, right: 20, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center', zIndex: 10 },
+  fullImage: { width: '100%', height: '80%' },
 })
