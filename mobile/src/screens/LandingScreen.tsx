@@ -14,7 +14,6 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
 import { MaterialIcons, Feather } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
-import Svg, { Line } from 'react-native-svg'
 
 const { width } = Dimensions.get('window')
 const BLUE = '#4E7FFF'
@@ -26,57 +25,46 @@ const MUTED = 'rgba(255,255,255,0.55)'
 const BORDER = 'rgba(255,255,255,0.08)'
 const BG = '#050505'
 
-function MapGrid({ w, h }: { w: number; h: number }) {
-  const cols = 6
-  const rows = 5
-  const lines = []
-  for (let i = 1; i < cols; i++) {
-    const x = (w / cols) * i
-    lines.push(<Line key={`v${i}`} x1={x} y1={0} x2={x} y2={h} stroke="#fff" strokeOpacity={0.05} strokeWidth={1} />)
-  }
-  for (let i = 1; i < rows; i++) {
-    const y = (h / rows) * i
-    lines.push(<Line key={`h${i}`} x1={0} y1={y} x2={w} y2={y} stroke="#fff" strokeOpacity={0.05} strokeWidth={1} />)
-  }
-  return <Svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={StyleSheet.absoluteFillObject}>{lines}</Svg>
-}
+const PEOPLE_NEARBY = [
+  { id: '1', name: 'Searching for people nearby...', distance: '', placeholder: true },
+  { id: '2', name: 'Searching for people nearby...', distance: '', placeholder: true },
+]
+
+const PLACES_NEARBY = [
+  { id: '1', name: 'Loading nearby venues...', distance: '', placeholder: true },
+  { id: '2', name: 'Loading nearby venues...', distance: '', placeholder: true },
+]
 
 function NearbyMap({ pulseAnim }: any) {
-  const w = Math.min(width - 48, 320)
-  const h = 200
-
-  const avatars = [
-    { label: 'A', color: PINK, top: 22, left: 26 },
-    { label: 'B', color: BLUE, top: 46, right: 30 },
-    { label: 'C', color: '#e8b33d', bottom: 26, left: 34 },
-    { label: 'D', color: '#3dbf9a', bottom: 22, right: 26 },
-  ]
+  const w = width
+  const h = 280
 
   return (
     <View style={[ns.mapCard, { width: w, height: h }]}>
-      <MapGrid w={w} h={h} />
+      <Image
+        source={require('../../assets/map.jpeg')}
+        style={{ position: 'absolute', top: 0, left: 0, width: w, height: h }}
+        contentFit="cover"
+        cachePolicy="memory-disk"
+      />
 
-      <View style={ns.centerDotWrap}>
-        <Animated.View style={[ns.centerRing, { transform: [{ scale: pulseAnim }] }]} />
-        <View style={ns.centerDot} />
+      <LinearGradient
+        colors={['rgba(5,5,5,1)', 'rgba(5,5,5,0.3)', 'rgba(5,5,5,0)', 'rgba(5,5,5,0.15)', 'rgba(5,5,5,1)']}
+        locations={[0, 0.18, 0.5, 0.8, 1]}
+        style={StyleSheet.absoluteFillObject}
+      />
+      <LinearGradient
+        colors={['rgba(5,5,5,0.9)', 'rgba(5,5,5,0)', 'rgba(5,5,5,0)', 'rgba(5,5,5,0.9)']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        locations={[0, 0.1, 0.9, 1]}
+        style={StyleSheet.absoluteFillObject}
+      />
+
+      <View style={ns.textOverlay}>
+        <Text style={ns.overlayTitle}>Real people.{'\n'}Real conversations.</Text>
+        <Text style={ns.overlaySub}>Discover people nearby who are open to talking.</Text>
       </View>
-
-      {avatars.map((a, i) => (
-        <View
-          key={i}
-          style={[
-            ns.avatarDot,
-            { backgroundColor: a.color },
-            a.top !== undefined ? { top: a.top } : {},
-            a.bottom !== undefined ? { bottom: a.bottom } : {},
-            a.left !== undefined ? { left: a.left } : {},
-            a.right !== undefined ? { right: a.right } : {},
-          ]}
-        >
-          <Text style={ns.avatarDotTxt}>{a.label}</Text>
-          <View style={ns.avatarOnlineDot} />
-        </View>
-      ))}
     </View>
   )
 }
@@ -166,6 +154,9 @@ export default function LandingScreen() {
       <StatusBar style="light" />
 
       <View style={s.nav}>
+        <View style={s.navBrand}>
+          <Text style={s.navTitle}>Let's Talk</Text>
+        </View>
         <TouchableOpacity activeOpacity={0.7} onPress={() => navigation.navigate('AccountMenu' as never)}>
           {avatarProfile?.photoUrl ? (
             <Image source={{ uri: avatarProfile.photoUrl }} style={s.headerAvatarImg} cachePolicy="disk" transition={150} />
@@ -175,57 +166,54 @@ export default function LandingScreen() {
             </View>
           )}
         </TouchableOpacity>
-        <View style={s.navBrand}>
-          <Text style={s.navTitle}>Let's Talk</Text>
-        </View>
-        <View style={{ width: 32 }} />
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
         <View style={s.hero}>
-          <Text style={s.heroTitle}>
-            <Text style={s.heroTitleLight}>Real people.{'\n'}</Text>
-            <Text style={s.heroTitleBold}>Real conversations.</Text>
-          </Text>
-          <Text style={s.heroSub}>Meet people nearby who actually want to talk.</Text>
-
           <NearbyMap pulseAnim={pulseAnim} />
 
-          <TouchableOpacity activeOpacity={0.9} onPress={handleJoin} style={{ width: '100%' }}>
+          <TouchableOpacity activeOpacity={0.9} onPress={handleJoin} style={{ width: '100%', paddingHorizontal: 20, marginTop: 20 }}>
             <LinearGradient colors={[BLUE, PURPLE, PINK]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.ctaBtn}>
-              <Feather name="search" size={18} color="#fff" />
               <Text style={s.ctaBtnText}>Find People Nearby</Text>
             </LinearGradient>
           </TouchableOpacity>
+        </View>
 
-          <View style={s.benefitsRow}>
-            {[
-              { icon: 'message-square', text: 'Talk in person' },
-              { icon: 'zap', text: 'People nearby' },
-              { icon: 'map-pin', text: 'Real places' },
-            ].map((f, i) => (
-              <View key={i} style={s.benefitItem}>
-                <Feather name={f.icon as any} size={13} color="rgba(255,255,255,0.6)" />
-                <Text style={s.benefitText}>{f.text}</Text>
+        <View style={s.rowSection}>
+          <View style={s.rowSectionHeader}>
+            <Text style={s.rowSectionTitle}>People nearby</Text>
+            <TouchableOpacity onPress={() => handleTabPress('nearby')}>
+              <Text style={s.seeAll}>See all</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={s.cardRow}>
+            {PEOPLE_NEARBY.map((p) => (
+              <View key={p.id} style={s.personCard}>
+                <View style={s.personAvatar}>
+                  <Feather name="user" size={18} color={ACCENT} />
+                </View>
+                <Text style={s.personName} numberOfLines={2}>{p.name}</Text>
               </View>
             ))}
           </View>
         </View>
 
-        <View style={s.peopleSection}>
-          <Text style={s.peopleSectionTitle}>People around you</Text>
-          <TouchableOpacity activeOpacity={0.85} style={s.peopleCard} onPress={() => handleTabPress('nearby')}>
-            <View style={s.peopleCardIcon}>
-              <Feather name="user" size={20} color={ACCENT} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={s.peopleCardTitle}>People nearby</Text>
-              <Text style={s.peopleCardDesc}>Find people around you who are open to talk.</Text>
-            </View>
-            <Feather name="chevron-right" size={18} color="rgba(255,255,255,0.3)" />
-          </TouchableOpacity>
-          <Text style={s.locationNote}>Your location is only used to find people nearby.</Text>
+        <View style={s.rowSection}>
+          <View style={s.rowSectionHeader}>
+            <Text style={s.rowSectionTitle}>Places nearby</Text>
+            <TouchableOpacity onPress={() => handleTabPress('nearby')}>
+              <Text style={s.seeAll}>See all</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={s.cardRow}>
+            {PLACES_NEARBY.map((p) => (
+              <View key={p.id} style={s.placeCard}>
+                <View style={s.placeThumb} />
+                <Text style={s.placeName} numberOfLines={2}>{p.name}</Text>
+              </View>
+            ))}
+          </View>
         </View>
 
       </ScrollView>
@@ -304,44 +292,52 @@ export default function LandingScreen() {
 }
 
 const ns = StyleSheet.create({
-  mapCard: { borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: BORDER, overflow: 'hidden', marginBottom: 20, position: 'relative' },
+  mapCard: { overflow: 'hidden', position: 'relative' },
   centerDotWrap: { position: 'absolute', top: '50%', left: '50%', marginLeft: -18, marginTop: -18, width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  centerRing: { position: 'absolute', width: 36, height: 36, borderRadius: 18, backgroundColor: ACCENT, opacity: 0.18 },
-  centerDot: { width: 16, height: 16, borderRadius: 8, backgroundColor: ACCENT, borderWidth: 2, borderColor: '#fff' },
-  avatarDot: { position: 'absolute', width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: BG },
-  avatarDotTxt: { fontSize: 12, fontWeight: '800', color: '#fff' },
-  avatarOnlineDot: { position: 'absolute', top: -2, right: -2, width: 9, height: 9, borderRadius: 4.5, backgroundColor: '#3dbf7a', borderWidth: 1.5, borderColor: BG },
+  centerRing: { position: 'absolute', width: 44, height: 44, borderRadius: 22, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.75)' },
+  centerPin: {
+    width: 30, height: 30, borderRadius: 15,
+    backgroundColor: 'rgba(124,92,252,0.9)',
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: '#fff',
+    shadowColor: ACCENT, shadowOpacity: 0.9, shadowRadius: 14, shadowOffset: { width: 0, height: 0 }, elevation: 10,
+  },
+  textOverlay: { position: 'absolute', bottom: 22, left: 0, right: 0, paddingHorizontal: 20 },
+  overlayTitle: { fontSize: 28, fontWeight: '800', color: '#fff', lineHeight: 34, letterSpacing: -0.5, marginBottom: 8 },
+  overlaySub: { fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 18 },
 })
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: BG },
 
-  nav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 12, zIndex: 10 },
+  nav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 4, zIndex: 10 },
   navBrand: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  navTitle: { fontSize: 20, fontWeight: '700', fontStyle: 'italic', color: '#fff', letterSpacing: -0.2 },
+  navTitle: { fontSize: 22, fontWeight: '700', color: '#fff', letterSpacing: -0.3 },
 
   scroll: { paddingBottom: 132 },
 
-  hero: { paddingHorizontal: 24, paddingTop: 20, paddingBottom: 8, alignItems: 'center' },
-  heroTitle: { textAlign: 'center', marginBottom: 10 },
-  heroTitleLight: { fontSize: 24, fontWeight: '600', color: 'rgba(255,255,255,0.6)', lineHeight: 30, letterSpacing: -0.3 },
-  heroTitleBold: { fontSize: 32, fontWeight: '900', color: '#fff', lineHeight: 38, letterSpacing: -0.6 },
-  heroSub: { fontSize: 15, color: MUTED, textAlign: 'center', lineHeight: 21, marginBottom: 18, maxWidth: '85%' },
+  hero: { paddingTop: 0, paddingBottom: 8 },
 
-  ctaBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 56, width: '100%', borderRadius: 999, marginBottom: 20, shadowColor: PURPLE, shadowOpacity: 0.35, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
-  ctaBtnText: { color: '#fff', fontWeight: '700', fontSize: 16, letterSpacing: 0.1 },
+  heroTextWrap: { marginTop: 16, marginBottom: 16, paddingHorizontal: 20 },
+  heroTitle: { fontSize: 28, fontWeight: '800', color: '#fff', lineHeight: 34, letterSpacing: -0.5, marginBottom: 8 },
+  heroSub: { fontSize: 14, color: MUTED, lineHeight: 19 },
 
-  benefitsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' },
-  benefitItem: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderColor: BORDER, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 999, paddingHorizontal: 11, paddingVertical: 7 },
-  benefitText: { fontSize: 12, color: 'rgba(255,255,255,0.65)', fontWeight: '600' },
+  ctaBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 52, width: '100%', borderRadius: 999, marginBottom: 8, shadowColor: PURPLE, shadowOpacity: 0.35, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
+  ctaBtnText: { color: '#fff', fontWeight: '700', fontSize: 15, letterSpacing: 0.1 },
 
-  peopleSection: { paddingHorizontal: 20, marginTop: 28 },
-  peopleSectionTitle: { fontSize: 15, fontWeight: '800', color: '#fff', marginBottom: 10, letterSpacing: -0.2 },
-  peopleCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: BORDER },
-  peopleCardIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: ACCENT_DIM, alignItems: 'center', justifyContent: 'center' },
-  peopleCardTitle: { fontSize: 14, fontWeight: '800', color: '#fff', marginBottom: 2 },
-  peopleCardDesc: { fontSize: 12, color: MUTED, lineHeight: 16 },
-  locationNote: { fontSize: 11, color: 'rgba(255,255,255,0.35)', textAlign: 'center', marginTop: 14 },
+  rowSection: { marginTop: 24, paddingLeft: 20 },
+  rowSectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingRight: 20 },
+  rowSectionTitle: { fontSize: 15, fontWeight: '800', color: '#fff', letterSpacing: -0.2 },
+  seeAll: { fontSize: 13, fontWeight: '600', color: ACCENT },
+  cardRow: { flexDirection: 'row', gap: 12, paddingRight: 20 },
+
+  personCard: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: BORDER },
+  personAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: ACCENT_DIM, alignItems: 'center', justifyContent: 'center' },
+  personName: { flex: 1, fontSize: 12, color: MUTED, lineHeight: 16 },
+
+  placeCard: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: BORDER },
+  placeThumb: { width: 40, height: 40, borderRadius: 10, backgroundColor: 'rgba(124,92,252,0.15)' },
+  placeName: { flex: 1, fontSize: 12, color: MUTED, lineHeight: 16 },
 
   bottomNav: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', backgroundColor: '#0a0a0a', paddingTop: 10, paddingHorizontal: 14, justifyContent: 'space-around', borderTopWidth: 1, borderTopColor: BORDER },
   navItem: { alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, minWidth: 60 },
