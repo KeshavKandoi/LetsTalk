@@ -9,6 +9,7 @@ import {
   ScrollView, Modal, ActivityIndicator, Dimensions, Animated,
 } from 'react-native'
 import { Image } from 'expo-image'
+import * as Location from 'expo-location'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
@@ -25,15 +26,18 @@ const MUTED = 'rgba(255,255,255,0.55)'
 const BORDER = 'rgba(255,255,255,0.08)'
 const BG = '#050505'
 
-const PEOPLE_NEARBY = [
-  { id: '1', name: 'Searching for people nearby...', distance: '', placeholder: true },
-  { id: '2', name: 'Searching for people nearby...', distance: '', placeholder: true },
-]
+function distanceMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371000
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLon = (lon2 - lon1) * Math.PI / 180
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
 
-const PLACES_NEARBY = [
-  { id: '1', name: 'Loading nearby venues...', distance: '', placeholder: true },
-  { id: '2', name: 'Loading nearby venues...', distance: '', placeholder: true },
-]
+function formatDistance(m: number) {
+  if (m < 1000) return `${Math.round(m)}m away`
+  return `${(m / 1000).toFixed(1)}km away`
+}
 
 function NearbyMap({ pulseAnim }: any) {
   const w = width
@@ -80,6 +84,9 @@ export default function LandingScreen() {
   const [avatarProfile, setAvatarProfile] = useState<{ photoUrl?: string; initials: string } | null>(null)
   const [activeTab, setActiveTab] = useState<'explore' | 'nearby' | 'chats' | 'profile'>('explore')
   const [session, setSession] = useState<any>(null)
+  const [placesNearby, setPlacesNearby] = useState<any[]>([])
+  const [peopleNearby, setPeopleNearby] = useState<any[]>([])
+  const [nearbyLoading, setNearbyLoading] = useState(true)
 
   const pulseAnim = useRef(new Animated.Value(1)).current
 
@@ -108,6 +115,46 @@ export default function LandingScreen() {
       Animated.timing(pulseAnim, { toValue: 1.25, duration: 1200, useNativeDriver: true }),
       Animated.timing(pulseAnim, { toValue: 1, duration: 1200, useNativeDriver: true }),
     ])).start()
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync()
+        if (status !== 'granted') { setNearbyLoading(false); return }
+        const loc = await Location.getCurrentPositionAsync({})
+        const { latitude, longitude } = loc.coords
+
+        const places = await apiFetch('/api/places/nearby', { latitude, longitude })
+        if (cancelled) return
+        const placesList = Array.isArray(places) ? places : []
+        const withDistance = placesList.map((p: any) => ({
+          ...p,
+          distanceLabel: formatDistance(distanceMeters(latitude, longitude, p.lat, p.lng)),
+        }))
+        setPlacesNearby(withDistance)
+
+        const topPlaces = withDistance.slice(0, 2)
+        const previews = await Promise.all(
+          topPlaces.map((p: any) => apiFetch('/api/places/preview', { placeId: p.placeId }).catch(() => null))
+        )
+        if (cancelled) return
+        const people: any[] = []
+        previews.forEach((preview: any) => {
+          if (preview?.participants) {
+            preview.participants.forEach((participant: any) => {
+              people.push(participant)
+            })
+          }
+        })
+        setPeopleNearby(people)
+      } catch {
+      } finally {
+        if (!cancelled) setNearbyLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
   }, [])
 
   const openProfile = async () => {
@@ -188,14 +235,32 @@ export default function LandingScreen() {
             </TouchableOpacity>
           </View>
           <View style={s.cardRow}>
-            {PEOPLE_NEARBY.map((p) => (
-              <View key={p.id} style={s.personCard}>
-                <View style={s.personAvatar}>
-                  <Feather name="user" size={18} color={ACCENT} />
+            {nearbyLoading ? (
+              [0, 1].map((i) => (
+                <View key={i} style={s.personCard}>
+                  <View style={s.personAvatar}><Feather name="user" size={18} color={ACCENT} /></View>
+                  <Text style={s.personName} numberOfLines={2}>Searching for people nearby...</Text>
                 </View>
-                <Text style={s.personName} numberOfLines={2}>{p.name}</Text>
+              ))
+            ) : peopleNearby.length === 0 ? (
+              <View style={s.personCard}>
+                <View style={s.personAvatar}><Feather name="user" size={18} color={ACCENT} /></View>
+                <Text style={s.personName} numberOfLines={2}>No one nearby right now</Text>
               </View>
-            ))}
+            ) : (
+              peopleNearby.slice(0, 2).map((p) => (
+                <View key={p.userId} style={s.personCard}>
+                  {p.photoUrl ? (
+                    <Image source={{ uri: p.photoUrl }} style={s.personAvatarImg} />
+                  ) : (
+                    <View style={s.personAvatar}><Feather name="user" size={18} color={ACCENT} /></View>
+                  )}
+                  <Text style={s.personName} numberOfLines={2}>
+                    {(p.username || 'Someone nearby')}{p.moodEmoji ? ' ' + p.moodEmoji : ''}
+                  </Text>
+                </View>
+              ))
+            )}
           </View>
         </View>
 
@@ -207,12 +272,26 @@ export default function LandingScreen() {
             </TouchableOpacity>
           </View>
           <View style={s.cardRow}>
-            {PLACES_NEARBY.map((p) => (
-              <View key={p.id} style={s.placeCard}>
+            {nearbyLoading ? (
+              [0, 1].map((i) => (
+                <View key={i} style={s.placeCard}>
+                  <View style={s.placeThumb} />
+                  <Text style={s.placeName} numberOfLines={2}>Loading nearby venues...</Text>
+                </View>
+              ))
+            ) : placesNearby.length === 0 ? (
+              <View style={s.placeCard}>
                 <View style={s.placeThumb} />
-                <Text style={s.placeName} numberOfLines={2}>{p.name}</Text>
+                <Text style={s.placeName} numberOfLines={2}>No places found nearby</Text>
               </View>
-            ))}
+            ) : (
+              placesNearby.slice(0, 2).map((p) => (
+                <View key={p.placeId} style={s.placeCard}>
+                  <View style={s.placeThumb} />
+                  <Text style={s.placeName} numberOfLines={2}>{p.name} · {p.distanceLabel}</Text>
+                </View>
+              ))
+            )}
           </View>
         </View>
 
@@ -333,6 +412,7 @@ const s = StyleSheet.create({
 
   personCard: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: BORDER },
   personAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: ACCENT_DIM, alignItems: 'center', justifyContent: 'center' },
+  personAvatarImg: { width: 40, height: 40, borderRadius: 20 },
   personName: { flex: 1, fontSize: 12, color: MUTED, lineHeight: 16 },
 
   placeCard: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: BORDER },
