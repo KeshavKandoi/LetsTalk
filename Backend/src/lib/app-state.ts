@@ -2173,3 +2173,43 @@ export async function getConversationMessagesWithStatus(input: { friendUserId: s
   
   return messages
 }
+
+export async function getNearbyPlacePeopleLite(input: { placeId: string }) {
+  const placeId = input.placeId.trim()
+  if (!placeId) {
+    throw new Error('Choose a place first.')
+  }
+
+  const presentStatuses = ['present', 'ready', 'in_conversation'] as const
+
+  const participantRecords = await db
+    .select({
+      userId: user.id,
+      username: user.displayUsername,
+      fallbackUsername: user.username,
+      fallbackName: user.name,
+      moodEmoji: userProfile.moodEmoji,
+      photoUrl: userProfile.photoUrl,
+    })
+    .from(userProfile)
+    .innerJoin(user, eq(user.id, userProfile.userId))
+    .where(
+      and(
+        eq(userProfile.currentPlaceId, placeId),
+        inArray(userProfile.status, presentStatuses),
+        eq(userProfile.isVerifiedOnSite, true),
+      ),
+    )
+    .orderBy(desc(userProfile.updatedAt))
+    .limit(8)
+
+  return {
+    placeId,
+    participants: participantRecords.map((record) => ({
+      userId: record.userId,
+      username: record.username || record.fallbackUsername || record.fallbackName,
+      moodEmoji: record.moodEmoji,
+      photoUrl: record.photoUrl ?? null,
+    })),
+  }
+}
