@@ -9,6 +9,7 @@ import { MaterialIcons } from '@expo/vector-icons'
 import * as Location from 'expo-location'
 import { LinearGradient } from 'expo-linear-gradient'
 import { apiFetch } from '../lib/api'
+import { Image } from 'expo-image'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
 const AMBER = '#e8824a'
@@ -21,6 +22,7 @@ interface NearbyPlace {
   readyCount: number
   lat?: number
   lng?: number
+  photoUrl?: string | null
 }
 
 interface PlacePreview {
@@ -236,9 +238,13 @@ export default function OnboardingScreen() {
               displayPlaces.map((place) => (
                 <TouchableOpacity key={place.placeId} style={s.placeCard} onPress={() => setSelectedPlace(place)} activeOpacity={0.75}>
                   <View style={s.placeCardRow}>
-                    <View style={s.placeIcon}>
-                      <MaterialIcons name="place" size={18} color={AMBER} />
-                    </View>
+                    {place.photoUrl ? (
+                      <Image source={{ uri: place.photoUrl }} style={s.placePhoto} contentFit="cover" cachePolicy="memory-disk" />
+                    ) : (
+                      <View style={s.placeIcon}>
+                        <MaterialIcons name="place" size={18} color={AMBER} />
+                      </View>
+                    )}
                     <View style={{ flex: 1 }}>
                       <Text style={s.placeName}>{place.name}</Text>
                       <Text style={s.placeAddress} numberOfLines={1}>{place.address}</Text>
@@ -267,9 +273,13 @@ export default function OnboardingScreen() {
 
             {/* Selected place */}
             <View style={s.selectedCard}>
-              <View style={s.selectedCardLeft}>
-                <MaterialIcons name="place" size={20} color={AMBER} />
-              </View>
+              {selectedPlace.photoUrl ? (
+                <Image source={{ uri: selectedPlace.photoUrl }} style={s.selectedPhoto} contentFit="cover" cachePolicy="memory-disk" />
+              ) : (
+                <View style={s.selectedCardLeft}>
+                  <MaterialIcons name="place" size={20} color={AMBER} />
+                </View>
+              )}
               <View style={{ flex: 1 }}>
                 <Text style={s.selectedName}>{selectedPlace.name}</Text>
                 <Text style={s.selectedAddress} numberOfLines={1}>{selectedPlace.address}</Text>
@@ -357,6 +367,7 @@ const s = StyleSheet.create({
   placeCard: { backgroundColor: 'rgba(15,15,15,0.9)', borderRadius: 18, padding: 14, marginBottom: 10, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)' },
   placeCardRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
   placeIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(232,130,74,0.1)', justifyContent: 'center', alignItems: 'center' },
+  placePhoto: { width: 48, height: 48, borderRadius: 12 },
   placeName: { fontSize: 15, fontWeight: '800', color: '#fff', marginBottom: 2 },
   placeAddress: { fontSize: 12, color: 'rgba(255,255,255,0.4)' },
   readyBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
@@ -368,6 +379,7 @@ const s = StyleSheet.create({
   statusText: { fontSize: 12, color: 'rgba(255,255,255,0.4)', fontWeight: '500' },
   selectedCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 16, padding: 14, marginBottom: 16, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)' },
   selectedCardLeft: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.08)', justifyContent: 'center', alignItems: 'center' },
+  selectedPhoto: { width: 48, height: 48, borderRadius: 12 },
   selectedName: { fontSize: 15, fontWeight: '800', color: '#fff', marginBottom: 2 },
   selectedAddress: { fontSize: 12, color: 'rgba(255,255,255,0.45)' },
   statsRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
