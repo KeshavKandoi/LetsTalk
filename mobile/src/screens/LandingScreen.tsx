@@ -287,7 +287,11 @@ export default function LandingScreen() {
             ) : (
               placesNearby.slice(0, 2).map((p) => (
                 <View key={p.placeId} style={s.placeCard}>
-                  <View style={s.placeThumb} />
+                  {p.photoUrl ? (
+                    <Image source={{ uri: p.photoUrl }} style={s.placeThumbImg} contentFit="cover" cachePolicy="memory-disk" />
+                  ) : (
+                    <View style={s.placeThumb} />
+                  )}
                   <Text style={s.placeName} numberOfLines={2}>{p.name} · {p.distanceLabel}</Text>
                 </View>
               ))
@@ -417,6 +421,7 @@ const s = StyleSheet.create({
 
   placeCard: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: BORDER },
   placeThumb: { width: 40, height: 40, borderRadius: 10, backgroundColor: 'rgba(124,92,252,0.15)' },
+  placeThumbImg: { width: 40, height: 40, borderRadius: 10 },
   placeName: { flex: 1, fontSize: 12, color: MUTED, lineHeight: 16 },
 
   bottomNav: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', backgroundColor: '#0a0a0a', paddingTop: 10, paddingHorizontal: 14, justifyContent: 'space-around', borderTopWidth: 1, borderTopColor: BORDER },
