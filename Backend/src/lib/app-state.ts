@@ -48,6 +48,9 @@ type GoogleNearbyPlace = {
     latitude?: number
     longitude?: number
   }
+  photos?: Array<{
+    name?: string
+  }>
 }
 
 function mapSession(session: NonNullable<SessionResult>): AppSession {
@@ -1805,6 +1808,11 @@ function mapGooglePlace(result: GoogleNearbyPlace): NearbyPlace | null {
     return null
   }
 
+  const photoName = result.photos?.[0]?.name
+  const photoUrl = photoName
+    ? `${getAppBaseUrl()}/api/places/photo?name=${encodeURIComponent(photoName)}`
+    : null
+
   return {
     placeId: result.id,
     name: result.displayName.text,
@@ -1812,6 +1820,7 @@ function mapGooglePlace(result: GoogleNearbyPlace): NearbyPlace | null {
     lat: result.location.latitude,
     lng: result.location.longitude,
     readyCount: 0,
+    photoUrl,
   }
 }
 
@@ -1833,7 +1842,7 @@ export async function searchNearbyPlacesForLocation(input: {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': getGoogleMapsApiKey(),
         'X-Goog-FieldMask':
-          'places.id,places.displayName,places.formattedAddress,places.location',
+          'places.id,places.displayName,places.formattedAddress,places.location,places.photos',
       },
       body: JSON.stringify({
         maxResultCount: 8,
