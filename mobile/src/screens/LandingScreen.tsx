@@ -123,7 +123,11 @@ export default function LandingScreen() {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync()
         if (status !== 'granted') { setNearbyLoading(false); return }
-        const loc = await Location.getCurrentPositionAsync({})
+
+        const lastKnown = await Location.getLastKnownPositionAsync({ maxAge: 5 * 60 * 1000 })
+        const loc = lastKnown ?? await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        })
         const { latitude, longitude } = loc.coords
 
         const places = await apiFetch('/api/places/nearby', { latitude, longitude })
