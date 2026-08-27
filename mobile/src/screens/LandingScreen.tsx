@@ -86,7 +86,8 @@ export default function LandingScreen() {
   const [session, setSession] = useState<any>(null)
   const [placesNearby, setPlacesNearby] = useState<any[]>([])
   const [peopleNearby, setPeopleNearby] = useState<any[]>([])
-  const [nearbyLoading, setNearbyLoading] = useState(true)
+  const [placesLoading, setPlacesLoading] = useState(true)
+  const [peopleLoading, setPeopleLoading] = useState(true)
 
   const pulseAnim = useRef(new Animated.Value(1)).current
 
@@ -120,17 +121,25 @@ export default function LandingScreen() {
   useEffect(() => {
     let cancelled = false
     ;(async () => {
+      const t0 = Date.now()
       try {
         const { status } = await Location.requestForegroundPermissionsAsync()
-        if (status !== 'granted') { setNearbyLoading(false); return }
+        console.log('[TIMING] permission:', Date.now() - t0, 'ms')
+        if (status !== 'granted') { setPlacesLoading(false); setPeopleLoading(false); return }
 
-        const lastKnown = await Location.getLastKnownPositionAsync({ maxAge: 5 * 60 * 1000 })
+        const t1 = Date.now()
+        const lastKnown = await Location.getLastKnownPositionAsync({})
+        console.log('[TIMING] getLastKnownPositionAsync:', Date.now() - t1, 'ms', lastKnown ? '(found cached)' : '(none, falling back)')
+        const t2 = Date.now()
         const loc = lastKnown ?? await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
+          accuracy: Location.Accuracy.Lowest,
         })
+        console.log('[TIMING] location total:', Date.now() - t2, 'ms')
         const { latitude, longitude } = loc.coords
 
+        const t3 = Date.now()
         const places = await apiFetch('/api/places/nearby', { latitude, longitude })
+        console.log('[TIMING] /api/places/nearby:', Date.now() - t3, 'ms')
         if (cancelled) return
         const placesList = Array.isArray(places) ? places : []
         const withDistance = placesList.map((p: any) => ({
@@ -138,11 +147,15 @@ export default function LandingScreen() {
           distanceLabel: formatDistance(distanceMeters(latitude, longitude, p.lat, p.lng)),
         }))
         setPlacesNearby(withDistance)
+        setPlacesLoading(false)
+        console.log('[TIMING] places shown at:', Date.now() - t0, 'ms total')
 
+        const t4 = Date.now()
         const topPlaces = withDistance.slice(0, 2)
         const previews = await Promise.all(
-          topPlaces.map((p: any) => apiFetch('/api/places/preview', { placeId: p.placeId }).catch(() => null))
+          topPlaces.map((p: any) => apiFetch('/api/places/nearby-people', { placeId: p.placeId }).catch(() => null))
         )
+        console.log('[TIMING] /api/places/preview x2:', Date.now() - t4, 'ms')
         if (cancelled) return
         const people: any[] = []
         previews.forEach((preview: any) => {
@@ -153,9 +166,11 @@ export default function LandingScreen() {
           }
         })
         setPeopleNearby(people)
-      } catch {
-      } finally {
-        if (!cancelled) setNearbyLoading(false)
+        setPeopleLoading(false)
+        console.log('[TIMING] people shown at:', Date.now() - t0, 'ms total')
+      } catch (e) {
+        console.log('[TIMING] error:', e)
+        if (!cancelled) { setPlacesLoading(false); setPeopleLoading(false) }
       }
     })()
     return () => { cancelled = true }
@@ -239,7 +254,7 @@ export default function LandingScreen() {
             </TouchableOpacity>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.cardRow}>
-            {nearbyLoading ? (
+            {peopleLoading ? (
               [0, 1].map((i) => (
                 <View key={i} style={s.personCard}>
                   <View style={s.personAvatar}><Feather name="user" size={18} color={ACCENT} /></View>
@@ -276,7 +291,7 @@ export default function LandingScreen() {
             </TouchableOpacity>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.cardRow}>
-            {nearbyLoading ? (
+            {placesLoading ? (
               [0, 1].map((i) => (
                 <View key={i} style={s.placeCard}>
                   <View style={s.placeThumb} />
