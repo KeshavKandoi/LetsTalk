@@ -26,6 +26,7 @@ import { Route as ApiPlacesPushTokenRouteImport } from './routes/api/places/push
 import { Route as ApiPlacesProfileRouteImport } from './routes/api/places/profile'
 import { Route as ApiPlacesPreviewRouteImport } from './routes/api/places/preview'
 import { Route as ApiPlacesPhotoRouteImport } from './routes/api/places/photo'
+import { Route as ApiPlacesNearbyPeopleRouteImport } from './routes/api/places/nearby-people'
 import { Route as ApiPlacesNearbyRouteImport } from './routes/api/places/nearby'
 import { Route as ApiPlacesLeaveRouteImport } from './routes/api/places/leave'
 import { Route as ApiPlacesJoinRouteImport } from './routes/api/places/join'
@@ -133,6 +134,11 @@ const ApiPlacesPreviewRoute = ApiPlacesPreviewRouteImport.update({
 const ApiPlacesPhotoRoute = ApiPlacesPhotoRouteImport.update({
   id: '/api/places/photo',
   path: '/api/places/photo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPlacesNearbyPeopleRoute = ApiPlacesNearbyPeopleRouteImport.update({
+  id: '/api/places/nearby-people',
+  path: '/api/places/nearby-people',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPlacesNearbyRoute = ApiPlacesNearbyRouteImport.update({
@@ -273,6 +279,7 @@ export interface FileRoutesByFullPath {
   '/api/places/join': typeof ApiPlacesJoinRoute
   '/api/places/leave': typeof ApiPlacesLeaveRoute
   '/api/places/nearby': typeof ApiPlacesNearbyRoute
+  '/api/places/nearby-people': typeof ApiPlacesNearbyPeopleRoute
   '/api/places/photo': typeof ApiPlacesPhotoRoute
   '/api/places/preview': typeof ApiPlacesPreviewRoute
   '/api/places/profile': typeof ApiPlacesProfileRoute
@@ -314,6 +321,7 @@ export interface FileRoutesByTo {
   '/api/places/join': typeof ApiPlacesJoinRoute
   '/api/places/leave': typeof ApiPlacesLeaveRoute
   '/api/places/nearby': typeof ApiPlacesNearbyRoute
+  '/api/places/nearby-people': typeof ApiPlacesNearbyPeopleRoute
   '/api/places/photo': typeof ApiPlacesPhotoRoute
   '/api/places/preview': typeof ApiPlacesPreviewRoute
   '/api/places/profile': typeof ApiPlacesProfileRoute
@@ -356,6 +364,7 @@ export interface FileRoutesById {
   '/api/places/join': typeof ApiPlacesJoinRoute
   '/api/places/leave': typeof ApiPlacesLeaveRoute
   '/api/places/nearby': typeof ApiPlacesNearbyRoute
+  '/api/places/nearby-people': typeof ApiPlacesNearbyPeopleRoute
   '/api/places/photo': typeof ApiPlacesPhotoRoute
   '/api/places/preview': typeof ApiPlacesPreviewRoute
   '/api/places/profile': typeof ApiPlacesProfileRoute
@@ -399,6 +408,7 @@ export interface FileRouteTypes {
     | '/api/places/join'
     | '/api/places/leave'
     | '/api/places/nearby'
+    | '/api/places/nearby-people'
     | '/api/places/photo'
     | '/api/places/preview'
     | '/api/places/profile'
@@ -440,6 +450,7 @@ export interface FileRouteTypes {
     | '/api/places/join'
     | '/api/places/leave'
     | '/api/places/nearby'
+    | '/api/places/nearby-people'
     | '/api/places/photo'
     | '/api/places/preview'
     | '/api/places/profile'
@@ -481,6 +492,7 @@ export interface FileRouteTypes {
     | '/api/places/join'
     | '/api/places/leave'
     | '/api/places/nearby'
+    | '/api/places/nearby-people'
     | '/api/places/photo'
     | '/api/places/preview'
     | '/api/places/profile'
@@ -523,6 +535,7 @@ export interface RootRouteChildren {
   ApiPlacesJoinRoute: typeof ApiPlacesJoinRoute
   ApiPlacesLeaveRoute: typeof ApiPlacesLeaveRoute
   ApiPlacesNearbyRoute: typeof ApiPlacesNearbyRoute
+  ApiPlacesNearbyPeopleRoute: typeof ApiPlacesNearbyPeopleRoute
   ApiPlacesPhotoRoute: typeof ApiPlacesPhotoRoute
   ApiPlacesPreviewRoute: typeof ApiPlacesPreviewRoute
   ApiPlacesProfileRoute: typeof ApiPlacesProfileRoute
@@ -658,6 +671,13 @@ declare module '@tanstack/react-router' {
       path: '/api/places/photo'
       fullPath: '/api/places/photo'
       preLoaderRoute: typeof ApiPlacesPhotoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/places/nearby-people': {
+      id: '/api/places/nearby-people'
+      path: '/api/places/nearby-people'
+      fullPath: '/api/places/nearby-people'
+      preLoaderRoute: typeof ApiPlacesNearbyPeopleRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/places/nearby': {
@@ -843,6 +863,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPlacesJoinRoute: ApiPlacesJoinRoute,
   ApiPlacesLeaveRoute: ApiPlacesLeaveRoute,
   ApiPlacesNearbyRoute: ApiPlacesNearbyRoute,
+  ApiPlacesNearbyPeopleRoute: ApiPlacesNearbyPeopleRoute,
   ApiPlacesPhotoRoute: ApiPlacesPhotoRoute,
   ApiPlacesPreviewRoute: ApiPlacesPreviewRoute,
   ApiPlacesProfileRoute: ApiPlacesProfileRoute,
