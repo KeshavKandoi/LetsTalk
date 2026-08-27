@@ -63,6 +63,7 @@ export type NearbyPlace = {
   latitude?: number | null
   longitude?: number | null
   readyCount: number
+  photoUrl?: string | null
 }
 
 export type AppState = {
