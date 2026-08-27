@@ -234,7 +234,7 @@ export default function LandingScreen() {
               <Text style={s.seeAll}>See all</Text>
             </TouchableOpacity>
           </View>
-          <View style={s.cardRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.cardRow}>
             {nearbyLoading ? (
               [0, 1].map((i) => (
                 <View key={i} style={s.personCard}>
@@ -248,7 +248,7 @@ export default function LandingScreen() {
                 <Text style={s.personName} numberOfLines={2}>No one nearby right now</Text>
               </View>
             ) : (
-              peopleNearby.slice(0, 2).map((p) => (
+              peopleNearby.map((p) => (
                 <View key={p.userId} style={s.personCard}>
                   {p.photoUrl ? (
                     <Image source={{ uri: p.photoUrl }} style={s.personAvatarImg} />
@@ -261,7 +261,7 @@ export default function LandingScreen() {
                 </View>
               ))
             )}
-          </View>
+          </ScrollView>
         </View>
 
         <View style={s.rowSection}>
@@ -271,7 +271,7 @@ export default function LandingScreen() {
               <Text style={s.seeAll}>See all</Text>
             </TouchableOpacity>
           </View>
-          <View style={s.cardRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.cardRow}>
             {nearbyLoading ? (
               [0, 1].map((i) => (
                 <View key={i} style={s.placeCard}>
@@ -285,7 +285,7 @@ export default function LandingScreen() {
                 <Text style={s.placeName} numberOfLines={2}>No places found nearby</Text>
               </View>
             ) : (
-              placesNearby.slice(0, 2).map((p) => (
+              placesNearby.map((p) => (
                 <View key={p.placeId} style={s.placeCard}>
                   {p.photoUrl ? (
                     <Image source={{ uri: p.photoUrl }} style={s.placeThumbImg} contentFit="cover" cachePolicy="memory-disk" />
@@ -296,7 +296,7 @@ export default function LandingScreen() {
                 </View>
               ))
             )}
-          </View>
+          </ScrollView>
         </View>
 
       </ScrollView>
@@ -414,12 +414,12 @@ const s = StyleSheet.create({
   seeAll: { fontSize: 13, fontWeight: '600', color: ACCENT },
   cardRow: { flexDirection: 'row', gap: 12, paddingRight: 20 },
 
-  personCard: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: BORDER },
+  personCard: { width: 200, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: BORDER },
   personAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: ACCENT_DIM, alignItems: 'center', justifyContent: 'center' },
   personAvatarImg: { width: 40, height: 40, borderRadius: 20 },
   personName: { flex: 1, fontSize: 12, color: MUTED, lineHeight: 16 },
 
-  placeCard: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: BORDER },
+  placeCard: { width: 200, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: BORDER },
   placeThumb: { width: 40, height: 40, borderRadius: 10, backgroundColor: 'rgba(124,92,252,0.15)' },
   placeThumbImg: { width: 40, height: 40, borderRadius: 10 },
   placeName: { flex: 1, fontSize: 12, color: MUTED, lineHeight: 16 },
