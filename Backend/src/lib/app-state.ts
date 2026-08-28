@@ -1824,6 +1824,18 @@ function mapGooglePlace(result: GoogleNearbyPlace): NearbyPlace | null {
   }
 }
 
+type CachedGooglePlaces = {
+  data: NearbyPlace[]
+  expiresAt: number
+}
+
+const nearbyGooglePlacesCache = new Map<string, CachedGooglePlaces>()
+const NEARBY_GOOGLE_CACHE_TTL_MS = 3 * 60 * 1000
+
+function getNearbyGoogleCacheKey(lat: number, lng: number) {
+  return `${lat.toFixed(3)},${lng.toFixed(3)}`
+}
+
 export async function searchNearbyPlacesForLocation(input: {
   latitude: number
   longitude: number
@@ -1834,42 +1846,57 @@ export async function searchNearbyPlacesForLocation(input: {
     throw new Error('A valid location is required.')
   }
 
-  const response = await fetch(
-    'https://places.googleapis.com/v1/places:searchNearby',
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': getGoogleMapsApiKey(),
-        'X-Goog-FieldMask':
-          'places.id,places.displayName,places.formattedAddress,places.location,places.photos',
-      },
-      body: JSON.stringify({
-        maxResultCount: 8,
-        locationRestriction: {
-          circle: {
-            center: {
-              latitude: input.latitude,
-              longitude: input.longitude,
-            },
-            radius: 200,
-          },
+  const cacheKey = getNearbyGoogleCacheKey(input.latitude, input.longitude)
+  const cached = nearbyGooglePlacesCache.get(cacheKey)
+  const cacheHit = cached && cached.expiresAt > Date.now()
+
+  let places: NearbyPlace[]
+
+  if (cacheHit) {
+    places = cached.data
+  } else {
+    const response = await fetch(
+      'https://places.googleapis.com/v1/places:searchNearby',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': getGoogleMapsApiKey(),
+          'X-Goog-FieldMask':
+            'places.id,places.displayName,places.formattedAddress,places.location,places.photos',
         },
-      }),
-    },
-  )
+        body: JSON.stringify({
+          maxResultCount: 8,
+          locationRestriction: {
+            circle: {
+              center: {
+                latitude: input.latitude,
+                longitude: input.longitude,
+              },
+              radius: 200,
+            },
+          },
+        }),
+      },
+    )
 
-  if (!response.ok) {
-    throw new Error('Unable to load nearby places right now.')
+    if (!response.ok) {
+      throw new Error('Unable to load nearby places right now.')
+    }
+
+    const payload = (await response.json()) as {
+      places?: GoogleNearbyPlace[]
+    }
+
+    places = (payload.places ?? [])
+      .map(mapGooglePlace)
+      .filter((value): value is NearbyPlace => value !== null)
+
+    nearbyGooglePlacesCache.set(cacheKey, {
+      data: places,
+      expiresAt: Date.now() + NEARBY_GOOGLE_CACHE_TTL_MS,
+    })
   }
-
-  const payload = (await response.json()) as {
-    places?: GoogleNearbyPlace[]
-  }
-
-  const places = (payload.places ?? [])
-    .map(mapGooglePlace)
-    .filter((value): value is NearbyPlace => value !== null)
 
   if (places.length > 0) {
     const now = new Date()
