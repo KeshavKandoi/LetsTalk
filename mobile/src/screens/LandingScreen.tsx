@@ -6,7 +6,7 @@ import DrawerMenu from './DrawerMenu'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, Modal, ActivityIndicator, Dimensions, Animated,
+  ScrollView, Modal, ActivityIndicator, Dimensions, Animated, InteractionManager,
 } from 'react-native'
 import { Image } from 'expo-image'
 import * as Location from 'expo-location'
@@ -83,7 +83,7 @@ export default function LandingScreen() {
   const [profileLoading, setProfileLoading] = useState(false)
   const [avatarProfile, setAvatarProfile] = useState<{ photoUrl?: string; initials: string } | null>(null)
   const [activeTab, setActiveTab] = useState<'explore' | 'nearby' | 'chats' | 'profile'>('explore')
-  const [session, setSession] = useState<any>(null)
+  const [session, setSession] = useState<any>(undefined)
   const [placesNearby, setPlacesNearby] = useState<any[]>([])
   const [peopleNearby, setPeopleNearby] = useState<any[]>([])
   const [placesLoading, setPlacesLoading] = useState(true)
@@ -120,60 +120,49 @@ export default function LandingScreen() {
 
   useEffect(() => {
     let cancelled = false
-    ;(async () => {
-      const t0 = Date.now()
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync()
-        console.log('[TIMING] permission:', Date.now() - t0, 'ms')
-        if (status !== 'granted') { setPlacesLoading(false); setPeopleLoading(false); return }
+    const task = InteractionManager.runAfterInteractions(() => {
+      ;(async () => {
+        try {
+          const { status } = await Location.requestForegroundPermissionsAsync()
+          if (status !== 'granted') { setPlacesLoading(false); setPeopleLoading(false); return }
 
-        const t1 = Date.now()
-        const lastKnown = await Location.getLastKnownPositionAsync({})
-        console.log('[TIMING] getLastKnownPositionAsync:', Date.now() - t1, 'ms', lastKnown ? '(found cached)' : '(none, falling back)')
-        const t2 = Date.now()
-        const loc = lastKnown ?? await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Lowest,
-        })
-        console.log('[TIMING] location total:', Date.now() - t2, 'ms')
-        const { latitude, longitude } = loc.coords
+          const lastKnown = await Location.getLastKnownPositionAsync({})
+          const loc = lastKnown ?? await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Lowest,
+          })
+          const { latitude, longitude } = loc.coords
 
-        const t3 = Date.now()
-        const places = await apiFetch('/api/places/nearby', { latitude, longitude })
-        console.log('[TIMING] /api/places/nearby:', Date.now() - t3, 'ms')
-        if (cancelled) return
-        const placesList = Array.isArray(places) ? places : []
-        const withDistance = placesList.map((p: any) => ({
-          ...p,
-          distanceLabel: formatDistance(distanceMeters(latitude, longitude, p.lat, p.lng)),
-        }))
-        setPlacesNearby(withDistance)
-        setPlacesLoading(false)
-        console.log('[TIMING] places shown at:', Date.now() - t0, 'ms total')
+          const places = await apiFetch('/api/places/nearby', { latitude, longitude })
+          if (cancelled) return
+          const placesList = Array.isArray(places) ? places : []
+          const withDistance = placesList.map((p: any) => ({
+            ...p,
+            distanceLabel: formatDistance(distanceMeters(latitude, longitude, p.lat, p.lng)),
+          }))
+          setPlacesNearby(withDistance)
+          setPlacesLoading(false)
 
-        const t4 = Date.now()
-        const topPlaces = withDistance.slice(0, 2)
-        const previews = await Promise.all(
-          topPlaces.map((p: any) => apiFetch('/api/places/nearby-people', { placeId: p.placeId }).catch(() => null))
-        )
-        console.log('[TIMING] /api/places/preview x2:', Date.now() - t4, 'ms')
-        if (cancelled) return
-        const people: any[] = []
-        previews.forEach((preview: any) => {
-          if (preview?.participants) {
-            preview.participants.forEach((participant: any) => {
-              people.push(participant)
-            })
-          }
-        })
-        setPeopleNearby(people)
-        setPeopleLoading(false)
-        console.log('[TIMING] people shown at:', Date.now() - t0, 'ms total')
-      } catch (e) {
-        console.log('[TIMING] error:', e)
-        if (!cancelled) { setPlacesLoading(false); setPeopleLoading(false) }
-      }
-    })()
-    return () => { cancelled = true }
+          const topPlaces = withDistance.slice(0, 2)
+          const previews = await Promise.all(
+            topPlaces.map((p: any) => apiFetch('/api/places/nearby-people', { placeId: p.placeId }).catch(() => null))
+          )
+          if (cancelled) return
+          const people: any[] = []
+          previews.forEach((preview: any) => {
+            if (preview?.participants) {
+              preview.participants.forEach((participant: any) => {
+                people.push(participant)
+              })
+            }
+          })
+          setPeopleNearby(people)
+          setPeopleLoading(false)
+        } catch (e) {
+          if (!cancelled) { setPlacesLoading(false); setPeopleLoading(false) }
+        }
+      })()
+    })
+    return () => { cancelled = true; task.cancel() }
   }, [])
 
   const openProfile = async () => {
@@ -190,13 +179,21 @@ export default function LandingScreen() {
     navigation.reset({ index: 0, routes: [{ name: 'Login' }] })
   }
 
-  const handleJoin = async () => {
+  const handleJoin = () => {
     if (!isConnected) return
-    try {
-      const s = await getSession()
-      if (s?.session) navigation.navigate('Onboarding' as never)
-      else { await signOut(); navigation.navigate('Signup' as never) }
-    } catch { await signOut(); navigation.navigate('Signup' as never) }
+
+    if (session !== undefined) {
+      if (session?.session) navigation.navigate('Onboarding' as never)
+      else { signOut(); navigation.navigate('Signup' as never) }
+      return
+    }
+
+    getSession()
+      .then((s) => {
+        if (s?.session) navigation.navigate('Onboarding' as never)
+        else { signOut(); navigation.navigate('Signup' as never) }
+      })
+      .catch(() => { signOut(); navigation.navigate('Signup' as never) })
   }
 
   const handleTabPress = (tab: 'explore' | 'nearby' | 'chats' | 'profile') => {
@@ -438,7 +435,7 @@ const s = StyleSheet.create({
   personAvatarImg: { width: 40, height: 40, borderRadius: 20 },
   personName: { flex: 1, fontSize: 12, color: MUTED, lineHeight: 16 },
 
-  placeCard: { width: 200, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: BORDER },
+  placeCard: { width: 200, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 14,padding: 12, borderWidth: 1, borderColor: BORDER },
   placeThumb: { width: 40, height: 40, borderRadius: 10, backgroundColor: 'rgba(124,92,252,0.15)' },
   placeThumbImg: { width: 40, height: 40, borderRadius: 10 },
   placeName: { flex: 1, fontSize: 12, color: MUTED, lineHeight: 16 },
