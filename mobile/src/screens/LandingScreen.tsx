@@ -41,7 +41,7 @@ function formatDistance(m: number) {
 
 function NearbyMap({ pulseAnim }: any) {
   const w = width
-  const h = 280
+  const h = 370
 
   return (
     <View style={[ns.mapCard, { width: w, height: h }]}>
@@ -236,10 +236,10 @@ export default function LandingScreen() {
         <View style={s.hero}>
           <NearbyMap pulseAnim={pulseAnim} />
 
-          <TouchableOpacity activeOpacity={0.9} onPress={handleJoin} style={{ width: '100%', paddingHorizontal: 20, marginTop: 20 }}>
-            <LinearGradient colors={[BLUE, PURPLE, PINK]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.ctaBtn}>
+          <TouchableOpacity activeOpacity={0.9} onPress={handleJoin} style={{ width: '100%', paddingHorizontal: 20, marginTop: 0 }}>
+            <View style={[s.ctaBtn, { backgroundColor: '#000', borderWidth: 1.5, borderColor: '#fff' }]}>
               <Text style={s.ctaBtnText}>Find People Nearby</Text>
-            </LinearGradient>
+            </View>
           </TouchableOpacity>
         </View>
 
