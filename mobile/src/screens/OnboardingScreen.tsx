@@ -1,19 +1,23 @@
 import { useEffect, useState, useCallback } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, ActivityIndicator, TextInput,
+  ScrollView, ActivityIndicator, TextInput, Alert,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
 import { MaterialIcons } from '@expo/vector-icons'
 import * as Location from 'expo-location'
+import * as ImagePicker from 'expo-image-picker'
+import * as FileSystem from 'expo-file-system/legacy'
 import { LinearGradient } from 'expo-linear-gradient'
 import { apiFetch } from '../lib/api'
 import { Image } from 'expo-image'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { getStoredSessionToken } from '../lib/auth'
 
 const AMBER = '#e8824a'
 const AMBER_LIGHT = 'rgba(232,130,74,0.7)'
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL
 
 interface NearbyPlace {
   placeId: string
@@ -51,6 +55,46 @@ export default function OnboardingScreen() {
   const [filteredPlaces, setFilteredPlaces] = useState<NearbyPlace[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
+  const [step, setStep] = useState<'photo' | 'place'>('photo')
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+
+  const pickPhoto = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (status !== 'granted') { Alert.alert('Permission needed', 'Allow photo access.'); return }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'] as any,
+      allowsEditing: true, aspect: [1, 1], quality: 0.7,
+    })
+    if (!result.canceled && result.assets[0]) {
+      setUploadingPhoto(true)
+      try {
+        const uri = result.assets[0].uri
+        const base64 = await FileSystem.readAsStringAsync(uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        })
+        const photoBase64 = `data:image/jpeg;base64,${base64}`
+        const token = await getStoredSessionToken()
+        const res = await fetch(`${BASE_URL}/api/places/upload-photo`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ photoBase64 }),
+        })
+        const data = await res.json()
+        if (data?.photoUrl) {
+          setPhotoUrl(data.photoUrl + '?t=' + Date.now())
+        } else {
+          Alert.alert('Error', data?.error || 'Upload failed.')
+        }
+      } catch (e: any) {
+        Alert.alert('Error', 'Could not upload photo.')
+      }
+      setUploadingPhoto(false)
+    }
+  }
 
   const fetchNearbyPlaces = async () => {
     setPlacesLoading(true)
@@ -187,7 +231,34 @@ export default function OnboardingScreen() {
           <View style={{ width: 44 }} />
         </View>
 
-        {!selectedPlace ? (
+        {step === 'photo' ? (
+          <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+            <Text style={s.pageTitle}>Add your photo</Text>
+            <Text style={s.subtitle}>Help people recognize you. You can always add this later.</Text>
+
+            <TouchableOpacity onPress={pickPhoto} disabled={uploadingPhoto} activeOpacity={0.85} style={{ alignItems: 'center', marginVertical: 24 }}>
+              <View style={s.photoCircle}>
+                {photoUrl ? (
+                  <Image source={{ uri: photoUrl }} style={s.photoCircleImg} contentFit="cover" />
+                ) : (
+                  <MaterialIcons name="add-a-photo" size={28} color={AMBER} />
+                )}
+                {uploadingPhoto && (
+                  <View style={s.photoCircleOverlay}>
+                    <ActivityIndicator color="#fff" />
+                  </View>
+                )}
+              </View>
+              <Text style={s.photoHint}>{photoUrl ? 'Tap to change' : 'Tap to upload'}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={s.joinBtnWrap} onPress={() => setStep('place')} disabled={uploadingPhoto} activeOpacity={0.85}>
+              <LinearGradient colors={['#eafff0', '#cdeed6', '#a9dcb8']} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={s.joinBtn}>
+                <Text style={s.joinBtnText}>{photoUrl ? 'Continue' : 'Skip for now'}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </ScrollView>
+        ) : !selectedPlace ? (
           <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <Text style={s.pageTitle}>Find your spot</Text>
             <Text style={s.subtitle}>Pick a place that feels active right now.</Text>
@@ -419,4 +490,8 @@ const s = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.7)',
   },
   joinBtnText: { color: '#1f4a2c', fontWeight: '900', fontSize: 16 },
+  photoCircle: { width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1.5, borderColor: 'rgba(232,130,74,0.4)', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  photoCircleImg: { width: 120, height: 120, borderRadius: 60 },
+  photoCircleOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' },
+  photoHint: { marginTop: 12, fontSize: 13, color: 'rgba(255,255,255,0.5)', fontWeight: '600' },
 })
