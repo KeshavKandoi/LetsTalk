@@ -39,6 +39,32 @@ function formatDistance(m: number) {
   return `${(m / 1000).toFixed(1)}km away`
 }
 
+function WhyLetsTalk() {
+  const features = [
+    { icon: 'shield', title: 'Verified profiles', desc: 'Real people, not bots or fake accounts.' },
+    { icon: 'zap', title: 'Real-time nearby', desc: 'See who\'s actually around you right now.' },
+    { icon: 'map-pin', title: 'Safe meetups', desc: 'Meet in public places you both choose.' },
+    { icon: 'slash', title: 'No spam DMs', desc: 'Conversations only start when both agree.' },
+  ] as const
+
+  return (
+    <View style={wl.section}>
+      <Text style={wl.title}>Why Let's Talk</Text>
+      <View style={wl.grid}>
+        {features.map((f) => (
+          <View key={f.title} style={wl.card}>
+            <View style={wl.iconWrap}>
+              <Feather name={f.icon} size={18} color="#fff" />
+            </View>
+            <Text style={wl.cardTitle}>{f.title}</Text>
+            <Text style={wl.cardDesc}>{f.desc}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  )
+}
+
 function NearbyMap({ pulseAnim }: any) {
   const w = width
   const h = 370
@@ -315,6 +341,8 @@ export default function LandingScreen() {
           </ScrollView>
         </View>
 
+        <WhyLetsTalk />
+
       </ScrollView>
 
       <DrawerMenu visible={drawerVisible} onClose={() => setDrawerVisible(false)} />
@@ -404,6 +432,16 @@ const ns = StyleSheet.create({
   textOverlay: { position: 'absolute', bottom: 22, left: 0, right: 0, paddingHorizontal: 20 },
   overlayTitle: { fontSize: 28, fontWeight: '800', color: '#fff', lineHeight: 34, letterSpacing: -0.5, marginBottom: 8 },
   overlaySub: { fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 18 },
+})
+
+const wl = StyleSheet.create({
+  section: { marginTop: 32, paddingHorizontal: 20 },
+  title: { fontSize: 17, fontWeight: '800', color: '#fff', letterSpacing: -0.2, marginBottom: 16 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between' },
+  card: { width: '48%', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
+  iconWrap: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+  cardTitle: { fontSize: 13, fontWeight: '700', color: '#fff', marginBottom: 4 },
+  cardDesc: { fontSize: 11, color: 'rgba(255,255,255,0.55)', lineHeight: 15 },
 })
 
 const s = StyleSheet.create({
