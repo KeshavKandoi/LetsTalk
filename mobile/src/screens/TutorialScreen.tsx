@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
 import { useNavigation } from '@react-navigation/native'
 import { Feather, MaterialIcons } from '@expo/vector-icons'
-import { getSession, markOnboardingCompleted } from '../lib/auth'
+import { getSession, hasCompletedPhotoOnboarding } from '../lib/auth'
 
 const { width } = Dimensions.get('window')
 
@@ -54,10 +54,13 @@ export default function TutorialScreen() {
   const handleGetStarted = async () => {
     try {
       const session = await getSession()
-      const email = session?.user?.email
-      if (email) await markOnboardingCompleted(email)
+      const userId = session?.user?.id
+      if (!userId || await hasCompletedPhotoOnboarding(userId)) {
+        navigation.reset({ index: 0, routes: [{ name: 'Landing' }] })
+        return
+      }
     } catch {}
-    navigation.reset({ index: 0, routes: [{ name: 'Landing' }] })
+    navigation.reset({ index: 0, routes: [{ name: 'AddPhoto' }] })
   }
 
   const onMomentumScrollEnd = (e: any) => {
