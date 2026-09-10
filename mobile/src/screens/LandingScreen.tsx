@@ -17,6 +17,9 @@ import { MaterialIcons, Feather } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 
 const { width } = Dimensions.get('window')
+const CONTENT_HORIZONTAL_PADDING = 20
+const PLACE_CARD_GAP = 14
+const PLACE_CARD_WIDTH = (width - CONTENT_HORIZONTAL_PADDING * 2 - PLACE_CARD_GAP) / 2
 const BLUE = '#4E7FFF'
 const PINK = '#FF5FA8'
 const PURPLE = '#9C6BFF'
@@ -524,7 +527,7 @@ const s = StyleSheet.create({
   rowSectionTitle: { fontSize: 15, fontWeight: '800', color: '#fff', letterSpacing: -0.2 },
   seeAll: { fontSize: 13, fontWeight: '600', color: ACCENT },
   cardRow: { flexDirection: 'row', gap: 12, paddingRight: 20 },
-  placeCardRow: { flexDirection: 'row', gap: 14, paddingRight: 20 },
+  placeCardRow: { flexDirection: 'row', gap: PLACE_CARD_GAP, paddingRight: CONTENT_HORIZONTAL_PADDING },
 
   personCard: { width: 200, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: BORDER },
   personAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: ACCENT_DIM, alignItems: 'center', justifyContent: 'center' },
@@ -540,7 +543,7 @@ const s = StyleSheet.create({
   emptyPersonTitle: { fontSize: 12, fontWeight: '700', color: '#fff', textAlign: 'center' },
   emptyPersonHint: { marginTop: 2, fontSize: 11, color: MUTED, textAlign: 'center' },
 
-  placeCard: { width: 200, minHeight: 78, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: BORDER },
+  placeCard: { width: PLACE_CARD_WIDTH, minHeight: 78, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: BORDER },
   placeThumb: { width: 48, height: 48, borderRadius: 10, backgroundColor: 'rgba(124,92,252,0.15)' },
   placeThumbImg: { width: 48, height: 48, borderRadius: 10 },
   placeInfo: { flex: 1, justifyContent: 'center', minWidth: 0 },
