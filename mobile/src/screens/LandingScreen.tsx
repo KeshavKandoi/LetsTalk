@@ -193,13 +193,14 @@ export default function LandingScreen() {
         topPlaces.map((p: any) => apiFetch('/api/places/nearby-people', { placeId: p.placeId }).catch(() => null))
       )
       if (!peopleRefreshVisibleRef.current) return
-      const peopleByUserId = new Map<string, any>()
+      const latestPeopleByUserId = new Map<string, any>()
       previews.forEach((preview: any) => {
         preview?.participants?.forEach((participant: any) => {
-          if (participant?.userId) peopleByUserId.set(participant.userId, participant)
+          if (participant?.userId) latestPeopleByUserId.set(participant.userId, participant)
         })
       })
-      setPeopleNearby([...peopleByUserId.values()])
+      const latestPeople = [...latestPeopleByUserId.values()]
+      setPeopleNearby(latestPeople)
       setPeopleLoading(false)
     } finally {
       peopleRefreshInFlightRef.current = false
