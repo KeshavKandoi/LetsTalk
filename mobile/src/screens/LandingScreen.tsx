@@ -337,15 +337,17 @@ export default function LandingScreen() {
               </View>
             ) : (
               peopleNearby.map((p) => (
-                <View key={p.userId} style={s.personCard}>
+                <View key={p.userId} style={s.personCardActive}>
                   {p.photoUrl ? (
-                    <Image source={{ uri: p.photoUrl }} style={s.personAvatarImg} />
+                    <Image source={{ uri: p.photoUrl }} style={s.personAvatarImgActive} />
                   ) : (
-                    <View style={s.personAvatar}><Feather name="user" size={18} color={ACCENT} /></View>
+                    <View style={s.personAvatarActive}><Feather name="user" size={19} color={ACCENT} /></View>
                   )}
-                  <Text style={s.personName} numberOfLines={2}>
-                    {p.username || 'Someone nearby'}
-                  </Text>
+                  <View style={s.personInfo}>
+                    <Text style={s.personNameActive} numberOfLines={2}>
+                      {p.username || 'Someone nearby'}
+                    </Text>
+                  </View>
                 </View>
               ))
             )}
@@ -528,6 +530,11 @@ const s = StyleSheet.create({
   personAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: ACCENT_DIM, alignItems: 'center', justifyContent: 'center' },
   personAvatarImg: { width: 40, height: 40, borderRadius: 20 },
   personName: { flex: 1, fontSize: 12, color: MUTED, lineHeight: 16 },
+  personCardActive: { width: 200, minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: 'rgba(124,92,252,0.22)' },
+  personAvatarActive: { width: 48, height: 48, borderRadius: 24, backgroundColor: ACCENT_DIM, alignItems: 'center', justifyContent: 'center' },
+  personAvatarImgActive: { width: 48, height: 48, borderRadius: 24 },
+  personInfo: { flex: 1, justifyContent: 'center', minWidth: 0 },
+  personNameActive: { fontSize: 13, fontWeight: '700', color: '#fff', lineHeight: 17 },
   emptyPersonCard: { width: 200, minHeight: 88, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(124,92,252,0.08)', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: 'rgba(124,92,252,0.22)' },
   emptyPersonIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: ACCENT_DIM, marginBottom: 7 },
   emptyPersonTitle: { fontSize: 12, fontWeight: '700', color: '#fff', textAlign: 'center' },
