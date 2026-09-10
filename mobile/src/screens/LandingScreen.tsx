@@ -535,10 +535,10 @@ const s = StyleSheet.create({
   personAvatarImgActive: { width: 48, height: 48, borderRadius: 24 },
   personInfo: { flex: 1, justifyContent: 'center', minWidth: 0 },
   personNameActive: { fontSize: 13, fontWeight: '700', color: '#fff', lineHeight: 17 },
-  emptyPersonCard: { width: 200, minHeight: 88, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(124,92,252,0.08)', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: 'rgba(124,92,252,0.22)' },
-  emptyPersonIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: ACCENT_DIM, marginBottom: 7 },
+  emptyPersonCard: { width: 200, minHeight: 76, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(124,92,252,0.08)', borderRadius: 14, padding: 10, borderWidth: 1, borderColor: 'rgba(124,92,252,0.22)' },
+  emptyPersonIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: ACCENT_DIM, marginBottom: 5 },
   emptyPersonTitle: { fontSize: 12, fontWeight: '700', color: '#fff', textAlign: 'center' },
-  emptyPersonHint: { marginTop: 3, fontSize: 11, color: MUTED, textAlign: 'center' },
+  emptyPersonHint: { marginTop: 2, fontSize: 11, color: MUTED, textAlign: 'center' },
 
   placeCard: { width: 200, minHeight: 78, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: BORDER },
   placeThumb: { width: 48, height: 48, borderRadius: 10, backgroundColor: 'rgba(124,92,252,0.15)' },
