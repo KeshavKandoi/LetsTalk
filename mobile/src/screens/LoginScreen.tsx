@@ -3,7 +3,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native'
 import { useNetworkCheck } from '../hooks/useNetworkCheck'
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform, Alert, Pressable, Keyboard,
+  ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, Keyboard,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
@@ -12,6 +12,7 @@ import * as WebBrowser from 'expo-web-browser'
 import * as Google from 'expo-auth-session/providers/google'
 import { signIn } from '../lib/auth'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { getNetworkErrorMessage } from '../lib/api'
 
 WebBrowser.maybeCompleteAuthSession()
 
@@ -77,7 +78,7 @@ export default function LoginScreen() {
         navigation.reset({ index: 0, routes: [{ name: 'Landing' }] })
       }
     } catch (e: any) {
-      setError(e.message || 'Google login failed')
+      setError(getNetworkErrorMessage(e))
     } finally {
       setGoogleLoading(false)
     }
@@ -90,7 +91,7 @@ export default function LoginScreen() {
       await signIn(email, password)
       navigation.reset({ index: 0, routes: [{ name: 'Landing' }] })
     } catch (e: any) {
-      setError(e.message || 'Login failed')
+      setError(getNetworkErrorMessage(e))
     } finally {
       setLoading(false)
     }
@@ -99,25 +100,7 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     if (!isConnected) { setError('No internet connection. Please check your network.'); return }
     if (!email || !password) { setError('Please fill in all fields'); return }
-    try {
-      const currentToken = await AsyncStorage.getItem('session_token')
-      const res = await fetch(`${BASE_URL}/api/auth/check-session`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, currentToken }),
-      })
-      const { hasSession } = await res.json()
-      if (hasSession) {
-        Alert.alert('Already Logged In', 'This account is already logged in on another device. Logging in here will log out the other device.', [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Log In Here', style: 'destructive', onPress: doLogin },
-        ])
-      } else {
-        await doLogin()
-      }
-    } catch {
-      await doLogin()
-    }
+    await doLogin()
   }
 
   return (
