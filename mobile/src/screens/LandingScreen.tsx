@@ -6,7 +6,7 @@ import DrawerMenu from './DrawerMenu'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, Modal, ActivityIndicator, Dimensions, Animated,
+  ScrollView, Modal, ActivityIndicator, Dimensions, Animated, AppState,
 } from 'react-native'
 import { Image } from 'expo-image'
 import * as Location from 'expo-location'
@@ -114,6 +114,8 @@ export default function LandingScreen() {
   const [peopleNearby, setPeopleNearby] = useState<any[]>([])
   const [placesLoading, setPlacesLoading] = useState(true)
   const [peopleLoading, setPeopleLoading] = useState(true)
+  const peopleRefreshInFlightRef = useRef(false)
+  const peopleRefreshVisibleRef = useRef(false)
 
   const pulseAnim = useRef(new Animated.Value(1)).current
 
@@ -169,27 +171,66 @@ export default function LandingScreen() {
           setPlacesLoading(false)
           setUserScopedCache('landing_nearby_places', withDistance).catch(() => {})
 
-          const topPlaces = withDistance.slice(0, 2)
-          const previews = await Promise.all(
-            topPlaces.map((p: any) => apiFetch('/api/places/nearby-people', { placeId: p.placeId }).catch(() => null))
-          )
-          if (cancelled) return
-          const people: any[] = []
-          previews.forEach((preview: any) => {
-            if (preview?.participants) {
-              preview.participants.forEach((participant: any) => {
-                people.push(participant)
-              })
-            }
-          })
-          setPeopleNearby(people)
-          setPeopleLoading(false)
         } catch (e) {
           if (!cancelled) { setPlacesLoading(false); setPeopleLoading(false) }
         }
     })()
     return () => { cancelled = true }
   }, [])
+
+  const refreshPeopleNearby = useCallback(async () => {
+    if (!peopleRefreshVisibleRef.current || peopleRefreshInFlightRef.current) return
+    peopleRefreshInFlightRef.current = true
+    const topPlaces = placesNearby.slice(0, 2)
+    try {
+      if (topPlaces.length === 0) {
+        setPeopleNearby([])
+        setPeopleLoading(false)
+        return
+      }
+
+      const previews = await Promise.all(
+        topPlaces.map((p: any) => apiFetch('/api/places/nearby-people', { placeId: p.placeId }).catch(() => null))
+      )
+      if (!peopleRefreshVisibleRef.current) return
+      const peopleByUserId = new Map<string, any>()
+      previews.forEach((preview: any) => {
+        preview?.participants?.forEach((participant: any) => {
+          if (participant?.userId) peopleByUserId.set(participant.userId, participant)
+        })
+      })
+      setPeopleNearby([...peopleByUserId.values()])
+      setPeopleLoading(false)
+    } finally {
+      peopleRefreshInFlightRef.current = false
+    }
+  }, [placesNearby])
+
+  useFocusEffect(
+    useCallback(() => {
+      let appState = AppState.currentState
+      let active = true
+      peopleRefreshVisibleRef.current = true
+
+      const refreshIfVisible = () => {
+        if (active && appState === 'active') void refreshPeopleNearby()
+      }
+
+      refreshIfVisible()
+      const interval = setInterval(refreshIfVisible, 15_000)
+      const subscription = AppState.addEventListener('change', (nextState) => {
+        appState = nextState
+        if (nextState === 'active') refreshIfVisible()
+      })
+
+      return () => {
+        active = false
+        peopleRefreshVisibleRef.current = false
+        clearInterval(interval)
+        subscription.remove()
+      }
+    }, [refreshPeopleNearby])
+  )
 
   const openProfile = async () => {
     setProfileVisible(true)
