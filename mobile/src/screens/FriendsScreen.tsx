@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import AsyncStorage from '@react-native-async-storage/async-storage'
+import { getUserScopedCache, setUserScopedCache } from '../lib/auth'
 import {
   Image, Modal,
   View, Text, StyleSheet, TouchableOpacity, Alert,
@@ -60,17 +60,15 @@ export default function FriendsScreen() {
   const [dismissedRejected, setDismissedRejected] = useState<string[]>([])
 
   useEffect(() => {
-    AsyncStorage.getItem('dismissedRejectedRequests')
-      .then((raw) => {
-        if (raw) setDismissedRejected(JSON.parse(raw))
-      })
+    getUserScopedCache<string[]>('dismissed_rejected_requests')
+      .then((cached) => { if (cached) setDismissedRejected(cached) })
       .catch(() => {})
   }, [])
 
   const dismissRejected = (requestId: string) => {
     setDismissedRejected((prev) => {
       const next = prev.includes(requestId) ? prev : [...prev, requestId]
-      AsyncStorage.setItem('dismissedRejectedRequests', JSON.stringify(next)).catch(() => {})
+      setUserScopedCache('dismissed_rejected_requests', next).catch(() => {})
       return next
     })
   }
@@ -127,20 +125,17 @@ export default function FriendsScreen() {
     setIncoming(next.incoming)
     setPending(next.pending)
     setRejected(next.rejected)
-    AsyncStorage.setItem('cached_friends_data', JSON.stringify(next)).catch(() => {})
+    setUserScopedCache('cached_friends_data', next).catch(() => {})
   }
 
   useEffect(() => {
-    AsyncStorage.getItem('cached_friends_data').then(cached => {
-      if (cached) {
-        try {
-          const c = JSON.parse(cached)
-          setFriends(c.friends || [])
-          setIncoming(c.incoming || [])
-          setPending(c.pending || [])
-          setRejected(c.rejected || [])
-          setLoading(false)
-        } catch {}
+    getUserScopedCache<any>('cached_friends_data').then(c => {
+      if (c) {
+        setFriends(c.friends || [])
+        setIncoming(c.incoming || [])
+        setPending(c.pending || [])
+        setRejected(c.rejected || [])
+        setLoading(false)
       }
     })
 
