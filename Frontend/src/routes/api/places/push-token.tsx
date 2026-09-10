@@ -11,11 +11,15 @@ export const Route = createFileRoute('/api/places/push-token')({
         try {
           const session = await auth.api.getSession({ headers: (() => { const h = new Headers(Object.fromEntries(request.headers.entries())); const t = (request.headers.get('authorization') || request.headers.get('Authorization') || '').replace('Bearer ',''); if(t) h.set('cookie', 'better-auth.session_token=' + t); return h; })() })
           if (!session) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
-          const { token } = await request.json()
+          const body = await request.json() as { token?: unknown }
+          const token = typeof body.token === 'string' ? body.token.trim() : ''
+          if (!token || token.length > 256 || !token.startsWith('ExponentPushToken')) {
+            return new Response(JSON.stringify({ error: 'Invalid push token.' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+          }
           await db.update(userProfile).set({ pushToken: token }).where(eq(userProfile.userId, session.user.id))
           return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } })
-        } catch (e: any) {
-          return new Response(JSON.stringify({ error: e.message }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+        } catch {
+          return new Response(JSON.stringify({ error: 'Unable to save push token.' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
         }
       },
     },
