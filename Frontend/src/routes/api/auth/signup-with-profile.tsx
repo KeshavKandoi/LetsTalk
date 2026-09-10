@@ -5,13 +5,25 @@ export const Route = createFileRoute('/api/auth/signup-with-profile')({
     handlers: {
       POST: async ({ request }) => {
         try {
-          const body = await request.json()
-          const { email, username, password, dob, gender, confirmPassword } = body
+          const body = await request.json() as Record<string, any>
+          const rawEmail = typeof body.email === 'string' ? body.email : ''
+          const email = rawEmail.trim().toLowerCase()
+          const { username, password, dob, gender, confirmPassword } = body
+          if (!email || !password || !username) {
+            return new Response(JSON.stringify({ error: 'Email, username, and password are required' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+          }
 
           const { auth } = await import('@backend/lib/auth')
           const { db } = await import('@backend/lib/db')
           const { userProfile, user } = await import('@backend/lib/db/schema')
-          const { eq } = await import('drizzle-orm')
+          const { eq, ilike } = await import('drizzle-orm')
+
+          const existing = await db.select({ id: user.id }).from(user).where(ilike(user.email, email)).limit(1)
+          if (existing.length) {
+            return new Response(JSON.stringify({ error: 'ACCOUNT_EXISTS', code: 'ACCOUNT_EXISTS', message: 'An account with this email already exists. Please log in.' }), {
+              status: 409, headers: { 'Content-Type': 'application/json' },
+            })
+          }
 
           // Step 1: Call the standard better-auth endpoint via handler
           const signupBody = JSON.stringify({
@@ -32,11 +44,17 @@ export const Route = createFileRoute('/api/auth/signup-with-profile')({
           const signupData = responseText ? JSON.parse(responseText) : {}
           
 
-          if (!signupData.user?.id) {
+          if (!signupResponse.ok || !signupData.user?.id) {
+            const duplicate = /exist|already|unique|duplicate/i.test(JSON.stringify(signupData))
             return new Response(JSON.stringify({ error: 'Signup failed', details: signupData }), {
-              status: 400,
+              status: duplicate ? 409 : 400,
               headers: { 'Content-Type': 'application/json' },
             })
+          }
+
+          const created = await db.select({ id: user.id, email: user.email }).from(user).where(eq(user.id, signupData.user.id)).limit(1)
+          if (!created[0] || created[0].email.trim().toLowerCase() !== email) {
+            return new Response(JSON.stringify({ error: 'Signup failed' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
           }
 
           // Step 2: Save dob and gender to user_profile
@@ -85,6 +103,12 @@ export const Route = createFileRoute('/api/auth/signup-with-profile')({
             headers: { 'Content-Type': 'application/json' },
           })
         } catch (e: any) {
+          if (/exist|already|unique|duplicate/i.test(String(e?.message || e))) {
+            return new Response(JSON.stringify({ error: 'ACCOUNT_EXISTS', code: 'ACCOUNT_EXISTS', message: 'An account with this email already exists. Please log in.' }), {
+              status: 409,
+              headers: { 'Content-Type': 'application/json' },
+            })
+          }
           return new Response(JSON.stringify({
             error: e.message || 'Signup failed',
           }), {
