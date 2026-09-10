@@ -359,7 +359,7 @@ export default function LandingScreen() {
               <Text style={s.seeAll}>See all</Text>
             </TouchableOpacity>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.cardRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.placeCardRow}>
             {placesLoading ? (
               [0, 1].map((i) => (
                 <View key={i} style={s.placeCard}>
@@ -385,7 +385,10 @@ export default function LandingScreen() {
                   ) : (
                     <View style={s.placeThumb} />
                   )}
-                  <Text style={s.placeName} numberOfLines={2}>{p.name} · {p.distanceLabel}</Text>
+                  <View style={s.placeInfo}>
+                    <Text style={s.placeName} numberOfLines={2}>{p.name}</Text>
+                    <Text style={s.placeDistance} numberOfLines={1}>{p.distanceLabel}</Text>
+                  </View>
                 </TouchableOpacity>
               ))
             )}
@@ -519,6 +522,7 @@ const s = StyleSheet.create({
   rowSectionTitle: { fontSize: 15, fontWeight: '800', color: '#fff', letterSpacing: -0.2 },
   seeAll: { fontSize: 13, fontWeight: '600', color: ACCENT },
   cardRow: { flexDirection: 'row', gap: 12, paddingRight: 20 },
+  placeCardRow: { flexDirection: 'row', gap: 14, paddingRight: 20 },
 
   personCard: { width: 200, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: BORDER },
   personAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: ACCENT_DIM, alignItems: 'center', justifyContent: 'center' },
@@ -529,10 +533,12 @@ const s = StyleSheet.create({
   emptyPersonTitle: { fontSize: 12, fontWeight: '700', color: '#fff', textAlign: 'center' },
   emptyPersonHint: { marginTop: 3, fontSize: 11, color: MUTED, textAlign: 'center' },
 
-  placeCard: { width: 200, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 14,padding: 12, borderWidth: 1, borderColor: BORDER },
-  placeThumb: { width: 40, height: 40, borderRadius: 10, backgroundColor: 'rgba(124,92,252,0.15)' },
-  placeThumbImg: { width: 40, height: 40, borderRadius: 10 },
-  placeName: { flex: 1, fontSize: 12, color: MUTED, lineHeight: 16 },
+  placeCard: { width: 200, minHeight: 78, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: BORDER },
+  placeThumb: { width: 48, height: 48, borderRadius: 10, backgroundColor: 'rgba(124,92,252,0.15)' },
+  placeThumbImg: { width: 48, height: 48, borderRadius: 10 },
+  placeInfo: { flex: 1, justifyContent: 'center', minWidth: 0 },
+  placeName: { fontSize: 13, fontWeight: '700', color: '#fff', lineHeight: 17 },
+  placeDistance: { marginTop: 3, fontSize: 11, color: MUTED, lineHeight: 14 },
 
   bottomNav: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', backgroundColor: '#0a0a0a', paddingTop: 10, paddingHorizontal: 14, justifyContent: 'space-around', borderTopWidth: 1, borderTopColor: BORDER },
   navItem: { alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, minWidth: 60 },
