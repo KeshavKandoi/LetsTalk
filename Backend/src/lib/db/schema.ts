@@ -116,27 +116,6 @@ export const userProfile = pgTable('user_profile', {
   updatedAt: timestamp('updated_at').notNull(),
 })
 
-export const notification = pgTable(
-  'notification',
-  {
-    id: text('id').primaryKey(),
-    recipientUserId: text('recipient_user_id')
-      .notNull()
-      .references(() => user.id, { onDelete: 'cascade' }),
-    type: text('type').notNull(),
-    message: text('message').notNull(),
-    data: text('data'),
-    eventKey: text('event_key').notNull(),
-    createdAt: timestamp('created_at').notNull(),
-    readAt: timestamp('read_at'),
-  },
-  (table) => [
-    uniqueIndex('notification_recipient_event_unique').on(table.recipientUserId, table.eventKey),
-    index('notification_recipient_created_idx').on(table.recipientUserId, table.createdAt, table.id),
-    index('notification_recipient_unread_idx').on(table.recipientUserId, table.readAt),
-  ],
-)
-
 export const place = pgTable('place', {
   placeId: text('place_id').primaryKey(),
   name: text('name').notNull(),
@@ -313,7 +292,6 @@ export const report = pgTable(
 export const userRelations = relations(user, ({ many, one }) => ({
   accounts: many(account),
   sessions: many(session),
-  notifications: many(notification),
   profile: one(userProfile),
 }))
 
@@ -327,8 +305,4 @@ export const accountRelations = relations(account, ({ one }) => ({
 
 export const userProfileRelations = relations(userProfile, ({ one }) => ({
   user: one(user, { fields: [userProfile.userId], references: [user.id] }),
-}))
-
-export const notificationRelations = relations(notification, ({ one }) => ({
-  recipient: one(user, { fields: [notification.recipientUserId], references: [user.id] }),
 }))
