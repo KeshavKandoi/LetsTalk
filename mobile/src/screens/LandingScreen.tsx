@@ -328,9 +328,12 @@ export default function LandingScreen() {
                 </View>
               ))
             ) : peopleNearby.length === 0 ? (
-              <View style={s.personCard}>
-                <View style={s.personAvatar}><Feather name="user" size={18} color={ACCENT} /></View>
-                <Text style={s.personName} numberOfLines={2}>No one nearby right now</Text>
+              <View style={s.emptyPersonCard}>
+                <View style={s.emptyPersonIcon}>
+                  <Feather name="users" size={17} color={ACCENT} />
+                </View>
+                <Text style={s.emptyPersonTitle}>No one nearby right now</Text>
+                <Text style={s.emptyPersonHint}>Check back soon</Text>
               </View>
             ) : (
               peopleNearby.map((p) => (
@@ -521,6 +524,10 @@ const s = StyleSheet.create({
   personAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: ACCENT_DIM, alignItems: 'center', justifyContent: 'center' },
   personAvatarImg: { width: 40, height: 40, borderRadius: 20 },
   personName: { flex: 1, fontSize: 12, color: MUTED, lineHeight: 16 },
+  emptyPersonCard: { width: 200, minHeight: 88, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(124,92,252,0.08)', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: 'rgba(124,92,252,0.22)' },
+  emptyPersonIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: ACCENT_DIM, marginBottom: 7 },
+  emptyPersonTitle: { fontSize: 12, fontWeight: '700', color: '#fff', textAlign: 'center' },
+  emptyPersonHint: { marginTop: 3, fontSize: 11, color: MUTED, textAlign: 'center' },
 
   placeCard: { width: 200, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 14,padding: 12, borderWidth: 1, borderColor: BORDER },
   placeThumb: { width: 40, height: 40, borderRadius: 10, backgroundColor: 'rgba(124,92,252,0.15)' },
