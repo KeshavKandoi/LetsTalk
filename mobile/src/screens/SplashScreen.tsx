@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react'
-import { View, Text, StyleSheet, Animated, Dimensions } from 'react-native'
+import { View, Text, StyleSheet, Animated, Dimensions, Image } from 'react-native'
 
 const { width } = Dimensions.get('window')
 
@@ -65,7 +65,9 @@ export default function SplashScreen({ onComplete, duration = 4000 }: any) {
         </Animated.View>
 
         {/* Center Glow */}
-        <Animated.View style={[styles.glow, { opacity: glowOpacity }]} />
+        <Animated.View style={[styles.glow, { opacity: glowOpacity }]}>
+          <Image source={require('../../assets/logo-cropped.png')} style={styles.logo} resizeMode="contain" />
+        </Animated.View>
       </View>
 
       <Animated.View style={{ opacity: textOpacity }}>
@@ -94,7 +96,8 @@ const styles = StyleSheet.create({
   legLeftRight: { marginLeft: 8 },
   legRight: { marginLeft: 8 },
   legRightRight: { marginRight: 8 },
-  glow: { position: 'absolute', width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(255,255,255,0.3)', shadowColor: '#ffffff', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 1, shadowRadius: 40, elevation: 15 },
+  glow: { position: 'absolute', width: 100, height: 100, borderRadius: 50, backgroundColor: '#000000', justifyContent: 'center', alignItems: 'center' },
+  logo: { width: 82, height: 68 },
   title: { fontSize: 32, fontWeight: '800', color: '#ffffff', textAlign: 'center', marginBottom: 8 },
   subtitle: { fontSize: 12, color: '#ffffff', textAlign: 'center', letterSpacing: 1.5 },
 })
