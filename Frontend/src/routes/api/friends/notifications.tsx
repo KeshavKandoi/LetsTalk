@@ -66,15 +66,29 @@ export const Route = createFileRoute('/api/friends/notifications')({
             return Response.json({ unreadCount: 0 })
           }
 
-          if (body.action === 'delete' && body.notificationId) {
-            await db.delete(notification)
-              .where(and(eq(notification.id, body.notificationId), eq(notification.recipientUserId, userId)))
-            return Response.json({ unreadCount: await unreadCount(userId) })
+          if (body.action === 'delete') {
+            const deletedRows = typeof body.notificationId === 'string' && body.notificationId
+              ? await db.delete(notification)
+                .where(and(eq(notification.id, body.notificationId), eq(notification.recipientUserId, userId)))
+                .returning({ id: notification.id })
+              : []
+            if (deletedRows.length === 0) {
+              return Response.json({ error: 'Notification not found.' }, { status: 404 })
+            }
+            return Response.json({
+              deletedNotificationId: deletedRows[0].id,
+              unreadCount: await unreadCount(userId),
+            })
           }
 
           if (body.action === 'clear') {
-            await db.delete(notification).where(eq(notification.recipientUserId, userId))
-            return Response.json({ unreadCount: 0 })
+            const deletedRows = await db.delete(notification)
+              .where(eq(notification.recipientUserId, userId))
+              .returning({ id: notification.id })
+            return Response.json({
+              deletedCount: deletedRows.length,
+              unreadCount: await unreadCount(userId),
+            })
           }
 
           const pageSize = Math.min(Math.max(Number(body.limit) || DEFAULT_PAGE_SIZE, 1), MAX_PAGE_SIZE)
