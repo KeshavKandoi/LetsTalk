@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
 import { MaterialIcons, Ionicons, Feather } from '@expo/vector-icons'
 import { signUp, signOut } from '../lib/auth'
+import { getNetworkErrorMessage } from '../lib/api'
 
 export default function SignupScreen() {
   const navigation = useNavigation<any>()
@@ -82,7 +83,7 @@ export default function SignupScreen() {
       await signUp(normalizedEmail, username, password, dob, gender)
       navigation.navigate('OTP', { email: normalizedEmail, password, isNewSignup: true })
     } catch (e: any) {
-      setError(e.message || 'Signup failed')
+      setError(getNetworkErrorMessage(e))
     } finally {
       setLoading(false)
     }
