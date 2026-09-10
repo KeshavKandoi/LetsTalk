@@ -11,6 +11,8 @@ import {
   touchReadyPresence,
 } from '@backend/lib/app-state'
 
+const createHandoffToken = () => crypto.randomUUID().replaceAll('-', '')
+
 export const Route = createFileRoute('/api/places/state')({
   server: {
     handlers: {
@@ -91,8 +93,8 @@ export const Route = createFileRoute('/api/places/state')({
               const now = new Date()
               const expiresAt = new Date(now.getTime() + 12 * 60 * 60 * 1000)
               const [existing] = await db.select().from(handoffCode).where(eq(handoffCode.userId, session.user.id)).limit(1)
-              let token = existing?.token ?? Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)
-              if (existing && existing.expiresAt <= now) token = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)
+              let token = existing?.token ?? createHandoffToken()
+              if (existing && existing.expiresAt <= now) token = createHandoffToken()
               await db.insert(handoffCode).values({ token, userId: session.user.id, placeId: profileRecord.currentPlaceId, expiresAt, createdAt: existing?.createdAt ?? now, updatedAt: now }).onConflictDoUpdate({ target: handoffCode.userId, set: { token, placeId: profileRecord.currentPlaceId, expiresAt, updatedAt: now } })
               const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.29.59:3000'
               return { url: BASE_URL + '/?scan=' + token, isActive: profileRecord.status === 'ready' }
