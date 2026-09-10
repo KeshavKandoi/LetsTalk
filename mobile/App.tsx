@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNetworkCheck } from './src/hooks/useNetworkCheck'
 import { NavigationContainer } from '@react-navigation/native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
-import { getSession, signOut, hasCompletedOnboarding, establishSession } from './src/lib/auth'
+import { getSession, signOut, hasCompletedOnboarding, establishSession, getUserScopedCache } from './src/lib/auth'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { StatusBar } from 'expo-status-bar'
 import { View, Text, ActivityIndicator } from 'react-native'
@@ -40,6 +40,7 @@ export default function App() {
         // ✅ Only auto-login if session exists AND email is verified
         if (session?.session && session?.user?.emailVerified) {
           const user = await establishSession()
+          if (user) await getUserScopedCache('avatar_profile_cache')
           const completed = user ? await hasCompletedOnboarding(user.id, user.email) : false
           setInitialRoute(completed ? 'Landing' : 'Tutorial')
         } else {
