@@ -5,10 +5,11 @@ const SESSION_TOKEN_KEY = 'session_token'
 const CURRENT_USER_ID_KEY = 'current_user_id'
 
 export async function signIn(username: string, password: string) {
+  const email = username.trim().toLowerCase()
   const res = await fetch(`${BASE_URL}/api/auth/sign-in/email`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Origin': BASE_URL },
-    body: JSON.stringify({ email: username, password, rememberMe: true }),
+    body: JSON.stringify({ email, password, rememberMe: true }),
   })
   const data = await res.json()
   if (!res.ok || data.code || data.error) throw new Error(data.message || data.error?.message || 'Login failed')
@@ -23,6 +24,7 @@ export async function signIn(username: string, password: string) {
 }
 
 export async function signUp(email: string, username: string, password: string, dob?: string, gender?: string) {
+  email = email.trim().toLowerCase()
   const res = await fetch(`${BASE_URL}/api/auth/signup-with-profile`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Origin': BASE_URL },
@@ -35,6 +37,7 @@ export async function signUp(email: string, username: string, password: string, 
 }
 
 export async function sendOTP(email: string) {
+  email = email.trim().toLowerCase()
   const res = await fetch(`${BASE_URL}/api/auth/email-otp/send-verification-otp`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Origin': BASE_URL },
@@ -46,6 +49,7 @@ export async function sendOTP(email: string) {
 }
 
 export async function verifyOTP(email: string, otp: string) {
+  email = email.trim().toLowerCase()
   const res = await fetch(`${BASE_URL}/api/auth/email-otp/verify-email`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Origin': BASE_URL },
@@ -113,17 +117,55 @@ export async function signOut() {
   await AsyncStorage.removeItem(CURRENT_USER_ID_KEY)
 }
 
-const ONBOARDING_PREFIX = 'onboarding_completed:'
-
-export async function hasCompletedOnboarding(email: string) {
-  if (!email) return true
-  const val = await AsyncStorage.getItem(ONBOARDING_PREFIX + email.toLowerCase())
-  return val === 'true'
+// Removes only values owned by the currently authenticated user. Global
+// discovery caches remain available for the next account.
+export async function clearDeletedUserData(userId: string, email?: string) {
+  if (!userId) return
+  const keys = await AsyncStorage.getAllKeys()
+  const ownedKeys: string[] = []
+  for (const key of keys) {
+    try {
+      const raw = await AsyncStorage.getItem(key)
+      if (raw && JSON.parse(raw)?.userId === userId) ownedKeys.push(key)
+    } catch {}
+  }
+  await AsyncStorage.multiRemove([
+    ...ownedKeys,
+    ONBOARDING_PREFIX + userId,
+    PHOTO_ONBOARDING_PREFIX + userId,
+    ...(email ? [ONBOARDING_PREFIX + email.trim().toLowerCase()] : []),
+    SESSION_TOKEN_KEY,
+    CURRENT_USER_ID_KEY,
+  ])
 }
 
-export async function markOnboardingCompleted(email: string) {
-  if (!email) return
-  await AsyncStorage.setItem(ONBOARDING_PREFIX + email.toLowerCase(), 'true')
+const ONBOARDING_PREFIX = 'onboarding_completed:'
+const PHOTO_ONBOARDING_PREFIX = 'photo_onboarding_completed:'
+
+export async function hasCompletedOnboarding(userId: string, legacyEmail?: string) {
+  if (!userId) return false
+  const val = await AsyncStorage.getItem(ONBOARDING_PREFIX + userId)
+  if (val === 'true') return true
+  if (legacyEmail && await AsyncStorage.getItem(ONBOARDING_PREFIX + legacyEmail.toLowerCase()) === 'true') {
+    await AsyncStorage.setItem(ONBOARDING_PREFIX + userId, 'true')
+    return true
+  }
+  return false
+}
+
+export async function markOnboardingCompleted(userId: string) {
+  if (!userId) return
+  await AsyncStorage.setItem(ONBOARDING_PREFIX + userId, 'true')
+}
+
+export async function hasCompletedPhotoOnboarding(userId: string) {
+  if (!userId) return false
+  return (await AsyncStorage.getItem(PHOTO_ONBOARDING_PREFIX + userId)) === 'true'
+}
+
+export async function markPhotoOnboardingCompleted(userId: string) {
+  if (!userId) return
+  await AsyncStorage.setItem(PHOTO_ONBOARDING_PREFIX + userId, 'true')
 }
 
 export async function getCurrentUserId() {
