@@ -46,7 +46,7 @@ export const Route = createFileRoute('/api/auth/signup-with-profile')({
 
           if (!signupResponse.ok || !signupData.user?.id) {
             const duplicate = /exist|already|unique|duplicate/i.test(JSON.stringify(signupData))
-            return new Response(JSON.stringify({ error: 'Signup failed', details: signupData }), {
+            return new Response(JSON.stringify({ error: duplicate ? 'ACCOUNT_EXISTS' : 'Signup failed' }), {
               status: duplicate ? 409 : 400,
               headers: { 'Content-Type': 'application/json' },
             })
@@ -109,9 +109,7 @@ export const Route = createFileRoute('/api/auth/signup-with-profile')({
               headers: { 'Content-Type': 'application/json' },
             })
           }
-          return new Response(JSON.stringify({
-            error: e.message || 'Signup failed',
-          }), {
+          return new Response(JSON.stringify({ error: 'Signup failed' }), {
             status: 400,
             headers: { 'Content-Type': 'application/json' },
           })
