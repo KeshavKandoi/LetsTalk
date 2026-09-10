@@ -9,7 +9,7 @@ import { useNavigation, useRoute } from '@react-navigation/native'
 import * as Location from 'expo-location'
 import QRCode from 'react-native-qrcode-svg'
 import ScannerModal from './ScannerModal'
-import { apiFetch } from '../lib/api'
+import { apiFetch, getNetworkErrorMessage } from '../lib/api'
 import { getUserScopedCache } from '../lib/auth'
 import { MaterialIcons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -260,7 +260,7 @@ export default function PlaceViewScreen() {
         if (Date.now() - pingTime < 30000) setNotice(`👋 ${data.profile.pingRequestedByUsername} is looking for you nearby!`)
       }
     } catch (e: any) {
-      setError(e.message || 'Could not load place.')
+      setError(getNetworkErrorMessage(e))
     } finally {
       setLoading(false)
       setRefreshing(false)
