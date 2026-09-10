@@ -31,7 +31,7 @@ export default function ForgotPasswordScreen({ route }: any) {
   const [passwordFocused, setPasswordFocused] = useState(false)
   const [confirmFocused, setConfirmFocused] = useState(false)
 
-  const toggleDismiss = (ref: React.RefObject<TextInput>) => {
+  const toggleDismiss = (ref: React.RefObject<TextInput | null>) => {
     ref.current?.blur()
     Keyboard.dismiss()
   }
@@ -160,7 +160,7 @@ export default function ForgotPasswordScreen({ route }: any) {
                 {otpDigits.map((digit, index) => (
                   <TextInput
                     key={index}
-                    ref={(r) => (otpInputs.current[index] = r)}
+                    ref={(r) => { otpInputs.current[index] = r }}
                     style={[styles.otpBox, digit ? styles.otpBoxFilled : null]}
                     value={digit}
                     onChangeText={(t) => handleOtpChange(t.slice(-1), index)}
