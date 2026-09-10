@@ -10,7 +10,7 @@ import * as Location from 'expo-location'
 import QRCode from 'react-native-qrcode-svg'
 import ScannerModal from './ScannerModal'
 import { apiFetch } from '../lib/api'
-import AsyncStorage from '@react-native-async-storage/async-storage'
+import { getUserScopedCache } from '../lib/auth'
 import { MaterialIcons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 
@@ -248,7 +248,7 @@ export default function PlaceViewScreen() {
           const me = allParticipants.find((p: any) => p.userId === data.session?.user?.id)
           if (me?.photoUrl) {
             photoLoadedRef.current = true
-            const photoTs = await AsyncStorage.getItem('photo_ts').catch(() => '1') || '1'
+            const photoTs = await getUserScopedCache<string>('photo_ts') || '1'
             setMyPhotoUrl(me.photoUrl + '?t=' + photoTs)
           }
         }
