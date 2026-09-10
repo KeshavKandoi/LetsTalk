@@ -2204,6 +2204,8 @@ export async function getNearbyPlacePeopleLite(input: { placeId: string }) {
     throw new Error('Choose a place first.')
   }
 
+  await expireStaleReady()
+
   const presentStatuses = ['present', 'ready', 'in_conversation'] as const
 
   const participantRecords = await db
