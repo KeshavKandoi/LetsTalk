@@ -8,7 +8,6 @@ import { signOut } from '../lib/auth'
 import { apiFetch } from '../lib/api'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { getUserScopedCache, setUserScopedCache } from '../lib/auth'
-import { refreshNotificationUnreadCount, subscribeNotificationUnreadCount } from '../lib/notification-state'
 
 const ACCENT = '#7C5CFC'
 
@@ -26,13 +25,6 @@ export default function AccountMenuScreen() {
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [photoViewerVisible, setPhotoViewerVisible] = useState(false)
-  const [unreadCount, setUnreadCount] = useState(0)
-
-  useEffect(() => {
-    const unsubscribe = subscribeNotificationUnreadCount(setUnreadCount)
-    void refreshNotificationUnreadCount().catch(() => {})
-    return () => { unsubscribe() }
-  }, [])
 
   useEffect(() => {
     getUserScopedCache('cached_profile').then(cached => {
@@ -103,9 +95,6 @@ export default function AccountMenuScreen() {
           >
             <MaterialIcons name={item.icon as any} size={22} color="rgba(255,255,255,0.8)" />
             <Text style={s.menuLabel}>{item.label}</Text>
-            {item.screen === 'Notifications' && unreadCount > 0 && (
-              <View style={s.badge}><Text style={s.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text></View>
-            )}
             <MaterialIcons name="chevron-right" size={20} color="rgba(255,255,255,0.3)" />
           </TouchableOpacity>
         ))}
@@ -159,8 +148,6 @@ const s = StyleSheet.create({
   loginTxt: { color: '#fff', fontWeight: '700', fontSize: 14 },
   signupBtn: { flex: 1, backgroundColor: ACCENT, borderRadius: 50, paddingVertical: 12, alignItems: 'center' },
   signupTxt: { color: '#fff', fontWeight: '700', fontSize: 14 },
-  badge: { minWidth: 20, height: 20, paddingHorizontal: 5, borderRadius: 10, backgroundColor: '#E05010', alignItems: 'center', justifyContent: 'center' },
-  badgeText: { color: '#fff', fontSize: 11, fontWeight: '800' },
 })
 
 const v = StyleSheet.create({
