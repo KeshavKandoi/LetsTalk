@@ -10,7 +10,7 @@ export const Route = createFileRoute('/api/friends/respond')({
           const session = await auth.api.getSession({ headers: (() => { const h = new Headers(Object.fromEntries(request.headers.entries())); const t = (request.headers.get('authorization') || request.headers.get('Authorization') || '').replace('Bearer ',''); if(t) h.set('cookie', 'better-auth.session_token=' + t); return h; })() })
           if (!session) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
           const body = await request.json() as { requestId?: string; friendUserId?: string; action: 'accept' | 'reject' | 'remove' }
-          const result = await respondToFriendRequest(body)
+          const result = await respondToFriendRequest({ ...body, viewerUserId: session.user.id })
           return new Response(JSON.stringify(result), { headers: { 'Content-Type': 'application/json' } })
         } catch (e: any) {
           return new Response(JSON.stringify({ error: e.message }), { status: 400, headers: { 'Content-Type': 'application/json' } })
