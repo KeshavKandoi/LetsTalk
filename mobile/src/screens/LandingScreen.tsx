@@ -1,6 +1,6 @@
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
 import { useNetworkCheck } from '../hooks/useNetworkCheck'
-import { getSession, signOut, getUserScopedCache, setUserScopedCache } from '../lib/auth'
+import { getSession, signOut, getUserScopedCache, getUserScopedCacheSync, setUserScopedCache } from '../lib/auth'
 import { apiFetch } from '../lib/api'
 import DrawerMenu from './DrawerMenu'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -118,13 +118,13 @@ export default function LandingScreen() {
   const pulseAnim = useRef(new Animated.Value(1)).current
 
   useEffect(() => {
-    getUserScopedCache<{ photoUrl?: string; initials: string }>('avatar_profile_cache')
-      .then((cached) => { if (cached) setAvatarProfile(cached) })
-      .catch(() => {})
-      .then(() => apiFetch('/api/places/state', {}).catch(() => null))
+    const cachedAvatar = getUserScopedCacheSync<{ photoUrl?: string; initials: string }>('avatar_profile_cache')
+    if (cachedAvatar) setAvatarProfile(cachedAvatar)
+    apiFetch('/api/places/state', {}).catch(() => null)
       .then((data) => {
         const user = data?.session?.user
         if (user) {
+          setSession(data)
           const name = user.username || user.name || '?'
           const rawUrl = data?.profile?.photoUrl || user.image || null
           const fresh = { photoUrl: rawUrl, initials: name.slice(0, 2).toUpperCase() }
@@ -133,10 +133,6 @@ export default function LandingScreen() {
         }
       })
       .catch(() => {})
-
-    getSession()
-      .then((s) => setSession(s))
-      .catch(() => setSession(null))
 
     Animated.loop(Animated.sequence([
       Animated.timing(pulseAnim, { toValue: 1.25, duration: 1200, useNativeDriver: true }),
@@ -244,6 +240,7 @@ export default function LandingScreen() {
 
       <View style={s.nav}>
         <View style={s.navBrand}>
+          <Image source={require('../../assets/logo-cropped.png')} style={s.navLogo} contentFit="contain" />
           <Text style={s.navTitle}>Let's Talk</Text>
         </View>
         <TouchableOpacity activeOpacity={0.7} onPress={() => navigation.navigate('AccountMenu' as never)}>
@@ -450,6 +447,7 @@ const s = StyleSheet.create({
   nav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 4, zIndex: 10 },
   navBrand: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   navTitle: { fontSize: 22, fontWeight: '700', color: '#fff', letterSpacing: -0.3 },
+  navLogo: { width: 30, height: 25 },
 
   scroll: { paddingBottom: 132 },
 
