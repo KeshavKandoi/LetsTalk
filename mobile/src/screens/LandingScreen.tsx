@@ -81,14 +81,14 @@ function NearbyMap({ pulseAnim }: any) {
       <LinearGradient
         colors={['rgba(5,5,5,1)', 'rgba(5,5,5,0.3)', 'rgba(5,5,5,0)', 'rgba(5,5,5,0.15)', 'rgba(5,5,5,1)']}
         locations={[0, 0.18, 0.5, 0.8, 1]}
-        style={StyleSheet.absoluteFillObject}
+        style={StyleSheet.absoluteFill}
       />
       <LinearGradient
         colors={['rgba(5,5,5,0.9)', 'rgba(5,5,5,0)', 'rgba(5,5,5,0)', 'rgba(5,5,5,0.9)']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         locations={[0, 0.1, 0.9, 1]}
-        style={StyleSheet.absoluteFillObject}
+        style={StyleSheet.absoluteFill}
       />
 
       <View style={ns.textOverlay}>
