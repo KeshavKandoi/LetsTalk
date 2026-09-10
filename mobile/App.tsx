@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNetworkCheck } from './src/hooks/useNetworkCheck'
 import { NavigationContainer } from '@react-navigation/native'
-import { SafeAreaProvider } from 'react-native-safe-area-context'
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { getSession, signOut, hasCompletedOnboarding, establishSession, getUserScopedCache } from './src/lib/auth'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { StatusBar } from 'expo-status-bar'
@@ -26,6 +26,17 @@ import SplashScreen from './src/screens/SplashScreen'
 import AddPhotoScreen from './src/screens/AddPhotoScreen'
 
 const Stack = createNativeStackNavigator()
+
+function OfflineBanner({ visible }: { visible: boolean }) {
+  const insets = useSafeAreaInsets()
+  if (!visible) return null
+
+  return (
+    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 9999, backgroundColor: '#b00020', paddingTop: insets.top + 8, paddingBottom: 10, alignItems: 'center' }}>
+      <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>No internet connection</Text>
+    </View>
+  )
+}
 
 export default function App() {
   const [loading, setLoading] = useState(true)
@@ -61,57 +72,41 @@ export default function App() {
     init()
   }, [])
 
-  if (showSplash) {
-    return (
-      <SplashScreen
-        onComplete={() => setShowSplash(false)}
-        duration={3000}
-      />
-    )
-  }
-
-  if (loading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#E9DFC9' }}>
-        <ActivityIndicator size="large" color="#405e98" />
-      </View>
-    )
-  }
-
   return (
     <SafeAreaProvider>
-      {!isConnected && (
-        <View style={{ backgroundColor: '#b00020', paddingVertical: 5, alignItems: 'center' }}>
-          <Text style={{ color: '#fff', fontWeight: '600', fontSize: 11 }}>⚠ No internet connection</Text>
+      <StatusBar style="light" />
+      {showSplash ? (
+        <SplashScreen onComplete={() => setShowSplash(false)} duration={3000} />
+      ) : loading ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#E9DFC9' }}>
+          <ActivityIndicator size="large" color="#405e98" />
         </View>
+      ) : (
+        <>
+          <OfflineBanner visible={!isConnected} />
+          <NavigationContainer>
+            <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRoute}>
+              <Stack.Screen name="Landing" component={LandingScreen} />
+              <Stack.Screen name="Login" component={LoginScreen} />
+              <Stack.Screen name="Signup" component={SignupScreen} />
+              <Stack.Screen name="OTP" component={OTPScreen} />
+              <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+              <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+              <Stack.Screen name="Tutorial" component={TutorialScreen} />
+              <Stack.Screen name="AddPhoto" component={AddPhotoScreen} />
+              <Stack.Screen name="PlaceView" component={PlaceViewScreen} />
+              <Stack.Screen name="Profile" component={ProfileScreen} />
+              <Stack.Screen name="AccountMenu" component={AccountMenuScreen} />
+              <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+              <Stack.Screen name="AccountSettings" component={AccountSettingsScreen} />
+              <Stack.Screen name="Notifications" component={NotificationsScreen} />
+              <Stack.Screen name="AboutUs" component={AboutUsScreen} />
+              <Stack.Screen name="Friends" component={FriendsScreen} />
+              <Stack.Screen name="Conversation" component={ConversationScreen} />
+            </Stack.Navigator>
+          </NavigationContainer>
+        </>
       )}
-      {!isConnected && (
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 9999, backgroundColor: '#b00020', paddingTop: 44, paddingBottom: 10, alignItems: 'center' }}>
-          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>No internet connection</Text>
-        </View>
-      )}
-      <NavigationContainer>
-        <StatusBar style="dark" />
-        <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRoute}>
-          <Stack.Screen name="Landing" component={LandingScreen} />
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="Signup" component={SignupScreen} />
-          <Stack.Screen name="OTP" component={OTPScreen} />
-          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-          <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-          <Stack.Screen name="Tutorial" component={TutorialScreen} />
-          <Stack.Screen name="AddPhoto" component={AddPhotoScreen} />
-          <Stack.Screen name="PlaceView" component={PlaceViewScreen} />
-          <Stack.Screen name="Profile" component={ProfileScreen} />
-          <Stack.Screen name="AccountMenu" component={AccountMenuScreen} />
-          <Stack.Screen name="EditProfile" component={EditProfileScreen} />
-          <Stack.Screen name="AccountSettings" component={AccountSettingsScreen} />
-          <Stack.Screen name="Notifications" component={NotificationsScreen} />
-          <Stack.Screen name="AboutUs" component={AboutUsScreen} />
-          <Stack.Screen name="Friends" component={FriendsScreen} />
-          <Stack.Screen name="Conversation" component={ConversationScreen} />
-        </Stack.Navigator>
-      </NavigationContainer>
     </SafeAreaProvider>
   )
 }
