@@ -14,7 +14,6 @@ import {
   normalizeIntentText,
 } from './user-agent-logic'
 import { broadcastPlaceUpdate } from './place-agent'
-import { createScanConnectionNotifications } from '../notifications'
 
 function asPresenceStatus(status: string | null | undefined): PresenceStatus {
   switch (status) {
@@ -348,16 +347,6 @@ export class UserAgent {
       id: connectionId, requesterUserId: this.userId, recipientUserId: input.counterpartUserId,
       placeId: input.placeId, status: 'accepted', createdAt: now, updatedAt: now,
     })
-    const [viewerUser] = await db.select().from(user).where(eq(user.id, this.userId)).limit(1)
-    const [targetUser] = await db.select().from(user).where(eq(user.id, input.counterpartUserId)).limit(1)
-    if (viewerUser && targetUser) {
-      await createScanConnectionNotifications({
-        connectionId,
-        firstUser: { id: viewerUser.id, name: getDisplayUsername(viewerUser) },
-        secondUser: { id: targetUser.id, name: getDisplayUsername(targetUser) },
-        createdAt: now,
-      })
-    }
     await db.update(userProfile).set({
       status: 'in_conversation', isFindable: false, locationHint: null,
       pingRequestedAt: null, pingRequestedByUserId: null, pingRequestedByUsername: null, updatedAt: now,
@@ -412,16 +401,6 @@ export class UserAgent {
       id: connectionId, requesterUserId: this.userId, recipientUserId: input.counterpartUserId,
       placeId: input.placeId, status: 'accepted', createdAt: now, updatedAt: now,
     })
-    const [viewerUser] = await db.select().from(user).where(eq(user.id, this.userId)).limit(1)
-    const [targetUser] = await db.select().from(user).where(eq(user.id, input.counterpartUserId)).limit(1)
-    if (viewerUser && targetUser) {
-      await createScanConnectionNotifications({
-        connectionId,
-        firstUser: { id: viewerUser.id, name: getDisplayUsername(viewerUser) },
-        secondUser: { id: targetUser.id, name: getDisplayUsername(targetUser) },
-        createdAt: now,
-      })
-    }
 
     await syncPlaceAgents([viewerProfile?.currentPlaceId, input.placeId, ...endedConnections.placeIds])
     await syncUserAgents([input.counterpartUserId, ...endedConnections.participantUserIds].filter((id) => id !== this.userId))
