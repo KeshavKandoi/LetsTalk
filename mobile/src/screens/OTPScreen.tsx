@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import { StatusBar } from 'expo-status-bar'
 import { MaterialIcons, Feather } from '@expo/vector-icons'
-import { verifyOTP, sendOTP, signIn, hasCompletedOnboarding } from '../lib/auth'
+import { verifyOTP, sendOTP, signIn, hasCompletedOnboarding, establishSession } from '../lib/auth'
 
 export default function OTPScreen() {
   const navigation = useNavigation<any>()
@@ -51,8 +51,13 @@ export default function OTPScreen() {
     setError('')
     try {
       await verifyOTP(email, code)
-      if (password) {
-        try { await signIn(email, password) } catch {}
+      let user = await establishSession()
+      if (!user && password) {
+        await signIn(email, password)
+        user = await establishSession()
+      }
+      if (!user) {
+        throw new Error('Verified, but could not start your session. Please log in.')
       }
       const alreadyOnboarded = await hasCompletedOnboarding(email)
       navigation.reset({ index: 0, routes: [{ name: alreadyOnboarded ? 'Landing' : 'Tutorial' }] })
