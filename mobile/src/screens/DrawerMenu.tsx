@@ -10,6 +10,7 @@ import { signOut } from '../lib/auth'
 import { apiFetch } from '../lib/api'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { getUserScopedCache, setUserScopedCache } from '../lib/auth'
+import { refreshNotificationUnreadCount, subscribeNotificationUnreadCount } from '../lib/notification-state'
 
 const { width } = Dimensions.get('window')
 const DRAWER_WIDTH = width * 0.65
@@ -34,6 +35,12 @@ export default function DrawerMenu({ visible, onClose }: Props) {
   const fadeAnim   = useRef(new Animated.Value(0)).current
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  useEffect(() => {
+    const unsubscribe = subscribeNotificationUnreadCount(setUnreadCount)
+    return () => { unsubscribe() }
+  }, [])
 
   // One animation value per row: header + menu items + logout
   const TOTAL_ROWS = MENU_ITEMS.length + 2 // header, items, logout
@@ -64,6 +71,7 @@ export default function DrawerMenu({ visible, onClose }: Props) {
         Animated.timing(fadeAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
       ]).start()
       animateRowsIn()
+      void refreshNotificationUnreadCount().catch(() => {})
       // Load from cache first (instant), then fetch fresh data
       getUserScopedCache('cached_profile').then(cached => {
         if (cached) setProfile(cached)
@@ -154,6 +162,9 @@ export default function DrawerMenu({ visible, onClose }: Props) {
               >
                 <MaterialIcons name={item.icon as any} size={26} color="#FFFFFF" />
                 <Text style={s.menuLabel}>{item.label}</Text>
+                {item.screen === 'Notifications' && unreadCount > 0 && (
+                  <View style={s.badge}><Text style={s.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text></View>
+                )}
               </TouchableOpacity>
             </Animated.View>
           ))}
@@ -223,6 +234,8 @@ const s = StyleSheet.create({
     borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.15)',
   },
   menuLabel:  { flex: 1, fontSize: 14, fontWeight: '900', color: '#FFFFFF', letterSpacing: 1.2 },
+  badge: { minWidth: 20, height: 20, paddingHorizontal: 5, borderRadius: 10, backgroundColor: '#E05010', alignItems: 'center', justifyContent: 'center' },
+  badgeText: { color: '#fff', fontSize: 11, fontWeight: '800' },
   loginBtn:   { flex: 1, borderWidth: 2, borderColor: '#FFFFFF', borderRadius: 50, paddingVertical: 8, alignItems: 'center' },
   loginTxt:   { color: '#FFFFFF', fontWeight: '800', fontSize: 13 },
   signupBtn:  { flex: 1, backgroundColor: '#FFFFFF', borderRadius: 50, paddingVertical: 8, alignItems: 'center' },
