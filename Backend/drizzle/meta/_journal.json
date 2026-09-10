@@ -71,6 +71,13 @@
       "when": 1783683839394,
       "tag": "0009_stiff_christian_walker",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1789047513407,
+      "tag": "0010_persistent_notifications",
+      "breakpoints": true
     }
   ]
 }
