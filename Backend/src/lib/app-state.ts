@@ -1568,8 +1568,9 @@ export async function respondToFriendRequest(input: {
   requestId?: string
   friendUserId?: string
   action: 'accept' | 'reject' | 'remove'
+  viewerUserId?: string
 }) {
-  const session = await requireCurrentSession()
+  const session = input.viewerUserId ? { user: { id: input.viewerUserId } } : await requireCurrentSession()
   const [requestRecord] = input.requestId
     ? await db
         .select()
@@ -1657,8 +1658,6 @@ export async function getConversationMessages(input: { friendUserId: string; vie
     friendUserId,
   )
 
-  console.log('[messages] Looking up friendship for:', session.user.id, '↔', friendUserId)
-  console.log('[messages] Found record:', JSON.stringify(requestRecord))
   if (!requestRecord || requestRecord.status !== 'accepted') {
     throw new Error('You can only message accepted friends.')
   }
@@ -1702,8 +1701,6 @@ export async function sendConversationMessage(input: {
     friendUserId,
   )
 
-  console.log('[messages] Looking up friendship for:', session.user.id, '↔', friendUserId)
-  console.log('[messages] Found record:', JSON.stringify(requestRecord))
   if (!requestRecord || requestRecord.status !== 'accepted') {
     throw new Error('You can only message accepted friends.')
   }
@@ -2076,8 +2073,8 @@ export async function getGoogleMapsBrowserConfig() {
 
 // ===== WHATSAPP-LIKE FEATURES =====
 
-export async function markMessageAsDelivered(input: { messageId: string }) {
-  const session = await requireCurrentSession()
+export async function markMessageAsDelivered(input: { messageId: string; viewerUserId?: string }) {
+  const session = input.viewerUserId ? { user: { id: input.viewerUserId } } : await requireCurrentSession()
   const [message] = await db
     .select()
     .from(friendMessage)
@@ -2100,8 +2097,8 @@ export async function markMessageAsDelivered(input: { messageId: string }) {
   return { success: true }
 }
 
-export async function markMessageAsRead(input: { messageId: string }) {
-  const session = await requireCurrentSession()
+export async function markMessageAsRead(input: { messageId: string; viewerUserId?: string }) {
+  const session = input.viewerUserId ? { user: { id: input.viewerUserId } } : await requireCurrentSession()
   const [message] = await db
     .select()
     .from(friendMessage)
