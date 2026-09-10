@@ -7,7 +7,6 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
 import { MaterialIcons, Feather } from '@expo/vector-icons'
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
-import AsyncStorage from '@react-native-async-storage/async-storage'
 import { getSession, signOut, getUserScopedCache, setUserScopedCache } from '../lib/auth'
 import { apiFetch } from '../lib/api'
 
@@ -66,7 +65,6 @@ export default function ProfileScreen() {
       {
         text: 'Log out', style: 'destructive', onPress: async () => {
           await signOut()
-          await AsyncStorage.removeItem(CACHE_KEY)
           navigation.reset({ index: 0, routes: [{ name: 'Login' }] })
         }
       }
