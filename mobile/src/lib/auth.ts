@@ -3,6 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL
 const SESSION_TOKEN_KEY = 'session_token'
 const CURRENT_USER_ID_KEY = 'current_user_id'
+let currentUserIdMemory: string | null = null
+const userCacheMemory = new Map<string, { userId: string; data: any }>()
 
 export async function signIn(username: string, password: string) {
   const email = username.trim().toLowerCase()
@@ -115,6 +117,7 @@ export async function signOut() {
   } catch {}
   await AsyncStorage.removeItem(SESSION_TOKEN_KEY)
   await AsyncStorage.removeItem(CURRENT_USER_ID_KEY)
+  currentUserIdMemory = null
 }
 
 // Removes only values owned by the currently authenticated user. Global
@@ -184,6 +187,7 @@ export async function establishSession() {
     return null
   }
   await AsyncStorage.setItem(CURRENT_USER_ID_KEY, data.user.id)
+  currentUserIdMemory = data.user.id
   return data.user
 }
 
@@ -198,6 +202,7 @@ export async function getUserScopedCache<T = any>(key: string): Promise<T | null
     const parsed = JSON.parse(raw)
     const currentUserId = await getCurrentUserId()
     if (!currentUserId || parsed.userId !== currentUserId) return null
+    userCacheMemory.set(key, parsed)
     return parsed.data as T
   } catch {
     return null
@@ -207,5 +212,12 @@ export async function getUserScopedCache<T = any>(key: string): Promise<T | null
 export async function setUserScopedCache(key: string, data: any) {
   const currentUserId = await getCurrentUserId()
   if (!currentUserId) return
-  await AsyncStorage.setItem(key, JSON.stringify({ userId: currentUserId, data }))
+  const value = { userId: currentUserId, data }
+  userCacheMemory.set(key, value)
+  await AsyncStorage.setItem(key, JSON.stringify(value))
+}
+
+export function getUserScopedCacheSync<T = any>(key: string) {
+  const cached = userCacheMemory.get(key)
+  return cached?.userId === currentUserIdMemory ? cached.data as T : null
 }
