@@ -52,6 +52,7 @@ export default function NotificationsScreen() {
   const isConnected = useNetworkCheck()
   const requestInFlightRef = useRef(false)
   const mutationGenerationRef = useRef(0)
+  const authoritativeGenerationRef = useRef(0)
   const cacheWriteChainRef = useRef(Promise.resolve())
 
   const queueCacheWrite = (list: Notification[], generation: number) => {
@@ -74,6 +75,7 @@ export default function NotificationsScreen() {
       const data = await apiFetch('/api/friends/notifications', { limit: PAGE_SIZE })
       const list = Array.isArray(data.notifications) ? data.notifications : []
       if (mutationGenerationRef.current !== requestGeneration) return
+      ++authoritativeGenerationRef.current
       setNotifications(list)
       setNextCursor(data.nextCursor || null)
       setHasMore(Boolean(data.hasMore))
@@ -102,6 +104,7 @@ export default function NotificationsScreen() {
     try {
       const data = await apiFetch('/api/friends/notifications', { cursor: nextCursor, limit: PAGE_SIZE })
       if (mutationGenerationRef.current !== requestGeneration) return
+      ++authoritativeGenerationRef.current
       setNotifications((current) => {
         const existing = new Set(current.map((item) => item.id))
         return [...current, ...(data.notifications || []).filter((item: Notification) => !existing.has(item.id))]
@@ -118,8 +121,16 @@ export default function NotificationsScreen() {
   }, [hasMore, nextCursor])
 
   useEffect(() => {
+    const cacheMutationGeneration = mutationGenerationRef.current
+    const cacheAuthoritativeGeneration = authoritativeGenerationRef.current
     getUserScopedCache<Notification[]>('cached_notifications')
-      .then((cached) => { if (cached?.length) setNotifications(cached) })
+      .then((cached) => {
+        if (
+          cached?.length &&
+          mutationGenerationRef.current === cacheMutationGeneration &&
+          authoritativeGenerationRef.current === cacheAuthoritativeGeneration
+        ) setNotifications(cached)
+      })
       .catch(() => {})
   }, [])
 
