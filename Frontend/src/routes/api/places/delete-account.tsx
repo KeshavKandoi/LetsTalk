@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { auth } from '@backend/lib/auth'
 import { db } from '@backend/lib/db'
 import { user, userProfile, verification } from '@backend/lib/db/schema'
-import { eq, sql } from 'drizzle-orm'
+import { eq, ilike, sql } from 'drizzle-orm'
 
 export const Route = createFileRoute('/api/places/delete-account')({
   server: {
@@ -17,7 +17,7 @@ export const Route = createFileRoute('/api/places/delete-account')({
             await tx.delete(userProfile).where(eq(userProfile.userId, userId))
             await tx.execute(sql`DELETE FROM session WHERE "userId" = ${userId}`)
             await tx.execute(sql`DELETE FROM account WHERE "userId" = ${userId}`)
-            await tx.delete(verification).where(eq(verification.identifier, email))
+            await tx.delete(verification).where(ilike(verification.identifier, email.trim().toLowerCase()))
             await tx.delete(user).where(eq(user.id, userId))
           })
           return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } })
