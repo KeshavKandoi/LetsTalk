@@ -1,98 +1,118 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { db } from '@backend/lib/db'
-import { friendRequest, handoffConnection, user, userProfile } from '@backend/lib/db/schema'
+import { and, desc, eq, isNull, lt, or, sql } from 'drizzle-orm'
 import { auth } from '@backend/lib/auth'
-import { eq, or, and, desc, gte } from 'drizzle-orm'
+import { db } from '@backend/lib/db'
+import { notification } from '@backend/lib/db/schema'
+
+const DEFAULT_PAGE_SIZE = 20
+const MAX_PAGE_SIZE = 50
+
+function sessionHeaders(request: Request) {
+  const headers = new Headers(Object.fromEntries(request.headers.entries()))
+  const token = (request.headers.get('authorization') || request.headers.get('Authorization') || '').replace('Bearer ', '')
+  if (token) headers.set('cookie', `better-auth.session_token=${token}`)
+  return headers
+}
+
+async function unreadCount(userId: string) {
+  const [result] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(notification)
+    .where(and(eq(notification.recipientUserId, userId), isNull(notification.readAt)))
+  return Number(result?.count ?? 0)
+}
+
+function parseCursor(cursor: unknown) {
+  if (typeof cursor !== 'string' || !cursor) return null
+  const separator = cursor.indexOf('|')
+  if (separator <= 0) return null
+  const createdAt = new Date(cursor.slice(0, separator))
+  const id = cursor.slice(separator + 1)
+  if (!id || Number.isNaN(createdAt.getTime())) return null
+  return { createdAt, id }
+}
 
 export const Route = createFileRoute('/api/friends/notifications')({
   server: {
     handlers: {
       POST: async ({ request }) => {
         try {
-          const session = await auth.api.getSession({ headers: (() => { const h = new Headers(Object.fromEntries(request.headers.entries())); const t = (request.headers.get('authorization') || request.headers.get('Authorization') || '').replace('Bearer ',''); if(t) h.set('cookie', 'better-auth.session_token=' + t); return h; })() })
+          const session = await auth.api.getSession({ headers: sessionHeaders(request) })
           if (!session) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
+
+          const body = await request.json().catch(() => ({})) as {
+            action?: 'list' | 'unreadCount' | 'markRead' | 'markAllRead' | 'delete' | 'clear'
+            cursor?: string
+            limit?: number
+            notificationId?: string
+          }
           const userId = session.user.id
-          const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
 
-          // Friend requests - join only the OTHER user
-          const friendRows = await db
-            .select({
-              id: friendRequest.id,
-              status: friendRequest.status,
-              requesterUserId: friendRequest.requesterUserId,
-              recipientUserId: friendRequest.recipientUserId,
-              requesterAccepted: friendRequest.requesterAccepted,
-              recipientAccepted: friendRequest.recipientAccepted,
-              updatedAt: friendRequest.updatedAt,
-              username: user.displayUsername,
-              fallbackUsername: user.username,
-            })
-            .from(friendRequest)
-            .innerJoin(user, or(
-              and(eq(friendRequest.requesterUserId, userId), eq(user.id, friendRequest.recipientUserId)),
-              and(eq(friendRequest.recipientUserId, userId), eq(user.id, friendRequest.requesterUserId)),
-            ))
-            .where(or(
-              eq(friendRequest.requesterUserId, userId),
-              eq(friendRequest.recipientUserId, userId),
-            ))
-            .orderBy(desc(friendRequest.updatedAt))
-            // only last 30 days handled in filter below
-
-          // QR scan connections - join only the OTHER user
-          const scanRows = await db
-            .select({
-              id: handoffConnection.id,
-              requesterUserId: handoffConnection.requesterUserId,
-              recipientUserId: handoffConnection.recipientUserId,
-              createdAt: handoffConnection.createdAt,
-              username: user.displayUsername,
-              fallbackUsername: user.username,
-            })
-            .from(handoffConnection)
-            .innerJoin(user, or(
-              and(eq(handoffConnection.requesterUserId, userId), eq(user.id, handoffConnection.recipientUserId)),
-              and(eq(handoffConnection.recipientUserId, userId), eq(user.id, handoffConnection.requesterUserId)),
-            ))
-            .where(or(
-              eq(handoffConnection.requesterUserId, userId),
-              eq(handoffConnection.recipientUserId, userId),
-            ))
-            .orderBy(desc(handoffConnection.createdAt))
-
-          const notifications: any[] = []
-
-          for (const row of friendRows) {
-            const otherUsername = row.username || row.fallbackUsername || 'Someone'
-            const isRequester = row.requesterUserId === userId
-            const isRecipient = row.recipientUserId === userId
-
-            if (row.status === 'pending' && isRecipient && !row.recipientAccepted) {
-              notifications.push({ id: `fr-${row.id}`, type: 'friend_request', message: `${otherUsername} sent you a friend request`, time: row.updatedAt })
-            } else if (row.status === 'accepted') {
-              notifications.push({ id: `fa-${row.id}`, type: 'friend_accepted', message: `You are now friends with ${otherUsername}`, time: row.updatedAt })
-            } else if (row.status === 'declined' && isRequester) {
-              notifications.push({ id: `fd-${row.id}`, type: 'friend_removed', message: `${otherUsername} removed you from friends`, time: row.updatedAt })
-            }
+          if (body.action === 'unreadCount') {
+            return Response.json({ unreadCount: await unreadCount(userId) })
           }
 
-          // Deduplicate scan connections by pair
-          const seenPairs = new Set<string>()
-          for (const row of scanRows) {
-            const otherId = row.requesterUserId === userId ? row.recipientUserId : row.requesterUserId
-            const pairKey = [userId, otherId].sort().join('-')
-            if (seenPairs.has(pairKey)) continue
-            seenPairs.add(pairKey)
-            const otherUsername = row.username || row.fallbackUsername || 'Someone'
-            notifications.push({ id: `sc-${row.id}`, type: 'scan_connected', message: `You connected with ${otherUsername}`, time: row.createdAt })
+          if (body.action === 'markRead' && body.notificationId) {
+            await db.update(notification)
+              .set({ readAt: new Date() })
+              .where(and(eq(notification.id, body.notificationId), eq(notification.recipientUserId, userId)))
+            return Response.json({ unreadCount: await unreadCount(userId) })
           }
 
-          const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000
-          const filtered = notifications.filter(n => new Date(n.time).getTime() > cutoff)
-          filtered.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
-          return new Response(JSON.stringify({ notifications: filtered }), { headers: { 'Content-Type': 'application/json' } })
-        } catch (e: any) {
-          return new Response(JSON.stringify({ error: e.message }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+          if (body.action === 'markAllRead') {
+            await db.update(notification)
+              .set({ readAt: new Date() })
+              .where(and(eq(notification.recipientUserId, userId), isNull(notification.readAt)))
+            return Response.json({ unreadCount: 0 })
+          }
+
+          if (body.action === 'delete' && body.notificationId) {
+            await db.delete(notification)
+              .where(and(eq(notification.id, body.notificationId), eq(notification.recipientUserId, userId)))
+            return Response.json({ unreadCount: await unreadCount(userId) })
+          }
+
+          if (body.action === 'clear') {
+            await db.delete(notification).where(eq(notification.recipientUserId, userId))
+            return Response.json({ unreadCount: 0 })
+          }
+
+          const pageSize = Math.min(Math.max(Number(body.limit) || DEFAULT_PAGE_SIZE, 1), MAX_PAGE_SIZE)
+          const cursor = parseCursor(body.cursor)
+          const rows = await db
+            .select()
+            .from(notification)
+            .where(and(
+              eq(notification.recipientUserId, userId),
+              cursor
+                ? or(
+                    lt(notification.createdAt, cursor.createdAt),
+                    and(eq(notification.createdAt, cursor.createdAt), lt(notification.id, cursor.id)),
+                  )
+                : undefined,
+            ))
+            .orderBy(desc(notification.createdAt), desc(notification.id))
+            .limit(pageSize + 1)
+
+          const hasMore = rows.length > pageSize
+          const page = rows.slice(0, pageSize)
+          const last = page[page.length - 1]
+          return Response.json({
+            notifications: page.map((row) => ({
+              id: row.id,
+              type: row.type,
+              message: row.message,
+              data: row.data ? JSON.parse(row.data) : null,
+              createdAt: row.createdAt,
+              readAt: row.readAt,
+              isRead: Boolean(row.readAt),
+            })),
+            nextCursor: hasMore && last ? `${new Date(last.createdAt).toISOString()}|${last.id}` : null,
+            hasMore,
+            unreadCount: await unreadCount(userId),
+          })
+        } catch {
+          return new Response(JSON.stringify({ error: 'Unable to load notifications.' }), { status: 500, headers: { 'Content-Type': 'application/json' } })
         }
       },
     },
