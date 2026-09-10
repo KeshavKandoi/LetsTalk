@@ -1,6 +1,6 @@
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
 import { useNetworkCheck } from '../hooks/useNetworkCheck'
-import { getSession, signOut } from '../lib/auth'
+import { getSession, signOut, getUserScopedCache, setUserScopedCache } from '../lib/auth'
 import { apiFetch } from '../lib/api'
 import DrawerMenu from './DrawerMenu'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -118,8 +118,8 @@ export default function LandingScreen() {
   const pulseAnim = useRef(new Animated.Value(1)).current
 
   useEffect(() => {
-    AsyncStorage.getItem('avatar_profile_cache')
-      .then((cached) => { if (cached) setAvatarProfile(JSON.parse(cached)) })
+    getUserScopedCache<{ photoUrl?: string; initials: string }>('avatar_profile_cache')
+      .then((cached) => { if (cached) setAvatarProfile(cached) })
       .catch(() => {})
       .then(() => apiFetch('/api/places/state', {}).catch(() => null))
       .then((data) => {
@@ -129,7 +129,7 @@ export default function LandingScreen() {
           const rawUrl = data?.profile?.photoUrl || user.image || null
           const fresh = { photoUrl: rawUrl, initials: name.slice(0, 2).toUpperCase() }
           setAvatarProfile(fresh)
-          AsyncStorage.setItem('avatar_profile_cache', JSON.stringify(fresh)).catch(() => {})
+          setUserScopedCache('avatar_profile_cache', fresh).catch(() => {})
         }
       })
       .catch(() => {})
