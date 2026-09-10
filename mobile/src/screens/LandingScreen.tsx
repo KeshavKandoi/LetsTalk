@@ -15,7 +15,6 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
 import { MaterialIcons, Feather } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
-import { registerPushToken } from '../lib/push'
 
 const { width } = Dimensions.get('window')
 const BLUE = '#4E7FFF'
@@ -121,7 +120,6 @@ export default function LandingScreen() {
   const pulseAnim = useRef(new Animated.Value(1)).current
 
   useEffect(() => {
-    void registerPushToken().catch(() => {})
     const cachedAvatar = getUserScopedCacheSync<{ photoUrl?: string; initials: string }>('avatar_profile_cache')
     if (cachedAvatar) setAvatarProfile(cachedAvatar)
     const cachedPlaces = getUserScopedCacheSync<any[]>('landing_nearby_places')
