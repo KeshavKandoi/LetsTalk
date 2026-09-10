@@ -333,7 +333,7 @@ export default function LandingScreen() {
                   key={p.placeId}
                   style={s.placeCard}
                   activeOpacity={0.75}
-                  onPress={() => navigation.navigate('PlaceView', { place: p })}
+                  onPress={() => navigation.navigate('Onboarding' as never)}
                 >
                   {p.photoUrl ? (
                     <Image source={{ uri: p.photoUrl }} style={s.placeThumbImg} contentFit="cover" cachePolicy="memory-disk" />
