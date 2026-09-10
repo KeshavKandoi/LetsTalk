@@ -94,11 +94,41 @@ export default function PlaceViewScreen() {
   const navigation = useNavigation<any>()
   const route = useRoute<any>()
   const passedPlace = route.params?.place || null
-  const [state, setState] = useState<PlaceViewState | null>(null)
+  const [state, setState] = useState<PlaceViewState | null>(() => passedPlace ? {
+    profile: {
+      moodEmoji: '',
+      intentText: '',
+      intentSummary: null,
+      status: 'present',
+      currentPlaceId: passedPlace.placeId,
+      isFindable: false,
+      isVerifiedOnSite: false,
+      locationHint: null,
+      pingRequestedAt: null,
+      pingRequestedByUsername: null,
+      photoUrl: null,
+    },
+    currentPlace: {
+      place: {
+        placeId: passedPlace.placeId,
+        name: passedPlace.name,
+        address: passedPlace.address,
+        readyCount: passedPlace.readyCount ?? 0,
+        lat: passedPlace.lat,
+        lng: passedPlace.lng,
+        latitude: passedPlace.latitude,
+        longitude: passedPlace.longitude,
+      },
+      readyCount: passedPlace.readyCount ?? 0,
+    },
+    activeConnection: null,
+    qrHandoff: null,
+    session: null,
+  } : null)
   const [participants, setParticipants] = useState<Participant[]>([])
   const [checkedInCount, setCheckedInCount] = useState(0)
   const [activeConversationCount, setActiveConversationCount] = useState(0)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!passedPlace)
   const [refreshing, setRefreshing] = useState(false)
   const [togglingReady, setTogglingReady] = useState(false)
   const [leaving, setLeaving] = useState(false)
@@ -129,6 +159,7 @@ export default function PlaceViewScreen() {
   const photoLoadedRef = useRef(false)
   const seenConnectionEventIdsRef = useRef<Set<string>>(new Set())
   const gpsOutOfRangeStrikesRef = useRef(0)
+  const initialPlaceRenderRef = useRef(Boolean(passedPlace))
 
   const getCurrentGpsLocation = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync()
@@ -206,7 +237,8 @@ export default function PlaceViewScreen() {
   }, [])
 
   const loadState = async (silent = false) => {
-    if (!silent) setLoading(true)
+    if (!silent && !initialPlaceRenderRef.current) setLoading(true)
+    initialPlaceRenderRef.current = false
     try {
       const earlyPlaceId = passedPlace?.placeId || null
       const previewPromise = earlyPlaceId ? apiFetch('/api/places/preview', { placeId: earlyPlaceId }).catch(() => null) : null
