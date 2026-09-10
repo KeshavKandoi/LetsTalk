@@ -12,7 +12,7 @@ import { verifyOTP, sendOTP, signIn, hasCompletedOnboarding, establishSession } 
 export default function OTPScreen() {
   const navigation = useNavigation<any>()
   const route = useRoute<any>()
-  const { email, password } = route.params || {}
+  const { email, password, isNewSignup } = route.params || {}
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [loading, setLoading] = useState(false)
   const [resending, setResending] = useState(false)
@@ -59,7 +59,7 @@ export default function OTPScreen() {
       if (!user) {
         throw new Error('Verified, but could not start your session. Please log in.')
       }
-      const alreadyOnboarded = await hasCompletedOnboarding(email)
+      const alreadyOnboarded = isNewSignup ? false : await hasCompletedOnboarding(user.id, user.email)
       navigation.reset({ index: 0, routes: [{ name: alreadyOnboarded ? 'Landing' : 'Tutorial' }] })
     } catch (e: any) {
       setError(e.message || 'Invalid OTP')
