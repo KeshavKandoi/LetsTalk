@@ -11,7 +11,7 @@ import * as ImagePicker from 'expo-image-picker'
 import * as FileSystem from 'expo-file-system/legacy'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { apiFetch } from '../lib/api'
-import { getSession, getStoredSessionToken } from '../lib/auth'
+import { getSession, getStoredSessionToken, getUserScopedCache, setUserScopedCache } from '../lib/auth'
 
 const DARK = '#151515'
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL
@@ -27,15 +27,12 @@ export default function EditProfileScreen() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
 
   useEffect(() => {
-    AsyncStorage.getItem('cached_profile_screen').then(cached => {
-      if (cached) {
-        try {
-          const c = JSON.parse(cached)
-          setAbout(c.about || '')
-          setUsername(c.username || '')
-          if (c.photoUrl) setPhotoUrl(c.photoUrl)
-          setLoading(false)
-        } catch {}
+    getUserScopedCache<any>('cached_profile_screen').then(c => {
+      if (c) {
+        setAbout(c.about || '')
+        setUsername(c.username || '')
+        if (c.photoUrl) setPhotoUrl(c.photoUrl)
+        setLoading(false)
       }
     })
 
@@ -46,7 +43,7 @@ export default function EditProfileScreen() {
         setUsername(data?.session?.user?.username || '')
         const u = session?.user || session?.session?.user
         const rawUrl = data?.profile?.photoUrl || u?.image || null
-        AsyncStorage.getItem('photo_ts').then(ts => {
+        getUserScopedCache<string>('photo_ts').then(ts => {
           setPhotoUrl(rawUrl ? rawUrl.split('?')[0] + '?t=' + (ts || '1') : null)
         })
       })
@@ -86,7 +83,7 @@ export default function EditProfileScreen() {
         console.log('Upload response:', JSON.stringify(data))
         if (data?.photoUrl) {
           const ts = Date.now().toString()
-          await AsyncStorage.setItem('photo_ts', ts)
+          await setUserScopedCache('photo_ts', ts)
           setPhotoUrl(data.photoUrl + '?t=' + ts)
           Alert.alert('Done!', 'Photo uploaded.')
         } else {
