@@ -490,7 +490,7 @@ const ns = StyleSheet.create({
     shadowColor: ACCENT, shadowOpacity: 0.9, shadowRadius: 14, shadowOffset: { width: 0, height: 0 }, elevation: 10,
   },
   textOverlay: { position: 'absolute', bottom: 22, left: 0, right: 0, paddingHorizontal: 20 },
-  overlayTitle: { fontSize: 28, fontWeight: '800', color: '#fff', lineHeight: 34, letterSpacing: -0.5, marginBottom: 8 },
+  overlayTitle: { fontSize: 28, fontWeight: '800', color: '#FFF8EE', lineHeight: 34, letterSpacing: -0.5, marginBottom: 8 },
   overlaySub: { fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 18 },
 })
 
@@ -522,7 +522,7 @@ const s = StyleSheet.create({
   heroTitle: { fontSize: 28, fontWeight: '800', color: '#fff', lineHeight: 34, letterSpacing: -0.5, marginBottom: 8 },
   heroSub: { fontSize: 14, color: MUTED, lineHeight: 19 },
 
-  ctaBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 52, width: '100%', borderRadius: 999, marginBottom: 8, shadowColor: PURPLE, shadowOpacity: 0.35, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
+  ctaBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 56, width: '100%', borderRadius: 999, marginBottom: 8, shadowColor: PURPLE, shadowOpacity: 0.35, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
   ctaBtnText: { color: '#fff', fontWeight: '700', fontSize: 15, letterSpacing: 0.1 },
 
   rowSection: { marginTop: 24, paddingLeft: 20 },
