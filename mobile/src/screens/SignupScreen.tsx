@@ -7,7 +7,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
 import { MaterialIcons, Ionicons, Feather } from '@expo/vector-icons'
-import { signUp } from '../lib/auth'
+import { signUp, signOut } from '../lib/auth'
 
 export default function SignupScreen() {
   const navigation = useNavigation<any>()
@@ -63,6 +63,7 @@ export default function SignupScreen() {
     setLoading(true)
     setError('')
     try {
+      await signOut().catch(() => {})
       const BASE_URL = process.env.EXPO_PUBLIC_API_URL
       const checkRes = await fetch(`${BASE_URL}/api/auth/check-email`, {
         method: 'POST',
