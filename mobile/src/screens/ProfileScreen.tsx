@@ -8,7 +8,7 @@ import { StatusBar } from 'expo-status-bar'
 import { MaterialIcons, Feather } from '@expo/vector-icons'
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { getSession, signOut } from '../lib/auth'
+import { getSession, signOut, getUserScopedCache, setUserScopedCache } from '../lib/auth'
 import { apiFetch } from '../lib/api'
 
 const CACHE_KEY = 'cached_profile_screen'
@@ -33,9 +33,9 @@ export default function ProfileScreen() {
   const loadProfile = async () => {
     // 1. Show cached profile instantly, if we have one
     try {
-      const cached = await AsyncStorage.getItem(CACHE_KEY)
+      const cached = await getUserScopedCache<any>(CACHE_KEY)
       if (cached) {
-        setProfile(JSON.parse(cached))
+        setProfile(cached)
         setLoading(false)
       }
     } catch {}
@@ -45,14 +45,14 @@ export default function ProfileScreen() {
       const session = await getSession()
       if (!session?.session) { navigation.goBack(); return }
       const u = session.user
-      const photoTs = await AsyncStorage.getItem('photo_ts').then(t => t || '1')
+      const photoTs = await getUserScopedCache<string>('photo_ts').then(t => t || '1')
       let stateData: any = null
       try {
         stateData = await apiFetch('/api/places/state', {})
       } catch {}
       const fresh = buildProfile(u, stateData, photoTs)
       setProfile(fresh)
-      AsyncStorage.setItem(CACHE_KEY, JSON.stringify(fresh)).catch(() => {})
+      setUserScopedCache(CACHE_KEY, fresh).catch(() => {})
     } catch (e) {}
     setLoading(false)
   }
