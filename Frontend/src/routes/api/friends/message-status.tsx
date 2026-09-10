@@ -16,9 +16,9 @@ export const Route = createFileRoute('/api/friends/message-status')({
           const body = await request.json() as { messageId?: string; action?: 'delivered' | 'read' }
           
           const result = body.action === 'delivered'
-            ? await markMessageAsDelivered({ messageId: body.messageId ?? '' })
+            ? await markMessageAsDelivered({ messageId: body.messageId ?? '', viewerUserId: session.user.id })
             : body.action === 'read'
-              ? await markMessageAsRead({ messageId: body.messageId ?? '' })
+              ? await markMessageAsRead({ messageId: body.messageId ?? '', viewerUserId: session.user.id })
               : { error: 'Invalid action' }
           
           return new Response(JSON.stringify(result), { headers: { 'Content-Type': 'application/json' } })
