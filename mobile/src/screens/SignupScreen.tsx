@@ -44,7 +44,8 @@ export default function SignupScreen() {
   }
 
   const handleSignup = async () => {
-    if (!email || !username || !password || !confirmPassword || !dobMonth || !dobDay || !dobYear || !gender) {
+    const normalizedEmail = email.trim().toLowerCase()
+    if (!normalizedEmail || !username || !password || !confirmPassword || !dobMonth || !dobDay || !dobYear || !gender) {
       setError('Please fill in all fields')
       return
     }
@@ -68,20 +69,18 @@ export default function SignupScreen() {
       const checkRes = await fetch(`${BASE_URL}/api/auth/check-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: normalizedEmail }),
       })
-      const { exists, emailVerified } = await checkRes.json()
-      if (exists && emailVerified) {
-        setError('An account with this email already exists. Please log in.')
-        return
-      }
-      if (exists && !emailVerified) {
-        navigation.navigate('OTP', { email, password })
+      const account = await checkRes.json()
+      if (account.exists) {
+        setError(account.authMethods?.includes('google')
+          ? 'This email is already linked to Google. Please log in with Google.'
+          : 'An account with this email already exists. Please log in.')
         return
       }
       const dob = `${dobYear}-${dobMonth}-${dobDay}`
-      await signUp(email, username, password, dob, gender)
-      navigation.navigate('OTP', { email, password })
+      await signUp(normalizedEmail, username, password, dob, gender)
+      navigation.navigate('OTP', { email: normalizedEmail, password, isNewSignup: true })
     } catch (e: any) {
       setError(e.message || 'Signup failed')
     } finally {
