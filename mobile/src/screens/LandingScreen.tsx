@@ -341,7 +341,7 @@ export default function LandingScreen() {
                     <View style={s.personAvatar}><Feather name="user" size={18} color={ACCENT} /></View>
                   )}
                   <Text style={s.personName} numberOfLines={2}>
-                    {(p.username || 'Someone nearby')}{p.moodEmoji ? ' ' + p.moodEmoji : ''}
+                    {p.username || 'Someone nearby'}
                   </Text>
                 </View>
               ))
