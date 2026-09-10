@@ -24,6 +24,8 @@ import OTPScreen from './src/screens/OTPScreen'
 import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen'
 import SplashScreen from './src/screens/SplashScreen'
 import AddPhotoScreen from './src/screens/AddPhotoScreen'
+import * as Notifications from 'expo-notifications'
+import { refreshNotificationUnreadCount } from './src/lib/notification-state'
 
 const Stack = createNativeStackNavigator()
 
@@ -44,6 +46,18 @@ export default function App() {
   const [showSplash, setShowSplash] = useState(true)
 
   const isConnected = useNetworkCheck()
+  useEffect(() => {
+    const received = Notifications.addNotificationReceivedListener(() => {
+      void refreshNotificationUnreadCount().catch(() => {})
+    })
+    const response = Notifications.addNotificationResponseReceivedListener(() => {
+      void refreshNotificationUnreadCount().catch(() => {})
+    })
+    return () => {
+      received.remove()
+      response.remove()
+    }
+  }, [])
   useEffect(() => {
     const init = async () => {
       try {
