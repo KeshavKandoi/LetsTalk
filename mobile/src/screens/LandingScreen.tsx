@@ -42,25 +42,26 @@ function formatDistance(m: number) {
   return `${(m / 1000).toFixed(1)}km away`
 }
 
-function WhyLetsTalk() {
-  const features = [
-    { icon: 'shield', title: 'Verified profiles', desc: 'Real people, not bots or fake accounts.' },
-    { icon: 'zap', title: 'Real-time nearby', desc: 'See who\'s actually around you right now.' },
-    { icon: 'map-pin', title: 'Safe meetups', desc: 'Meet in public places you both choose.' },
-    { icon: 'slash', title: 'No spam DMs', desc: 'Conversations only start when both agree.' },
+function HowItWorks() {
+  const steps = [
+    { icon: 'search', label: 'Find someone nearby', description: "See who's open to talk around you." },
+    { icon: 'map-pin', label: 'Choose a place', description: 'Pick a comfortable public spot.' },
+    { icon: 'message-circle', label: 'Start talking', description: 'Connect and start a conversation.' },
   ] as const
 
   return (
     <View style={wl.section}>
-      <Text style={wl.title}>Why Let's Talk</Text>
-      <View style={wl.grid}>
-        {features.map((f) => (
-          <View key={f.title} style={wl.card}>
-            <View style={wl.iconWrap}>
-              <Feather name={f.icon} size={18} color="#fff" />
+      <Text style={wl.title}>How it works</Text>
+      <View style={wl.flow}>
+        {steps.map((step, index) => (
+          <View key={step.label} style={wl.flowItem}>
+            <View style={wl.stepIcon}>
+              <Feather name={step.icon} size={18} color="#fff" />
+              <Text style={wl.stepNumber}>{index + 1}</Text>
             </View>
-            <Text style={wl.cardTitle}>{f.title}</Text>
-            <Text style={wl.cardDesc}>{f.desc}</Text>
+            <Text style={wl.stepLabel}>{step.label}</Text>
+            <Text style={wl.stepDescription}>{step.description}</Text>
+            {index < steps.length - 1 && <View style={wl.connector} />}
           </View>
         ))}
       </View>
@@ -400,7 +401,7 @@ export default function LandingScreen() {
           </ScrollView>
         </View>
 
-        <WhyLetsTalk />
+        <HowItWorks />
 
       </ScrollView>
 
@@ -494,13 +495,15 @@ const ns = StyleSheet.create({
 })
 
 const wl = StyleSheet.create({
-  section: { marginTop: 32, paddingHorizontal: 20 },
-  title: { fontSize: 17, fontWeight: '800', color: '#fff', letterSpacing: -0.2, marginBottom: 16 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between' },
-  card: { width: '48%', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
-  iconWrap: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
-  cardTitle: { fontSize: 13, fontWeight: '700', color: '#fff', marginBottom: 4 },
-  cardDesc: { fontSize: 11, color: 'rgba(255,255,255,0.55)', lineHeight: 15 },
+  section: { marginTop: 30, paddingHorizontal: 20 },
+  title: { fontSize: 16, fontWeight: '800', color: '#fff', letterSpacing: -0.2, marginBottom: 16 },
+  flow: { flexDirection: 'row', alignItems: 'flex-start' },
+  flowItem: { flex: 1, alignItems: 'center', position: 'relative' },
+  stepIcon: { width: 42, height: 42, borderRadius: 21, backgroundColor: ACCENT_DIM, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(124,92,252,0.45)', zIndex: 1 },
+  stepNumber: { position: 'absolute', right: -4, bottom: -3, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: ACCENT, color: '#fff', fontSize: 9, fontWeight: '800', textAlign: 'center', lineHeight: 16, overflow: 'hidden' },
+  stepLabel: { marginTop: 9, fontSize: 12, fontWeight: '700', color: '#fff', lineHeight: 16, textAlign: 'center' },
+  stepDescription: { marginTop: 3, paddingHorizontal: 3, fontSize: 10, color: 'rgba(255,255,255,0.55)', lineHeight: 14, textAlign: 'center' },
+  connector: { position: 'absolute', top: 21, left: '67%', right: '-17%', height: 1, backgroundColor: 'rgba(124,92,252,0.35)' },
 })
 
 const s = StyleSheet.create({
