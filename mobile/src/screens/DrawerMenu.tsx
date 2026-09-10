@@ -9,6 +9,7 @@ import { MaterialIcons } from '@expo/vector-icons'
 import { signOut } from '../lib/auth'
 import { apiFetch } from '../lib/api'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { getUserScopedCache, setUserScopedCache } from '../lib/auth'
 
 const { width } = Dimensions.get('window')
 const DRAWER_WIDTH = width * 0.65
@@ -64,14 +65,14 @@ export default function DrawerMenu({ visible, onClose }: Props) {
       ]).start()
       animateRowsIn()
       // Load from cache first (instant), then fetch fresh data
-      AsyncStorage.getItem('cached_profile').then(cached => {
-        if (cached) setProfile(JSON.parse(cached))
+      getUserScopedCache('cached_profile').then(cached => {
+        if (cached) setProfile(cached)
       })
       // Fetch fresh data in background
       apiFetch('/api/places/state', { _t: Date.now() })
         .then(data => {
           setProfile(data)
-          AsyncStorage.setItem('cached_profile', JSON.stringify(data))
+          setUserScopedCache('cached_profile', data)
         })
         .catch(() => {})
         .finally(() => setLoading(false))
