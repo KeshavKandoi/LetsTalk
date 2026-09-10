@@ -7,6 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons'
 import { signOut } from '../lib/auth'
 import { apiFetch } from '../lib/api'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { getUserScopedCache, setUserScopedCache } from '../lib/auth'
 
 const ACCENT = '#7C5CFC'
 
@@ -26,16 +27,16 @@ export default function AccountMenuScreen() {
   const [photoViewerVisible, setPhotoViewerVisible] = useState(false)
 
   useEffect(() => {
-    AsyncStorage.getItem('cached_profile').then(cached => {
+    getUserScopedCache('cached_profile').then(cached => {
       if (cached) {
-        setProfile(JSON.parse(cached))
+        setProfile(cached)
         setLoading(false)
       }
     })
     apiFetch('/api/places/state', {})
       .then(data => {
         setProfile(data)
-        AsyncStorage.setItem('cached_profile', JSON.stringify(data))
+        setUserScopedCache('cached_profile', data)
       })
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -43,7 +44,7 @@ export default function AccountMenuScreen() {
 
   const [photoTs, setPhotoTs] = useState('1')
   useEffect(() => {
-    AsyncStorage.getItem('photo_ts').then(ts => setPhotoTs(ts || '1'))
+    getUserScopedCache<string>('photo_ts').then(ts => setPhotoTs(ts || '1'))
   }, [])
 
   const handleLogout = async () => {
