@@ -8,7 +8,7 @@ import { useNavigation } from '@react-navigation/native'
 import { MaterialIcons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { apiFetch } from '../lib/api'
-import { getSession, signOut } from '../lib/auth'
+import { clearDeletedUserData, getSession, signOut } from '../lib/auth'
 
 const YELLOW = '#F5C500'
 const DARK = '#FFFFFF'
@@ -25,6 +25,7 @@ export default function AccountSettingsScreen() {
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const handleSendOtp = async () => {
     setLoading(true)
@@ -89,11 +90,22 @@ export default function AccountSettingsScreen() {
             { text: 'Cancel', style: 'cancel' },
             {
               text: 'Yes, delete', style: 'destructive', onPress: async () => {
+                if (deleting) return
+                setDeleting(true)
                 try {
+                  const session = await getSession()
+                  const userId = session?.user?.id
+                  const userEmail = session?.user?.email
+                  if (!userId) throw new Error('Your session has expired. Please log in again.')
                   await apiFetch('/api/places/delete-account', {})
-                  await signOut()
-                  navigation.reset({ index: 0, routes: [{ name: 'Landing' }] })
-                } catch (e: any) { Alert.alert('Error', e.message) }
+                  await clearDeletedUserData(userId, userEmail)
+                  await signOut().catch(() => {})
+                  navigation.reset({ index: 0, routes: [{ name: 'Signup' }] })
+                } catch (e: any) {
+                  Alert.alert('Error', e.message || 'Could not delete your account.')
+                } finally {
+                  setDeleting(false)
+                }
               },
             },
           ])
