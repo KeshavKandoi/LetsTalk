@@ -10,6 +10,16 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY!
 )
 
+const MAX_REQUEST_BYTES = 8 * 1024 * 1024
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+
+function isSupportedImage(buffer: Buffer) {
+  const jpeg = buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff
+  const png = buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
+  const webp = buffer.length >= 12 && buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP'
+  return jpeg || png || webp
+}
+
 export const Route = createFileRoute('/api/places/upload-photo')({
   server: {
     handlers: {
@@ -18,12 +28,21 @@ export const Route = createFileRoute('/api/places/upload-photo')({
           const session = await auth.api.getSession({ headers: (() => { const h = new Headers(Object.fromEntries(request.headers.entries())); const t = (request.headers.get('authorization') || request.headers.get('Authorization') || '').replace('Bearer ',''); if(t) h.set('cookie', 'better-auth.session_token=' + t); return h; })() })
           if (!session) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
 
-          const { photoBase64 } = await request.json()
-          if (!photoBase64) return new Response(JSON.stringify({ error: 'No photo' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+          const contentLength = Number(request.headers.get('content-length') || 0)
+          if (contentLength > MAX_REQUEST_BYTES) return new Response(JSON.stringify({ error: 'Photo is too large.' }), { status: 413, headers: { 'Content-Type': 'application/json' } })
+          const rawBody = await request.text()
+          if (new TextEncoder().encode(rawBody).byteLength > MAX_REQUEST_BYTES) return new Response(JSON.stringify({ error: 'Photo is too large.' }), { status: 413, headers: { 'Content-Type': 'application/json' } })
+          const body = JSON.parse(rawBody) as { photoBase64?: unknown }
+          if (typeof body.photoBase64 !== 'string' || !body.photoBase64) return new Response(JSON.stringify({ error: 'No photo provided.' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
 
           // Convert base64 to buffer
-          const base64Data = photoBase64.replace(/^data:image\/\w+;base64,/, '')
+          const match = body.photoBase64.match(/^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/]+={0,2})$/)
+          if (!match) return new Response(JSON.stringify({ error: 'Unsupported image format.' }), { status: 415, headers: { 'Content-Type': 'application/json' } })
+          const base64Data = match[2]
           const buffer = Buffer.from(base64Data, 'base64')
+          if (!buffer.length || buffer.length > MAX_IMAGE_BYTES || !isSupportedImage(buffer)) {
+            return new Response(JSON.stringify({ error: 'Invalid or oversized image.' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+          }
 
           const fileName = `${session.user.id}.jpg`
 
@@ -35,7 +54,7 @@ export const Route = createFileRoute('/api/places/upload-photo')({
               upsert: true,
             })
 
-          if (uploadError) throw new Error(uploadError.message)
+          if (uploadError) throw new Error('storage upload failed')
 
           // Get public URL
           const { data } = supabase.storage.from('avatars').getPublicUrl(fileName)
@@ -73,7 +92,8 @@ export const Route = createFileRoute('/api/places/upload-photo')({
 
           return new Response(JSON.stringify({ ok: true, photoUrl }), { headers: { 'Content-Type': 'application/json' } })
         } catch (e: any) {
-          return new Response(JSON.stringify({ error: e.message }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+          console.error('[upload-photo] request failed', { name: e?.name })
+          return new Response(JSON.stringify({ error: 'Could not upload photo.' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
         }
       },
     },
