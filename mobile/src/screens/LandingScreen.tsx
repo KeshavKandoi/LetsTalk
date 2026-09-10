@@ -6,7 +6,7 @@ import DrawerMenu from './DrawerMenu'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, Modal, ActivityIndicator, Dimensions, Animated, InteractionManager,
+  ScrollView, Modal, ActivityIndicator, Dimensions, Animated,
 } from 'react-native'
 import { Image } from 'expo-image'
 import * as Location from 'expo-location'
@@ -120,6 +120,11 @@ export default function LandingScreen() {
   useEffect(() => {
     const cachedAvatar = getUserScopedCacheSync<{ photoUrl?: string; initials: string }>('avatar_profile_cache')
     if (cachedAvatar) setAvatarProfile(cachedAvatar)
+    const cachedPlaces = getUserScopedCacheSync<any[]>('landing_nearby_places')
+    if (cachedPlaces?.length) {
+      setPlacesNearby(cachedPlaces)
+      setPlacesLoading(false)
+    }
     apiFetch('/api/places/state', {}).catch(() => null)
       .then((data) => {
         const user = data?.session?.user
@@ -142,8 +147,7 @@ export default function LandingScreen() {
 
   useEffect(() => {
     let cancelled = false
-    const task = InteractionManager.runAfterInteractions(() => {
-      ;(async () => {
+    ;(async () => {
         try {
           const { status } = await Location.requestForegroundPermissionsAsync()
           if (status !== 'granted') { setPlacesLoading(false); setPeopleLoading(false); return }
@@ -163,6 +167,7 @@ export default function LandingScreen() {
           }))
           setPlacesNearby(withDistance)
           setPlacesLoading(false)
+          setUserScopedCache('landing_nearby_places', withDistance).catch(() => {})
 
           const topPlaces = withDistance.slice(0, 2)
           const previews = await Promise.all(
@@ -182,9 +187,8 @@ export default function LandingScreen() {
         } catch (e) {
           if (!cancelled) { setPlacesLoading(false); setPeopleLoading(false) }
         }
-      })()
-    })
-    return () => { cancelled = true; task.cancel() }
+    })()
+    return () => { cancelled = true }
   }, [])
 
   const openProfile = async () => {
@@ -325,14 +329,19 @@ export default function LandingScreen() {
               </View>
             ) : (
               placesNearby.map((p) => (
-                <View key={p.placeId} style={s.placeCard}>
+                <TouchableOpacity
+                  key={p.placeId}
+                  style={s.placeCard}
+                  activeOpacity={0.75}
+                  onPress={() => navigation.navigate('PlaceView', { place: p })}
+                >
                   {p.photoUrl ? (
                     <Image source={{ uri: p.photoUrl }} style={s.placeThumbImg} contentFit="cover" cachePolicy="memory-disk" />
                   ) : (
                     <View style={s.placeThumb} />
                   )}
                   <Text style={s.placeName} numberOfLines={2}>{p.name} · {p.distanceLabel}</Text>
-                </View>
+                </TouchableOpacity>
               ))
             )}
           </ScrollView>
