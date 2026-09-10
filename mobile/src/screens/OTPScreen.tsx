@@ -8,6 +8,7 @@ import { useNavigation, useRoute } from '@react-navigation/native'
 import { StatusBar } from 'expo-status-bar'
 import { MaterialIcons, Feather } from '@expo/vector-icons'
 import { verifyOTP, sendOTP, signIn, hasCompletedOnboarding, establishSession } from '../lib/auth'
+import { getNetworkErrorMessage } from '../lib/api'
 
 export default function OTPScreen() {
   const navigation = useNavigation<any>()
@@ -62,7 +63,7 @@ export default function OTPScreen() {
       const alreadyOnboarded = isNewSignup ? false : await hasCompletedOnboarding(user.id, user.email)
       navigation.reset({ index: 0, routes: [{ name: alreadyOnboarded ? 'Landing' : 'Tutorial' }] })
     } catch (e: any) {
-      setError(e.message || 'Invalid OTP')
+      setError(getNetworkErrorMessage(e))
     } finally {
       setLoading(false)
     }
@@ -77,7 +78,7 @@ export default function OTPScreen() {
       setOtp(['', '', '', '', '', ''])
       inputs.current[0]?.focus()
     } catch (e: any) {
-      setError(e.message)
+      setError(getNetworkErrorMessage(e))
     } finally {
       setResending(false)
     }
