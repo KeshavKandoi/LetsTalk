@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
 import { MaterialIcons, Ionicons, Feather } from '@expo/vector-icons'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { getNetworkErrorMessage } from '../lib/api'
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL
 
@@ -71,7 +72,7 @@ export default function ForgotPasswordScreen({ route }: any) {
       const data = await res.json()
       if (!res.ok) throw new Error(data.message || 'Failed to resend OTP')
     } catch (e: any) {
-      setError(e.message || 'Failed to resend OTP')
+      setError(getNetworkErrorMessage(e))
     } finally { setLoading(false) }
   }
 
@@ -94,7 +95,7 @@ export default function ForgotPasswordScreen({ route }: any) {
       const data = await res.json()
       if (!res.ok) throw new Error(data.message || 'Failed to send OTP')
     } catch (e: any) {
-      setError(e.message || 'Failed to send OTP')
+      setError(getNetworkErrorMessage(e))
     } finally { setLoading(false) }
   }
 
@@ -121,7 +122,7 @@ export default function ForgotPasswordScreen({ route }: any) {
       await AsyncStorage.removeItem('session_token')
       navigation.navigate('Login')
     } catch (e: any) {
-      setError(e.message || 'Failed to reset password')
+      setError(getNetworkErrorMessage(e))
     } finally { setLoading(false) }
   }
 
