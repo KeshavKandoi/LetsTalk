@@ -34,7 +34,7 @@ export default function LoginScreen() {
   const [emailFocused, setEmailFocused] = useState(false)
   const [passwordFocused, setPasswordFocused] = useState(false)
 
-  const toggleDismiss = (ref: React.RefObject<TextInput>) => {
+  const toggleDismiss = (ref: React.RefObject<TextInput | null>) => {
     ref.current?.blur()
     Keyboard.dismiss()
   }
