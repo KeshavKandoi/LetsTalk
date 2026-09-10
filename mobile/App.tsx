@@ -40,7 +40,12 @@ export default function App() {
         // ✅ Only auto-login if session exists AND email is verified
         if (session?.session && session?.user?.emailVerified) {
           const user = await establishSession()
-          if (user) await getUserScopedCache('avatar_profile_cache')
+          if (user) {
+            await Promise.all([
+              getUserScopedCache('avatar_profile_cache'),
+              getUserScopedCache('landing_nearby_places'),
+            ])
+          }
           const completed = user ? await hasCompletedOnboarding(user.id, user.email) : false
           setInitialRoute(completed ? 'Landing' : 'Tutorial')
         } else {
