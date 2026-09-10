@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useNavigation } from '@react-navigation/native'
 import { MaterialIcons } from '@expo/vector-icons'
-import { apiFetch } from '../lib/api'
+import { apiFetch, getNetworkErrorMessage } from '../lib/api'
 import { getUserScopedCache, setUserScopedCache } from '../lib/auth'
 import { useNetworkCheck } from '../hooks/useNetworkCheck'
 
@@ -45,7 +45,7 @@ export default function NotificationsScreen() {
         setNotifications(list)
         setUserScopedCache('cached_notifications', list).catch(() => {})
       })
-      .catch((e: any) => setError(e.message || 'Failed to load'))
+      .catch((e: any) => setError(getNetworkErrorMessage(e)))
       .finally(() => setLoading(false))
   }, [])
 
