@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL
 const SESSION_TOKEN_KEY = 'session_token'
+const CURRENT_USER_ID_KEY = 'current_user_id'
 
 export async function signIn(username: string, password: string) {
   const res = await fetch(`${BASE_URL}/api/auth/sign-in/email`, {
@@ -15,6 +16,9 @@ export async function signIn(username: string, password: string) {
   const cookieMatch = setCookie.match(/better-auth\.session_token=([^;]+)/)
   if (cookieMatch) await AsyncStorage.setItem(SESSION_TOKEN_KEY, decodeURIComponent(cookieMatch[1]))
   else if (data.token) await AsyncStorage.setItem(SESSION_TOKEN_KEY, data.token)
+  else throw new Error('Login did not return a valid session.')
+  const user = await establishSession()
+  if (!user) throw new Error('Could not verify your session after login.')
   return data
 }
 
@@ -106,6 +110,7 @@ export async function signOut() {
     })
   } catch {}
   await AsyncStorage.removeItem(SESSION_TOKEN_KEY)
+  await AsyncStorage.removeItem(CURRENT_USER_ID_KEY)
 }
 
 const ONBOARDING_PREFIX = 'onboarding_completed:'
@@ -119,4 +124,46 @@ export async function hasCompletedOnboarding(email: string) {
 export async function markOnboardingCompleted(email: string) {
   if (!email) return
   await AsyncStorage.setItem(ONBOARDING_PREFIX + email.toLowerCase(), 'true')
+}
+
+export async function getCurrentUserId() {
+  return AsyncStorage.getItem(CURRENT_USER_ID_KEY)
+}
+
+// Confirms the stored session token actually resolves to a real user, and
+// records which user it belongs to. Returns null (and clears the token) if
+// the session cannot be verified, so callers never proceed as if logged in
+// on a broken or stale session.
+export async function establishSession() {
+  const data = await getSession()
+  if (!data?.session || !data?.user?.id) {
+    await AsyncStorage.removeItem(SESSION_TOKEN_KEY)
+    await AsyncStorage.removeItem(CURRENT_USER_ID_KEY)
+    return null
+  }
+  await AsyncStorage.setItem(CURRENT_USER_ID_KEY, data.user.id)
+  return data.user
+}
+
+// Cache helpers that tag every cached value with the user it belongs to.
+// A read is treated as a cache miss unless the stored owner matches the
+// currently logged-in user, so switching accounts can never surface the
+// previous user's cached profile, photo, etc.
+export async function getUserScopedCache<T = any>(key: string): Promise<T | null> {
+  try {
+    const raw = await AsyncStorage.getItem(key)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    const currentUserId = await getCurrentUserId()
+    if (!currentUserId || parsed.userId !== currentUserId) return null
+    return parsed.data as T
+  } catch {
+    return null
+  }
+}
+
+export async function setUserScopedCache(key: string, data: any) {
+  const currentUserId = await getCurrentUserId()
+  if (!currentUserId) return
+  await AsyncStorage.setItem(key, JSON.stringify({ userId: currentUserId, data }))
 }
