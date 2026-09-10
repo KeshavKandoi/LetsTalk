@@ -17,6 +17,7 @@ import type {
 import { auth } from './auth'
 import { db } from './db'
 import { UserAgent } from './agents/user-agent'
+import { createNotification, createScanConnectionNotifications } from './notifications'
 import {
   connectRequestRejection,
   handoffCode,
@@ -1350,6 +1351,21 @@ export async function respondToConnectRequest(input: {
       ),
     )
 
+  const connectionUsers = await db
+    .select({ id: user.id, name: user.displayUsername, username: user.username, fallbackName: user.name })
+    .from(user)
+    .where(inArray(user.id, [requestRecord.requesterUserId, requestRecord.recipientUserId]))
+  const requesterUser = connectionUsers.find((record) => record.id === requestRecord.requesterUserId)
+  const recipientUser = connectionUsers.find((record) => record.id === requestRecord.recipientUserId)
+  if (requesterUser && recipientUser) {
+    await createScanConnectionNotifications({
+      connectionId: requestRecord.id,
+      firstUser: { id: requesterUser.id, name: requesterUser.name || requesterUser.username || requesterUser.fallbackName },
+      secondUser: { id: recipientUser.id, name: recipientUser.name || recipientUser.username || recipientUser.fallbackName },
+      createdAt: now,
+    })
+  }
+
   return { success: true, connectionId: requestRecord.id }
 }
 
@@ -1409,11 +1425,13 @@ export async function createFriendRequest(input: { token?: string }) {
   const requesterAccepted = existingRequest?.requesterAccepted ?? false
   const recipientAccepted = existingRequest?.recipientAccepted ?? false
   const nextStatus = requesterAccepted && recipientAccepted ? 'accepted' : 'pending'
+  const requestId = existingRequest?.id ?? crypto.randomUUID()
+  const createsNewPendingNotification = nextStatus === 'pending' && existingRequest?.status !== 'pending'
 
   await db
     .insert(friendRequest)
     .values({
-      id: crypto.randomUUID(),
+      id: requestId,
       requesterUserId: pair.requesterUserId,
       recipientUserId: pair.recipientUserId,
       initiatorUserId: session.user.id,
@@ -1435,6 +1453,17 @@ export async function createFriendRequest(input: { token?: string }) {
         updatedAt: now,
       },
     })
+
+  if (createsNewPendingNotification) {
+    await createNotification({
+      recipientUserId: targetUserId,
+      type: 'friend_request',
+      message: `${session.user.name || 'Someone'} sent you a friend request`,
+      eventKey: `friend_request:${requestId}:${now.getTime()}`,
+      data: { requestId },
+      createdAt: now,
+    })
+  }
 
   // Mark the existing in-person connection as QR-verified (visible to both users)
   if (input.token) {
@@ -1605,6 +1634,7 @@ export async function respondToFriendRequest(input: {
   }
 
   const now = new Date()
+  const currentUserName = (session.user as { name?: string }).name || 'Someone'
 
   if (input.action === 'remove') {
     await db
@@ -1616,6 +1646,19 @@ export async function respondToFriendRequest(input: {
         updatedAt: now,
       })
       .where(eq(friendRequest.id, requestRecord.id))
+    if (requestRecord.status === 'accepted') {
+      const otherUserId = requestRecord.requesterUserId === session.user.id
+        ? requestRecord.recipientUserId
+        : requestRecord.requesterUserId
+      await createNotification({
+        recipientUserId: otherUserId,
+        type: 'friend_removed',
+        message: `${currentUserName} removed you from friends`,
+        eventKey: `friend_removed:${requestRecord.id}:${now.getTime()}`,
+        data: { requestId: requestRecord.id },
+        createdAt: now,
+      })
+    }
     return { success: true }
   }
 
@@ -1624,6 +1667,14 @@ export async function respondToFriendRequest(input: {
       .update(friendRequest)
       .set({ status: 'rejected', updatedAt: now })
       .where(eq(friendRequest.id, requestRecord.id))
+    await createNotification({
+      recipientUserId: requestRecord.requesterUserId,
+      type: 'friend_removed',
+      message: `${currentUserName} removed you from friends`,
+      eventKey: `friend_rejected:${requestRecord.id}:${now.getTime()}`,
+      data: { requestId: requestRecord.id },
+      createdAt: now,
+    })
     return { success: true }
   }
 
@@ -1641,6 +1692,30 @@ export async function respondToFriendRequest(input: {
       updatedAt: now,
     })
     .where(eq(friendRequest.id, requestRecord.id))
+
+  if (requesterAccepted && recipientAccepted && requestRecord.status !== 'accepted') {
+    const otherUserId = requestRecord.requesterUserId === session.user.id
+      ? requestRecord.recipientUserId
+      : requestRecord.requesterUserId
+    const [otherUser] = await db.select().from(user).where(eq(user.id, otherUserId)).limit(1)
+    const otherUserName = otherUser?.displayUsername || otherUser?.username || otherUser?.name || 'Someone'
+    await createNotification({
+      recipientUserId: otherUserId,
+      type: 'friend_accepted',
+      message: `You are now friends with ${currentUserName}`,
+      eventKey: `friend_accepted:${requestRecord.id}:${now.getTime()}`,
+      data: { requestId: requestRecord.id },
+      createdAt: now,
+    })
+    await createNotification({
+      recipientUserId: session.user.id,
+      type: 'friend_accepted',
+      message: `You are now friends with ${otherUserName}`,
+      eventKey: `friend_accepted:${requestRecord.id}:${now.getTime()}:${session.user.id}`,
+      data: { requestId: requestRecord.id },
+      createdAt: now,
+    })
+  }
 
   return { success: true }
 }
