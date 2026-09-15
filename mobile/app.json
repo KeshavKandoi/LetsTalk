@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "mobile",
+    "name": "LetsTalk",
     "slug": "mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/AppIcon.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
@@ -17,9 +17,7 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "foregroundImage": "./assets/AppIcon.png"
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
