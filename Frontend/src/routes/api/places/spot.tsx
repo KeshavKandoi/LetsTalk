@@ -9,7 +9,7 @@ export const Route = createFileRoute('/api/places/spot')({
           const session = await auth.api.getSession({ headers: request.headers })
           if (!session?.user?.id) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
 
-          const { spotLabel } = await request.json()
+          const { spotLabel } = await request.json() as { spotLabel?: string }
           const { db } = await import('@backend/lib/db')
           const { userProfile } = await import('@backend/lib/db/schema')
           const { eq } = await import('drizzle-orm')
