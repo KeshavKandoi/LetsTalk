@@ -1,13 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Modal, Pressable } from 'react-native'
 import { Image as ExpoImage } from 'expo-image'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useNavigation } from '@react-navigation/native'
+import { useNavigation, useFocusEffect } from '@react-navigation/native'
 import { MaterialIcons } from '@expo/vector-icons'
-import { signOut } from '../lib/auth'
-import { apiFetch } from '../lib/api'
+import { signOut, getCachedMyState, refreshMyState, getMyPhotoUrl } from '../lib/auth'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { getUserScopedCache, setUserScopedCache } from '../lib/auth'
 
 const ACCENT = '#7C5CFC'
 
@@ -27,25 +25,22 @@ export default function AccountMenuScreen() {
   const [photoViewerVisible, setPhotoViewerVisible] = useState(false)
 
   useEffect(() => {
-    getUserScopedCache('cached_profile').then(cached => {
+    getCachedMyState().then(cached => {
       if (cached) {
         setProfile(cached)
         setLoading(false)
       }
     })
-    apiFetch('/api/places/state', {})
-      .then(data => {
-        setProfile(data)
-        setUserScopedCache('cached_profile', data)
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false))
   }, [])
 
-  const [photoTs, setPhotoTs] = useState('1')
-  useEffect(() => {
-    getUserScopedCache<string>('photo_ts').then(ts => setPhotoTs(ts || '1'))
-  }, [])
+  useFocusEffect(
+    useCallback(() => {
+      refreshMyState()
+        .then(data => { if (data) setProfile(data) })
+        .catch(() => {})
+        .finally(() => setLoading(false))
+    }, [])
+  )
 
   const handleLogout = async () => {
     await signOut()
@@ -53,8 +48,7 @@ export default function AccountMenuScreen() {
   }
 
   const username = profile?.session?.user?.username || profile?.session?.user?.name || null
-  const rawPhoto = profile?.profile?.photoUrl || profile?.session?.user?.image
-  const photoUrl = rawPhoto ? `${rawPhoto.split('?')[0]}?t=${photoTs}` : null
+  const photoUrl = getMyPhotoUrl(profile)
   const initials = username ? username.slice(0, 2).toUpperCase() : '?'
   const isLoggedIn = !!profile?.session
 
