@@ -1,8 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { db } from '@backend/lib/db'
-import { friendRequest, handoffConnection, user, userProfile } from '@backend/lib/db/schema'
+import { friendRequest, handoffConnection, user } from '@backend/lib/db/schema'
 import { auth } from '@backend/lib/auth'
-import { eq, or, and, desc, gte } from 'drizzle-orm'
+import { eq, or, and, desc } from 'drizzle-orm'
 
 export const Route = createFileRoute('/api/friends/notifications')({
   server: {
@@ -12,7 +12,6 @@ export const Route = createFileRoute('/api/friends/notifications')({
           const session = await auth.api.getSession({ headers: (() => { const h = new Headers(Object.fromEntries(request.headers.entries())); const t = (request.headers.get('authorization') || request.headers.get('Authorization') || '').replace('Bearer ',''); if(t) h.set('cookie', 'better-auth.session_token=' + t); return h; })() })
           if (!session) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
           const userId = session.user.id
-          const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
 
           // Friend requests - join only the OTHER user
           const friendRows = await db
