@@ -9,9 +9,9 @@ function SignupPage() {
   const router = useRouter()
   return (
     <AuthScreen
-      refreshSession={async () => { await router.navigate({ to: '/' }) }}
+      refreshSession={async () => { await router.navigate({ to: '/', search: { scan: undefined } }) }}
       initialMode="sign-up"
-      onBack={() => router.navigate({ to: '/' })}
+      onBack={() => router.navigate({ to: '/', search: { scan: undefined } })}
     />
   )
 }
