@@ -1,9 +1,9 @@
 {
   "include": [
-    "Frontend/**/*.ts",
-    "Frontend/**/*.tsx",
-    "Backend/**/*.ts",
-    "Backend/**/*.tsx"
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "../Frontend/**/*.ts",
+    "../Frontend/**/*.tsx"
   ],
   "compilerOptions": {
     "target": "ES2022",
@@ -11,12 +11,12 @@
     "module": "ESNext",
     "baseUrl": ".",
     "paths": {
-      "@frontend/*": ["./Frontend/src/*"],
-      "@backend/*": ["./Backend/src/*"]
+      "@frontend/*": ["../Frontend/src/*"],
+      "@backend/*": ["./src/*"]
     },
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": [
-        "./Backend/worker-configuration.d.ts",
+        "./worker-configuration.d.ts",
         "node",
         "vite/client"
     ],
