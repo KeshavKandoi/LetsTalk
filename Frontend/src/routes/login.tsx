@@ -9,9 +9,9 @@ function LoginPage() {
   const router = useRouter()
   return (
     <AuthScreen
-      refreshSession={async () => { await router.navigate({ to: '/' }) }}
+      refreshSession={async () => { await router.navigate({ to: '/', search: { scan: undefined } }) }}
       initialMode="sign-in"
-      onBack={() => router.navigate({ to: '/' })}
+      onBack={() => router.navigate({ to: '/', search: { scan: undefined } })}
     />
   )
 }
