@@ -8,7 +8,13 @@ export const Route = createFileRoute('/api/places/change-password')({
         try {
           const session = await auth.api.getSession({ headers: (() => { const h = new Headers(Object.fromEntries(request.headers.entries())); const t = (request.headers.get('authorization') || request.headers.get('Authorization') || '').replace('Bearer ',''); if(t) h.set('cookie', 'better-auth.session_token=' + t); return h; })() })
           if (!session) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
-          const { currentPassword, newPassword } = await request.json()
+          const { currentPassword, newPassword } = await request.json() as {
+            currentPassword?: string
+            newPassword?: string
+          }
+          if (!currentPassword || !newPassword) {
+            return new Response(JSON.stringify({ error: 'Missing required fields' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+          }
           await auth.api.changePassword({
             headers: request.headers,
             body: { currentPassword, newPassword, revokeOtherSessions: true },
