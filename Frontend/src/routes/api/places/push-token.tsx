@@ -11,7 +11,7 @@ export const Route = createFileRoute('/api/places/push-token')({
         try {
           const session = await auth.api.getSession({ headers: (() => { const h = new Headers(Object.fromEntries(request.headers.entries())); const t = (request.headers.get('authorization') || request.headers.get('Authorization') || '').replace('Bearer ',''); if(t) h.set('cookie', 'better-auth.session_token=' + t); return h; })() })
           if (!session) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
-          const { token } = await request.json()
+          const { token } = await request.json() as { token?: string }
           await db.update(userProfile).set({ pushToken: token }).where(eq(userProfile.userId, session.user.id))
           return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } })
         } catch (e: any) {
