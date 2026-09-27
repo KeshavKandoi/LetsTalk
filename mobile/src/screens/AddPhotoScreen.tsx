@@ -6,7 +6,7 @@ import { MaterialIcons, Feather } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
 import * as FileSystem from 'expo-file-system/legacy'
 import { useNavigation } from '@react-navigation/native'
-import { getSession, getStoredSessionToken, markOnboardingCompleted, markPhotoOnboardingCompleted, setUserScopedCache } from '../lib/auth'
+import { getSession, getStoredSessionToken, markOnboardingCompleted, markPhotoOnboardingCompleted, setUserScopedCache, patchCachedMyPhoto } from '../lib/auth'
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL
 
@@ -55,7 +55,7 @@ export default function AddPhotoScreen() {
       })
       const data = await response.json()
       if (!response.ok || !data?.photoUrl) throw new Error(data?.error || 'Upload failed.')
-      await setUserScopedCache('photo_ts', Date.now().toString())
+      await patchCachedMyPhoto(data.photoUrl)
       await finish()
     } catch (error: any) {
       transitionStarted.current = false
