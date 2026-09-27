@@ -7,6 +7,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
 import { MaterialIcons, Ionicons, Feather } from '@expo/vector-icons'
+import { Image } from 'expo-image'
 import { signUp, signOut } from '../lib/auth'
 import { getNetworkErrorMessage } from '../lib/api'
 
@@ -110,8 +111,12 @@ export default function SignupScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.brandBlock}>
-            <Feather name="message-circle" size={32} color="#8B5CF6" />
-            <Text style={styles.brandName}>Let's Talk</Text>
+            <Image
+              source={require('../../assets/logo-cropped.png')}
+              style={styles.brandLogo}
+              contentFit="contain"
+              cachePolicy="memory-disk"
+            />
           </View>
 
           <Text style={styles.title}>Create account</Text>
@@ -335,11 +340,12 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4 },
   scrollContent: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 40 },
 
-  brandBlock: { alignItems: 'center', marginBottom: 28 },
+  brandBlock: { alignItems: 'center', marginBottom: 16 },
+  brandLogo: { width: 120, height: 100 },
   brandName: { fontSize: 18, fontWeight: '800', color: '#fff', marginTop: 8 },
 
-  title: { fontSize: 26, fontWeight: '800', color: '#fff', marginBottom: 4 },
-  subtitle: { fontSize: 14, color: 'rgba(255,255,255,0.55)', marginBottom: 24 },
+  title: { fontSize: 26, fontWeight: '800', color: '#fff', marginBottom: 4, textAlign: 'center' },
+  subtitle: { fontSize: 14, color: 'rgba(255,255,255,0.55)', marginBottom: 24, textAlign: 'center' },
 
   errorBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,107,107,0.1)', borderRadius: 10, padding: 12, marginBottom: 20 },
   errorText: { color: '#ff9b9b', fontSize: 13, flex: 1 },
