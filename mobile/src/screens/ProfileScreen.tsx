@@ -1,16 +1,14 @@
 import { useEffect, useState, useCallback } from 'react'
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
-  ActivityIndicator, Alert, Image, Modal, Pressable,
+  ActivityIndicator, Alert, Modal, Pressable,
 } from 'react-native'
+import { Image } from 'expo-image'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
 import { MaterialIcons, Feather } from '@expo/vector-icons'
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
-import { getSession, signOut, getUserScopedCache, setUserScopedCache } from '../lib/auth'
-import { apiFetch } from '../lib/api'
-
-const CACHE_KEY = 'cached_profile_screen'
+import { getSession, signOut, getCachedMyState, refreshMyState, getMyPhotoUrl } from '../lib/auth'
 
 export default function ProfileScreen() {
   const navigation = useNavigation<any>()
@@ -18,11 +16,11 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true)
   const [photoViewerVisible, setPhotoViewerVisible] = useState(false)
 
-  const buildProfile = (u: any, stateData: any, photoTs: string) => ({
+  const buildProfile = (u: any, stateData: any) => ({
     username: u?.name || u?.username || 'You',
     full_name: u?.name || 'You',
     email: u?.email || '',
-    photoUrl: stateData?.profile?.photoUrl ? stateData.profile.photoUrl + '?t=' + photoTs : null,
+    photoUrl: getMyPhotoUrl(stateData),
     created_at: u?.createdAt || null,
     gender: stateData?.profile?.gender || null,
     age: stateData?.profile?.age || null,
@@ -30,28 +28,28 @@ export default function ProfileScreen() {
   })
 
   const loadProfile = async () => {
-    // 1. Show cached profile instantly, if we have one
+    // 1. Show cached profile instantly, if we have one, from the same
+    // shared cache every other screen reads/writes (kept current by
+    // patchCachedMyPhoto() right after an upload).
     try {
-      const cached = await getUserScopedCache<any>(CACHE_KEY)
+      const cached = await getCachedMyState()
       if (cached) {
-        setProfile(cached)
+        const cachedUser = cached.session?.user
+        setProfile(buildProfile(cachedUser, cached))
         setLoading(false)
       }
     } catch {}
 
-    // 2. Fetch fresh data in the background and update once ready
+    // 2. Refresh in the background and update once ready
     try {
       const session = await getSession()
       if (!session?.session) { navigation.goBack(); return }
       const u = session.user
-      const photoTs = await getUserScopedCache<string>('photo_ts').then(t => t || '1')
       let stateData: any = null
       try {
-        stateData = await apiFetch('/api/places/state', {})
+        stateData = await refreshMyState()
       } catch {}
-      const fresh = buildProfile(u, stateData, photoTs)
-      setProfile(fresh)
-      setUserScopedCache(CACHE_KEY, fresh).catch(() => {})
+      if (stateData) setProfile(buildProfile(u, stateData))
     } catch (e) {}
     setLoading(false)
   }
@@ -111,7 +109,7 @@ export default function ProfileScreen() {
             onPress={() => setPhotoViewerVisible(true)}
           >
             {photoUrl ? (
-              <Image source={{ uri: photoUrl }} style={styles.avatarImage} resizeMode="cover" />
+              <Image source={{ uri: photoUrl }} style={styles.avatarImage} contentFit="cover" cachePolicy="memory-disk" transition={150} />
             ) : (
               <View style={styles.avatarPlaceholder}>
                 <Text style={styles.avatarInitial}>{displayName[0]?.toUpperCase()}</Text>
@@ -178,7 +176,7 @@ export default function ProfileScreen() {
             <MaterialIcons name="close" size={26} color="#fff" />
           </TouchableOpacity>
           {photoUrl && (
-            <Image source={{ uri: photoUrl }} style={viewerStyles.fullImage} resizeMode="contain" />
+            <Image source={{ uri: photoUrl }} style={viewerStyles.fullImage} contentFit="contain" cachePolicy="memory-disk" />
           )}
         </Pressable>
       </Modal>
