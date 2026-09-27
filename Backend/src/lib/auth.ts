@@ -90,7 +90,7 @@ export const auth = betterAuth({
       otpLength: 6,
       expiresIn: 600,
       async sendVerificationOTP({ email, otp, type }) {
-        const subjects = {
+        const subjects: Record<string, string> = {
           'sign-in': "Your Let's Talk login code",
           'email-verification': "Verify your Let's Talk email",
           'forget-password': "Reset your Let's Talk password",
