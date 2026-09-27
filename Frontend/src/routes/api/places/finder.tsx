@@ -9,10 +9,21 @@ export const Route = createFileRoute('/api/places/finder')({
         try {
           const session = await auth.api.getSession({ headers: (() => { const h = new Headers(Object.fromEntries(request.headers.entries())); const t = (request.headers.get('authorization') || request.headers.get('Authorization') || '').replace('Bearer ',''); if(t) h.set('cookie', 'better-auth.session_token=' + t); return h; })() })
           if (!session) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
-          const body = await request.json()
+          const body = await request.json() as {
+            action?: 'ping'
+            userId?: string
+            isFindable?: boolean
+            locationHint?: string | null
+          }
           if (body.action === 'ping') {
+            if (!body.userId) {
+              return new Response(JSON.stringify({ error: 'Missing userId' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+            }
             const result = await pingFindableUser({ userId: body.userId })
             return new Response(JSON.stringify(result), { headers: { 'Content-Type': 'application/json' } })
+          }
+          if (typeof body.isFindable !== 'boolean') {
+            return new Response(JSON.stringify({ error: 'Missing isFindable' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
           }
           const result = await saveFinderProfile({ isFindable: body.isFindable, locationHint: body.locationHint ?? null })
           return new Response(JSON.stringify(result), { headers: { 'Content-Type': 'application/json' } })
