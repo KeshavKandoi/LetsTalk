@@ -1,6 +1,6 @@
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
 import { useNetworkCheck } from '../hooks/useNetworkCheck'
-import { getSession, signOut, getUserScopedCache, getUserScopedCacheSync, setUserScopedCache } from '../lib/auth'
+import { getSession, signOut, getUserScopedCache, getUserScopedCacheSync, setUserScopedCache, refreshMyState, getMyPhotoUrl, getCachedMyState } from '../lib/auth'
 import { apiFetch } from '../lib/api'
 import DrawerMenu from './DrawerMenu'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -123,27 +123,39 @@ export default function LandingScreen() {
 
   const pulseAnim = useRef(new Animated.Value(1)).current
 
-  useEffect(() => {
-    const cachedAvatar = getUserScopedCacheSync<{ photoUrl?: string; initials: string }>('avatar_profile_cache')
-    if (cachedAvatar) setAvatarProfile(cachedAvatar)
-    const cachedPlaces = getUserScopedCacheSync<any[]>('landing_nearby_places')
-    if (cachedPlaces?.length) {
-      setPlacesNearby(cachedPlaces)
-      setPlacesLoading(false)
-    }
-    apiFetch('/api/places/state', {}).catch(() => null)
+  const refreshAvatar = useCallback(() => {
+    refreshMyState()
       .then((data) => {
         const user = data?.session?.user
         if (user) {
           setSession(data)
           const name = user.username || user.name || '?'
-          const rawUrl = data?.profile?.photoUrl || user.image || null
-          const fresh = { photoUrl: rawUrl, initials: name.slice(0, 2).toUpperCase() }
-          setAvatarProfile(fresh)
-          setUserScopedCache('avatar_profile_cache', fresh).catch(() => {})
+          setAvatarProfile({ photoUrl: getMyPhotoUrl(data) || undefined, initials: name.slice(0, 2).toUpperCase() })
         }
       })
       .catch(() => {})
+  }, [])
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshAvatar()
+    }, [refreshAvatar])
+  )
+
+  useEffect(() => {
+    getCachedMyState().then((cachedState) => {
+      if (cachedState?.session?.user) {
+        const user = cachedState.session.user
+        setSession(cachedState)
+        setAvatarProfile({ photoUrl: getMyPhotoUrl(cachedState) || undefined, initials: (user.username || user.name || '?').slice(0, 2).toUpperCase() })
+      }
+    })
+    const cachedPlaces = getUserScopedCacheSync<any[]>('landing_nearby_places')
+    if (cachedPlaces?.length) {
+      setPlacesNearby(cachedPlaces)
+      setPlacesLoading(false)
+    }
+    refreshAvatar()
 
     Animated.loop(Animated.sequence([
       Animated.timing(pulseAnim, { toValue: 1.25, duration: 1200, useNativeDriver: true }),
