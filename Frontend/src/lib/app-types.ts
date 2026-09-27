@@ -141,6 +141,7 @@ export type ConnectionPreviewState = {
     username: string
     moodEmoji: string | null
     intentSummary: string | null
+    spotLabel?: string | null
     status: PresenceStatus
   }
 }
