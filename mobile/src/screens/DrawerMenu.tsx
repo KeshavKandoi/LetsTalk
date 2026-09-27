@@ -6,10 +6,8 @@ import {
 import { Image as ExpoImage } from 'expo-image'
 import { useNavigation } from '@react-navigation/native'
 import { MaterialIcons } from '@expo/vector-icons'
-import { signOut } from '../lib/auth'
-import { apiFetch } from '../lib/api'
+import { signOut, getCachedMyState, refreshMyState, getMyPhotoUrl } from '../lib/auth'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { getUserScopedCache, setUserScopedCache } from '../lib/auth'
 
 const { width } = Dimensions.get('window')
 const DRAWER_WIDTH = width * 0.65
@@ -65,15 +63,12 @@ export default function DrawerMenu({ visible, onClose }: Props) {
       ]).start()
       animateRowsIn()
       // Load from cache first (instant), then fetch fresh data
-      getUserScopedCache('cached_profile').then(cached => {
+      getCachedMyState().then(cached => {
         if (cached) setProfile(cached)
       })
       // Fetch fresh data in background
-      apiFetch('/api/places/state', { _t: Date.now() })
-        .then(data => {
-          setProfile(data)
-          setUserScopedCache('cached_profile', data)
-        })
+      refreshMyState()
+        .then(data => { if (data) setProfile(data) })
         .catch(() => {})
         .finally(() => setLoading(false))
     } else {
@@ -92,8 +87,7 @@ export default function DrawerMenu({ visible, onClose }: Props) {
 
   const username   = profile?.session?.user?.username || profile?.session?.user?.name || null
   const email      = profile?.session?.user?.email || ''
-  const rawPhoto   = profile?.profile?.photoUrl || profile?.session?.user?.image
-  const photoUrl   = rawPhoto ? `${rawPhoto}?t=${Date.now()}` : null
+  const photoUrl   = getMyPhotoUrl(profile)
   const initials   = username ? username.slice(0, 2).toUpperCase() : '?'
   const isLoggedIn = !!profile?.session
 
