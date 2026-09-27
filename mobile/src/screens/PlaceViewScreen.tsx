@@ -276,13 +276,8 @@ export default function PlaceViewScreen() {
           else if (event.status === 'accepted') setNotice(`You and ${event.user.username} are now connected.`)
           else if (event.status === 'left_verified_location') setNotice(event.message || 'Your connection has left.')
         }
-        if (!photoLoadedRef.current) {
-          const me = allParticipants.find((p: any) => p.userId === data.session?.user?.id)
-          if (me?.photoUrl) {
-            photoLoadedRef.current = true
-            const photoTs = await getUserScopedCache<string>('photo_ts') || '1'
-            setMyPhotoUrl(me.photoUrl + '?t=' + photoTs)
-          }
+        if (data.profile?.photoUrl) {
+          setMyPhotoUrl(data.profile.photoUrl)
         }
         setCheckedInCount(preview.checkedInCount ?? 0)
         setActiveConversationCount(preview.activeConversationCount ?? 0)
