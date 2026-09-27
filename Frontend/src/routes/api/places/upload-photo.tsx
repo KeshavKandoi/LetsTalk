@@ -56,9 +56,13 @@ export const Route = createFileRoute('/api/places/upload-photo')({
 
           if (uploadError) throw new Error('storage upload failed')
 
-          // Get public URL
+          // Get public URL and version it so replacing the photo always
+          // produces a new URL string. This is what actually invalidates
+          // every image cache (mobile, CDN) since the storage key itself
+          // is reused (upsert: true) and would otherwise return the exact
+          // same public URL as before.
           const { data } = supabase.storage.from('avatars').getPublicUrl(fileName)
-          const photoUrl = data.publicUrl
+          const photoUrl = `${data.publicUrl}?v=${Date.now()}`
 
           // Save URL to DB - insert if not exists, update if exists
           const [existing] = await db
