@@ -2,7 +2,10 @@ import { json } from '@tanstack/react-start'
 
 export async function POST(request: Request) {
   try {
-    const { email, otp, newPassword } = await request.json()
+    const body = await request.json() as { email?: string; otp?: string; newPassword?: string }
+    const email = typeof body.email === 'string' ? body.email : ''
+    const otp = typeof body.otp === 'string' ? body.otp : ''
+    const newPassword = typeof body.newPassword === 'string' ? body.newPassword : ''
 
     if (!email || !otp || !newPassword) {
       return json({ error: 'Missing required fields' }, { status: 400 })
