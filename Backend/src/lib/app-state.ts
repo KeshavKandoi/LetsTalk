@@ -726,7 +726,7 @@ async function resolveScanPreview(
       username: getDisplayUsername(targetUser),
       moodEmoji: targetProfile.moodEmoji,
       intentSummary: targetProfile.intentSummary,
-      locationHint: targetProfile.locationHint ?? null,
+      spotLabel: targetProfile.locationHint ?? null,
       status: targetProfile.status as PresenceStatus,
     },
   }
