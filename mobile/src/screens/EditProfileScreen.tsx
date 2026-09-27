@@ -11,7 +11,7 @@ import * as ImagePicker from 'expo-image-picker'
 import * as FileSystem from 'expo-file-system/legacy'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { apiFetch } from '../lib/api'
-import { getSession, getStoredSessionToken, getUserScopedCache, setUserScopedCache } from '../lib/auth'
+import { getSession, getStoredSessionToken, getCachedMyState, refreshMyState, getMyPhotoUrl, patchCachedMyPhoto } from '../lib/auth'
 
 const DARK = '#151515'
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL
@@ -27,25 +27,23 @@ export default function EditProfileScreen() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
 
   useEffect(() => {
-    getUserScopedCache<any>('cached_profile_screen').then(c => {
+    getCachedMyState().then(c => {
       if (c) {
-        setAbout(c.about || '')
-        setUsername(c.username || '')
-        if (c.photoUrl) setPhotoUrl(c.photoUrl)
+        setAbout(c.profile?.about || '')
+        setUsername(c.session?.user?.username || '')
+        const cachedPhoto = getMyPhotoUrl(c)
+        if (cachedPhoto) setPhotoUrl(cachedPhoto)
         setLoading(false)
       }
     })
 
-    Promise.all([apiFetch('/api/places/state', {}), getSession()])
-      .then(([data, session]) => {
+    refreshMyState()
+      .then((data) => {
+        if (!data) return
         setIntentText(data?.profile?.intentText || '')
         setAbout(data?.profile?.about || '')
         setUsername(data?.session?.user?.username || '')
-        const u = session?.user || session?.session?.user
-        const rawUrl = data?.profile?.photoUrl || u?.image || null
-        getUserScopedCache<string>('photo_ts').then(ts => {
-          setPhotoUrl(rawUrl ? rawUrl.split('?')[0] + '?t=' + (ts || '1') : null)
-        })
+        setPhotoUrl(getMyPhotoUrl(data))
       })
       .catch((e) => console.log('Load error:', e))
       .finally(() => setLoading(false))
@@ -82,9 +80,8 @@ export default function EditProfileScreen() {
         console.log('Upload response status:', res.status)
         console.log('Upload response:', JSON.stringify(data))
         if (data?.photoUrl) {
-          const ts = Date.now().toString()
-          await setUserScopedCache('photo_ts', ts)
-          setPhotoUrl(data.photoUrl + '?t=' + ts)
+          setPhotoUrl(data.photoUrl)
+          await patchCachedMyPhoto(data.photoUrl)
           Alert.alert('Done!', 'Photo uploaded.')
         } else {
           Alert.alert('Error', data?.error || 'Upload failed.')
