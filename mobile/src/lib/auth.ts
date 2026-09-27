@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { apiFetch } from './api'
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL
 const SESSION_TOKEN_KEY = 'session_token'
@@ -220,4 +221,41 @@ export async function setUserScopedCache(key: string, data: any) {
 export function getUserScopedCacheSync<T = any>(key: string) {
   const cached = userCacheMemory.get(key)
   return cached?.userId === currentUserIdMemory ? cached.data as T : null
+}
+
+// ---- Single source of truth for "my" profile/photo ----
+// Every screen that shows the current user's own photo reads this cache
+// and calls refreshMyState() to update it, instead of keeping its own
+// screen-local cache with its own cache-busting logic.
+const MY_STATE_CACHE_KEY = 'my_state'
+let myStateRequestSeq = 0
+
+export async function getCachedMyState() {
+  return getUserScopedCache<any>(MY_STATE_CACHE_KEY)
+}
+
+// Fetches /api/places/state and caches the full result under one shared
+// key. If a newer call to this function starts before this one finishes,
+// this older, slower response is discarded instead of overwriting the
+// newer cached value.
+export async function refreshMyState() {
+  const requestId = ++myStateRequestSeq
+  const data = await apiFetch('/api/places/state', {})
+  if (requestId !== myStateRequestSeq) return null
+  await setUserScopedCache(MY_STATE_CACHE_KEY, data)
+  return data
+}
+
+export function getMyPhotoUrl(state: any): string | null {
+  return state?.profile?.photoUrl ?? null
+}
+
+// Immediately patches the cached photo right after a successful upload,
+// so screens still mounted elsewhere can show the new photo without
+// waiting for their own next refetch.
+export async function patchCachedMyPhoto(photoUrl: string) {
+  const cached = await getCachedMyState()
+  const next = { ...(cached || {}), profile: { ...(cached?.profile || {}), photoUrl } }
+  await setUserScopedCache(MY_STATE_CACHE_KEY, next)
+  return next
 }
