@@ -7,15 +7,20 @@ const CURRENT_USER_ID_KEY = 'current_user_id'
 let currentUserIdMemory: string | null = null
 const userCacheMemory = new Map<string, { userId: string; data: any }>()
 
-export async function signIn(username: string, password: string) {
+export async function signIn(username: string, password: string, forceLogin = false) {
   const email = username.trim().toLowerCase()
   const res = await fetch(`${BASE_URL}/api/auth/sign-in/email`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Origin': BASE_URL },
-    body: JSON.stringify({ email, password, rememberMe: true }),
+    body: JSON.stringify({ email, password, rememberMe: true, forceLogin }),
   })
   const data = await res.json()
-  if (!res.ok || data.code || data.error) throw new Error(data.message || data.error?.message || 'Login failed')
+  if (!res.ok || data.code || data.error) {
+    const message = data.message || data.error?.message || 'Login failed'
+    const err: any = new Error(message)
+    err.code = data.code || data.error?.code
+    throw err
+  }
   const setCookie = res.headers.get('set-cookie') || ''
   const cookieMatch = setCookie.match(/better-auth\.session_token=([^;]+)/)
   if (cookieMatch) await AsyncStorage.setItem(SESSION_TOKEN_KEY, decodeURIComponent(cookieMatch[1]))
