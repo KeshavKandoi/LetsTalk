@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Modal, Pressable } from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Modal, Pressable, Share } from 'react-native'
 import { Image as ExpoImage } from 'expo-image'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
@@ -9,13 +9,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 
 const ACCENT = '#7C5CFC'
 
+const APP_SHARE_URL = 'https://letstalks.app'
+
 const MENU_ITEMS = [
-  { icon: 'home', label: 'Home', screen: 'Landing' },
-  { icon: 'person-outline', label: 'Profile', screen: 'Profile' },
-  { icon: 'bar-chart', label: 'Friends', screen: 'Friends' },
-  { icon: 'notifications', label: 'Notifications', screen: 'Notifications' },
-  { icon: 'settings', label: 'Account settings', screen: 'AccountSettings' },
-  { icon: 'info-outline', label: 'About us', screen: 'AboutUs' },
+  { icon: 'home', label: 'Home', screen: 'Landing', share: false },
+  { icon: 'person-outline', label: 'Profile', screen: 'Profile', share: false },
+  { icon: 'bar-chart', label: 'Friends', screen: 'Friends', share: false },
+  { icon: 'notifications', label: 'Notifications', screen: 'Notifications', share: false },
+  { icon: 'settings', label: 'Account settings', screen: 'AccountSettings', share: false },
+  { icon: 'share', label: 'Share', screen: '', share: true },
+  { icon: 'info-outline', label: 'About us', screen: 'AboutUs', share: false },
 ]
 
 export default function AccountMenuScreen() {
@@ -45,6 +48,15 @@ export default function AccountMenuScreen() {
   const handleLogout = async () => {
     await signOut()
     navigation.reset({ index: 0, routes: [{ name: 'Login' }] })
+  }
+
+  const handleShare = async () => {
+    try {
+      await Share.share({
+        message: "Join me on Let's Talk - find people ready to talk nearby! Download it here: " + APP_SHARE_URL,
+        url: APP_SHARE_URL,
+      })
+    } catch {}
   }
 
   const username = profile?.session?.user?.username || profile?.session?.user?.name || null
@@ -85,7 +97,7 @@ export default function AccountMenuScreen() {
           <TouchableOpacity
             key={item.label}
             style={s.menuItem}
-            onPress={() => navigation.navigate(item.screen as never)}
+            onPress={() => (item.share ? handleShare() : navigation.navigate(item.screen as never))}
           >
             <MaterialIcons name={item.icon as any} size={22} color="rgba(255,255,255,0.8)" />
             <Text style={s.menuLabel}>{item.label}</Text>
