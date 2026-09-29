@@ -3,7 +3,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native'
 import { useNetworkCheck } from '../hooks/useNetworkCheck'
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, Keyboard,
+  ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, Keyboard, Alert,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
@@ -85,13 +85,25 @@ export default function LoginScreen() {
     }
   }
 
-  const doLogin = async () => {
+  const doLogin = async (forceLogin = false) => {
     setLoading(true)
     setError('')
     try {
-      await signIn(email, password)
+      await signIn(email, password, forceLogin)
       navigation.reset({ index: 0, routes: [{ name: 'Landing' }] })
     } catch (e: any) {
+      if (e?.code === 'ACTIVE_SESSION_EXISTS') {
+        setLoading(false)
+        Alert.alert(
+          'Already logged in',
+          'This account is already logged in on another device. Continue and log out the other device?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Continue', onPress: () => doLogin(true) },
+          ],
+        )
+        return
+      }
       setError(getNetworkErrorMessage(e))
     } finally {
       setLoading(false)
