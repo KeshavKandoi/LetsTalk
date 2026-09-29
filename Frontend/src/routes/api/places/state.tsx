@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { auth } from '@backend/lib/auth'
+import { getAppBaseUrl } from '@backend/lib/env'
 import { db } from '@backend/lib/db'
 import { userProfile } from '@backend/lib/db/schema'
 import { and, eq, sql } from 'drizzle-orm'
@@ -96,8 +97,7 @@ export const Route = createFileRoute('/api/places/state')({
               let token = existing?.token ?? createHandoffToken()
               if (existing && existing.expiresAt <= now) token = createHandoffToken()
               await db.insert(handoffCode).values({ token, userId: session.user.id, placeId: profileRecord.currentPlaceId, expiresAt, createdAt: existing?.createdAt ?? now, updatedAt: now }).onConflictDoUpdate({ target: handoffCode.userId, set: { token, placeId: profileRecord.currentPlaceId, expiresAt, updatedAt: now } })
-              const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.29.59:3000'
-              return { url: BASE_URL + '/?scan=' + token, isActive: profileRecord.status === 'ready' }
+              return { url: getAppBaseUrl() + '/?scan=' + token, isActive: profileRecord.status === 'ready' }
             })(),
             activeConnection: await getActiveConnectionForUser(session.user.id),
           }), { headers: { 'Content-Type': 'application/json' } })
