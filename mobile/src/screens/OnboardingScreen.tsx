@@ -14,6 +14,26 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 
 const AMBER = '#e8824a'
 const AMBER_LIGHT = 'rgba(232,130,74,0.7)'
+const CHECK_IN_RADIUS_METERS = 200
+
+function distanceMeters(
+  a: { latitude: number; longitude: number },
+  b: { latitude: number; longitude: number },
+) {
+  const toRad = (value: number) => (value * Math.PI) / 180
+  const earthRadiusMeters = 6371000
+  const dLat = toRad(b.latitude - a.latitude)
+  const dLng = toRad(b.longitude - a.longitude)
+  const lat1 = toRad(a.latitude)
+  const lat2 = toRad(b.latitude)
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2
+  return 2 * earthRadiusMeters * Math.asin(Math.sqrt(h))
+}
+
+function formatDistance(m: number) {
+  if (m < 1000) return `${Math.round(m)}m away`
+  return `${(m / 1000).toFixed(1)}km away`
+}
 
 interface NearbyPlace {
   placeId: string
@@ -36,6 +56,7 @@ export default function OnboardingScreen() {
   const [places, setPlaces] = useState<NearbyPlace[]>([])
   const [placesLoading, setPlacesLoading] = useState(false)
   const [selectedPlace, setSelectedPlace] = useState<NearbyPlace | null>(null)
+  const [userCoords, setUserCoords] = useState<{ latitude: number; longitude: number } | null>(null)
   const [preview, setPreview] = useState<PlacePreview | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [intentText, setIntentText] = useState('')
@@ -71,6 +92,7 @@ export default function OnboardingScreen() {
         const fresh = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Lowest })
         coords = fresh.coords
       }
+      setUserCoords(coords)
       const result = await apiFetch('/api/places/nearby', {
         latitude: coords.latitude,
         longitude: coords.longitude,
@@ -235,28 +257,60 @@ export default function OnboardingScreen() {
                 )}
               </View>
             ) : (
-              displayPlaces.map((place) => (
-                <TouchableOpacity key={place.placeId} style={s.placeCard} onPress={() => setSelectedPlace(place)} activeOpacity={0.75}>
-                  <View style={s.placeCardRow}>
-                    {place.photoUrl ? (
-                      <Image source={{ uri: place.photoUrl }} style={s.placePhoto} contentFit="cover" cachePolicy="memory-disk" />
-                    ) : (
-                      <View style={s.placeIcon}>
-                        <MaterialIcons name="place" size={18} color={AMBER} />
-                      </View>
-                    )}
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.placeName}>{place.name}</Text>
-                      <Text style={s.placeAddress} numberOfLines={1}>{place.address}</Text>
+              displayPlaces.map((place) => {
+                const dist = userCoords && place.lat != null && place.lng != null
+                  ? distanceMeters(userCoords, { latitude: place.lat, longitude: place.lng })
+                  : null
+                const tooFar = dist !== null && dist > CHECK_IN_RADIUS_METERS
+                return (
+                <TouchableOpacity key={place.placeId} style={s.placeCard} onPress={() => setSelectedPlace(place)} activeOpacity={0.85}>
+                  {place.photoUrl ? (
+                    <Image source={{ uri: place.photoUrl }} style={s.placeCardBg} contentFit="cover" cachePolicy="memory-disk" />
+                  ) : (
+                    <LinearGradient
+                      colors={['rgba(232,130,74,0.35)', 'rgba(30,20,15,0.9)']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={s.placeCardBg}
+                    >
+                      <MaterialIcons name="place" size={28} color="rgba(255,255,255,0.5)" style={{ flex: 1, alignSelf: 'center', textAlignVertical: 'center' }} />
+                    </LinearGradient>
+                  )}
+
+                  <LinearGradient
+                    colors={['transparent', 'rgba(0,0,0,0.15)', 'rgba(0,0,0,0.92)']}
+                    locations={[0, 0.45, 1]}
+                    style={s.placeCardScrim}
+                  />
+
+                  {dist !== null && (
+                    <View style={s.placeCardDistanceBadge}>
+                      <MaterialIcons name="near-me" size={11} color="rgba(255,255,255,0.85)" />
+                      <Text style={s.placeCardDistanceText}>{formatDistance(dist)}</Text>
                     </View>
-                    <View style={[s.readyBadge, place.readyCount > 0 && s.readyBadgeActive]}>
-                      <View style={[s.statusDot, place.readyCount > 0 && s.statusDotActive]} />
-                      <Text style={[s.readyBadgeText, place.readyCount > 0 && s.readyBadgeTextActive]}>{place.readyCount} ready</Text>
-                    </View>
+                  )}
+
+                  <View style={[s.placeCardReadyBadge, place.readyCount > 0 && s.placeCardReadyBadgeActive]}>
+                    <View style={[s.statusDot, place.readyCount > 0 && s.statusDotActive]} />
+                    <Text style={[s.placeCardReadyText, place.readyCount > 0 && s.placeCardReadyTextActive]}>{place.readyCount} ready</Text>
                   </View>
 
+                  <View style={s.placeCardOverlay}>
+                    <Text style={s.placeCardName} numberOfLines={1}>{place.name}</Text>
+                    <View style={s.placeCardAddressRow}>
+                      <MaterialIcons name="location-on" size={12} color="rgba(255,255,255,0.65)" />
+                      <Text style={s.placeCardAddress} numberOfLines={1}>{place.address}</Text>
+                    </View>
+                    {tooFar && (
+                      <View style={s.placeCardTooFarPill}>
+                        <MaterialIcons name="info-outline" size={11} color="#ffb4b4" />
+                        <Text style={s.placeCardTooFarText}>Too far to check in</Text>
+                      </View>
+                    )}
+                  </View>
                 </TouchableOpacity>
-              ))
+                )
+              })
             )}
           </ScrollView>
         ) : (
@@ -364,19 +418,23 @@ const s = StyleSheet.create({
   emptyText: { fontSize: 14, color: 'rgba(255,255,255,0.35)', fontWeight: '600' },
   retryBtn: { marginTop: 4, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 50, borderWidth: 1, borderColor: 'rgba(232,130,74,0.4)' },
   retryBtnText: { color: AMBER, fontWeight: '700', fontSize: 13 },
-  placeCard: { backgroundColor: 'rgba(15,15,15,0.9)', borderRadius: 18, padding: 14, marginBottom: 10, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)' },
-  placeCardRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
-  placeIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(232,130,74,0.1)', justifyContent: 'center', alignItems: 'center' },
-  placePhoto: { width: 48, height: 48, borderRadius: 12 },
-  placeName: { fontSize: 15, fontWeight: '800', color: '#fff', marginBottom: 2 },
-  placeAddress: { fontSize: 12, color: 'rgba(255,255,255,0.4)' },
-  readyBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
-  readyBadgeActive: { backgroundColor: 'rgba(74,222,128,0.1)' },
-  readyBadgeText: { fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: '700' },
-  readyBadgeTextActive: { color: '#4ade80' },
-  statusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.3)' },
+  placeCard: { height: 172, borderRadius: 20, marginBottom: 12, overflow: 'hidden', position: 'relative', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  placeCardBg: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  placeCardScrim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  placeCardReadyBadge: { position: 'absolute', top: 12, right: 12, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' },
+  placeCardReadyBadgeActive: { backgroundColor: 'rgba(74,222,128,0.18)', borderColor: 'rgba(74,222,128,0.4)' },
+  placeCardReadyText: { fontSize: 11, color: 'rgba(255,255,255,0.85)', fontWeight: '800' },
+  placeCardReadyTextActive: { color: '#4ade80' },
+  placeCardDistanceBadge: { position: 'absolute', top: 12, left: 12, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 20, paddingHorizontal: 9, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' },
+  placeCardDistanceText: { fontSize: 11, color: 'rgba(255,255,255,0.85)', fontWeight: '700' },
+  placeCardOverlay: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: 14 },
+  placeCardName: { fontSize: 18, fontWeight: '800', color: '#fff', marginBottom: 4 },
+  placeCardAddressRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  placeCardAddress: { fontSize: 12, color: 'rgba(255,255,255,0.7)', flexShrink: 1 },
+  placeCardTooFarPill: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', backgroundColor: 'rgba(186,26,26,0.22)', borderRadius: 20, paddingHorizontal: 9, paddingVertical: 4, marginTop: 8, borderWidth: 1, borderColor: 'rgba(255,107,107,0.3)' },
+  placeCardTooFarText: { fontSize: 10, color: '#ffb4b4', fontWeight: '700' },
+  statusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.5)' },
   statusDotActive: { backgroundColor: '#4ade80' },
-  statusText: { fontSize: 12, color: 'rgba(255,255,255,0.4)', fontWeight: '500' },
   selectedCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 16, padding: 14, marginBottom: 16, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.9)' },
   selectedCardLeft: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.08)', justifyContent: 'center', alignItems: 'center' },
   selectedPhoto: { width: 48, height: 48, borderRadius: 12 },
