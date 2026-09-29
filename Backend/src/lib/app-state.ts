@@ -44,6 +44,7 @@ type GoogleNearbyPlace = {
     text?: string
   }
   formattedAddress?: string
+  shortFormattedAddress?: string
   location?: {
     latitude?: number
     longitude?: number
@@ -1813,7 +1814,7 @@ function mapGooglePlace(result: GoogleNearbyPlace): NearbyPlace | null {
   return {
     placeId: result.id,
     name: result.displayName.text,
-    address: result.formattedAddress,
+    address: result.shortFormattedAddress || result.formattedAddress,
     lat: result.location.latitude,
     lng: result.location.longitude,
     readyCount: 0,
@@ -1860,17 +1861,29 @@ export async function searchNearbyPlacesForLocation(input: {
           'Content-Type': 'application/json',
           'X-Goog-Api-Key': getGoogleMapsApiKey(),
           'X-Goog-FieldMask':
-            'places.id,places.displayName,places.formattedAddress,places.location,places.photos',
+            'places.id,places.displayName,places.formattedAddress,places.shortFormattedAddress,places.location,places.photos',
         },
         body: JSON.stringify({
-          maxResultCount: 8,
+          maxResultCount: 15,
+          includedTypes: [
+            'cafe',
+            'coffee_shop',
+            'restaurant',
+            'bakery',
+            'bar',
+            'park',
+            'library',
+            'shopping_mall',
+            'plaza',
+            'tourist_attraction',
+          ],
           locationRestriction: {
             circle: {
               center: {
                 latitude: input.latitude,
                 longitude: input.longitude,
               },
-              radius: 200,
+              radius: 2000,
             },
           },
         }),
