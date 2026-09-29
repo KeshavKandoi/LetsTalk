@@ -703,7 +703,6 @@ export default function PlaceViewScreen() {
                 const isConnectedPerson = activeConnection?.counterpart.userId === p.userId
                 const actionLoading = connectionActionId === p.userId || (request && connectionActionId === request.id)
                 const canSendConnectRequest = isReady && (profile.isVerifiedOnSite !== false) && !activeConnection && p.status === 'ready' && p.isVerifiedOnSite
-                if (p.username === 'keshu') console.log('Connect debug:', {isReady, profileVerified: profile.isVerifiedOnSite, hasConnection: !!activeConnection, pStatus: p.status, pVerified: p.isVerifiedOnSite})
                 return (
                   <View key={p.userId} style={[s.personCard, p.status === 'ready' && s.personCardReady]}>
                     {/* Header row */}
