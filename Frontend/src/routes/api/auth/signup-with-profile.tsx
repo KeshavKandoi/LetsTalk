@@ -8,7 +8,7 @@ export const Route = createFileRoute('/api/auth/signup-with-profile')({
           const body = await request.json() as Record<string, any>
           const rawEmail = typeof body.email === 'string' ? body.email : ''
           const email = rawEmail.trim().toLowerCase()
-          const { username, password, dob, gender, confirmPassword } = body
+          const { username, password, dob, gender } = body
           if (!email || !password || !username) {
             return new Response(JSON.stringify({ error: 'Email, username, and password are required' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
           }
@@ -25,29 +25,17 @@ export const Route = createFileRoute('/api/auth/signup-with-profile')({
             })
           }
 
-          // Step 1: Call the standard better-auth endpoint via handler
-          const signupBody = JSON.stringify({
-            email,
-            password,
-            confirmPassword: confirmPassword || password,
-            name: username,
-          })
-          
-          const signupRequest = new Request('http://localhost:3000/api/auth/sign-up/email', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: signupBody,
+                    const signupData = await auth.api.signUpEmail({
+            body: {
+              email,
+              password,
+              name: username,
+            },
           })
 
-          const signupResponse = await auth.handler(signupRequest)
-          const responseText = await signupResponse.text()
-          const signupData = responseText ? JSON.parse(responseText) : {}
-          
-
-          if (!signupResponse.ok || !signupData.user?.id) {
-            const duplicate = /exist|already|unique|duplicate/i.test(JSON.stringify(signupData))
-            return new Response(JSON.stringify({ error: duplicate ? 'ACCOUNT_EXISTS' : 'Signup failed' }), {
-              status: duplicate ? 409 : 400,
+          if (!signupData?.user?.id) {
+            return new Response(JSON.stringify({ error: 'Signup failed' }), {
+              status: 400,
               headers: { 'Content-Type': 'application/json' },
             })
           }
