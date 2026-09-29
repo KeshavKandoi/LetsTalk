@@ -2,6 +2,7 @@ import { drizzleAdapter } from '@better-auth/drizzle-adapter'
 import { betterAuth } from 'better-auth'
 import { bearer, emailOTP } from 'better-auth/plugins'
 import { tanstackStartCookies } from 'better-auth/tanstack-start'
+import { APIError, createAuthMiddleware } from 'better-auth/api'
 import { Resend } from 'resend'
 import { db } from './db'
 import * as schema from './db/schema'
@@ -13,6 +14,10 @@ export const auth = betterAuth({
   secret: getAuthSecret(),
   baseURL: getAppBaseUrl(),
   basePath: '/api/auth',
+  session: {
+    expiresIn: 60 * 60 * 24 * 60,
+    updateAge: 60 * 60 * 24,
+  },
   trustedOrigins: [
     getAppBaseUrl(),
     'http://localhost:3000',
@@ -82,6 +87,50 @@ export const auth = betterAuth({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     },
+  },
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== '/sign-in/email' && ctx.path !== '/sign-in/username') {
+        return
+      }
+
+      const body: any = ctx.body
+
+      if (body?.forceLogin) {
+        return
+      }
+
+      const identifier = body?.email || body?.username
+
+      if (!identifier) {
+        return
+      }
+
+      const { db } = await import('./db')
+      const { user, session } = await import('./db/schema')
+      const { eq, ilike, and, gt } = await import('drizzle-orm')
+
+      const [matchedUser] = body?.email
+        ? await db.select({ id: user.id }).from(user).where(ilike(user.email, String(identifier).trim().toLowerCase())).limit(1)
+        : await db.select({ id: user.id }).from(user).where(eq(user.username, String(identifier))).limit(1)
+
+      if (!matchedUser) {
+        return
+      }
+
+      const activeSessions = await db
+        .select({ id: session.id })
+        .from(session)
+        .where(and(eq(session.userId, matchedUser.id), gt(session.expiresAt, new Date())))
+        .limit(1)
+
+      if (activeSessions.length > 0) {
+        throw new APIError('CONFLICT', {
+          code: 'ACTIVE_SESSION_EXISTS',
+          message: 'This account is already logged in on another device.',
+        })
+      }
+    }),
   },
   plugins: [
     tanstackStartCookies(),
