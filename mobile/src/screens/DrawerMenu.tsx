@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity, Animated,
-  Dimensions, ActivityIndicator, Image,
+  Dimensions, ActivityIndicator, Image, Share,
 } from 'react-native'
 import { Image as ExpoImage } from 'expo-image'
 import { useNavigation } from '@react-navigation/native'
@@ -17,13 +17,16 @@ interface Props {
   onClose: () => void
 }
 
+const APP_SHARE_URL = 'https://letstalks.app'
+
 const MENU_ITEMS = [
-  { icon: 'home',           label: 'HOME',             screen: 'Landing',         color: '#000000' },
-  { icon: 'person-outline', label: 'PROFILE',          screen: 'Profile',         color: '#000000' },
-  { icon: 'bar-chart',      label: 'FRIENDS',         screen: 'Friends',         color: '#000000' },
-  { icon: 'notifications', label: 'NOTIFICATIONS',   screen: 'Notifications',   color: '#000000' },
-  { icon: 'settings',       label: 'ACCOUNT SETTINGS', screen: 'AccountSettings', color: '#000000' },
-  { icon: 'info-outline',   label: 'ABOUT US',         screen: 'AboutUs',         color: '#000000' },
+  { icon: 'home',           label: 'HOME',             screen: 'Landing',         color: '#000000', share: false },
+  { icon: 'person-outline', label: 'PROFILE',          screen: 'Profile',         color: '#000000', share: false },
+  { icon: 'bar-chart',      label: 'FRIENDS',         screen: 'Friends',         color: '#000000', share: false },
+  { icon: 'notifications', label: 'NOTIFICATIONS',   screen: 'Notifications',   color: '#000000', share: false },
+  { icon: 'settings',       label: 'ACCOUNT SETTINGS', screen: 'AccountSettings', color: '#000000', share: false },
+  { icon: 'share',          label: 'SHARE',            screen: '',                color: '#000000', share: true },
+  { icon: 'info-outline',   label: 'ABOUT US',         screen: 'AboutUs',         color: '#000000', share: false },
 ]
 
 export default function DrawerMenu({ visible, onClose }: Props) {
@@ -85,6 +88,15 @@ export default function DrawerMenu({ visible, onClose }: Props) {
     navigation.reset({ index: 0, routes: [{ name: 'Login' }] })
   }
 
+  const handleShare = async () => {
+    try {
+      await Share.share({
+        message: "Join me on Let's Talk - find people ready to talk nearby! Download it here: " + APP_SHARE_URL,
+        url: APP_SHARE_URL,
+      })
+    } catch {}
+  }
+
   const username   = profile?.session?.user?.username || profile?.session?.user?.name || null
   const email      = profile?.session?.user?.email || ''
   const photoUrl   = getMyPhotoUrl(profile)
@@ -144,7 +156,7 @@ export default function DrawerMenu({ visible, onClose }: Props) {
             }}>
               <TouchableOpacity
                 style={[s.menuItem, { backgroundColor: item.color }]}
-                onPress={() => { onClose(); if (item.screen) navigation.navigate(item.screen as never) }}
+                onPress={() => { if (item.share) { onClose(); handleShare(); return } onClose(); if (item.screen) navigation.navigate(item.screen as never) }}
               >
                 <MaterialIcons name={item.icon as any} size={26} color="#FFFFFF" />
                 <Text style={s.menuLabel}>{item.label}</Text>
