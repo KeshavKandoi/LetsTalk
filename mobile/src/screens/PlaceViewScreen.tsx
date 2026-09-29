@@ -528,10 +528,8 @@ export default function PlaceViewScreen() {
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         {/* Header */}
         <View style={s.header}>
-          <TouchableOpacity style={s.leaveBtn} onPress={handleLeave} disabled={leaving}>
-            {leaving
-              ? <ActivityIndicator color="#ef4444" size="small" />
-              : <Text style={s.leaveText}>Leave Place</Text>}
+          <TouchableOpacity style={[s.leaveBtn, leaving && s.leaveBtnDisabled]} onPress={handleLeave} disabled={leaving}>
+            <Text style={s.leaveText}>Leave Place</Text>
           </TouchableOpacity>
           <Text style={s.logo}>Let's Talk</Text>
           <View style={{ width: 90 }} />
@@ -989,6 +987,7 @@ const s = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(232,130,74,0.1)' },
   logo: { fontSize: 20, fontWeight: '900', color: '#ffffff', letterSpacing: -0.5 },
   leaveBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5, borderColor: '#ffffff', backgroundColor: '#ef4444' },
+  leaveBtnDisabled: { opacity: 0.5 },
   leaveText: { color: '#ffffff', fontWeight: '700', fontSize: 13 },
 
   // Alerts
