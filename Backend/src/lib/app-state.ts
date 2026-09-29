@@ -882,7 +882,7 @@ export async function setReadyState(input: { ready: boolean; latitude?: number; 
       longitude: placeRecord.lng,
     }
     if (distanceMeters(currentLocation, placeLocation) > 200) {
-      throw new Error('You are outside 100 meters of this location.')
+      throw new Error('You are outside 200 meters of this location.')
     }
   }
   const agent = await getUserAgent(session.user.id)
@@ -966,7 +966,7 @@ export async function verifyOnSiteLocation(input: { latitude?: number; longitude
     success: true,
     verified: false,
     deactivated: true,
-    message: 'You are out of 100 meters. Your availability has been deactivated.',
+    message: 'You are out of 200 meters. Your availability has been deactivated.',
   }
 }
 
