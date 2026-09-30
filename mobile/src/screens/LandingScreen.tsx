@@ -522,7 +522,7 @@ const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: BG },
 
   nav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 4, zIndex: 10 },
-  navBrand: { flexDirection: 'row', alignItems: 'center', gap: 70 },
+  navBrand: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   navTitle: { fontSize: 22, fontWeight: '700', color: '#fff', letterSpacing: -0.3 },
   navLogo: { width: 30, height: 25 },
 
@@ -570,8 +570,8 @@ const s = StyleSheet.create({
   navItemActive: { backgroundColor: ACCENT_DIM, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8 },
   navItemLabel: { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.4)', marginTop: 2, letterSpacing: 0.2 },
   navItemLabelActive: { color: ACCENT },
-  headerAvatarImg: { width: 38, height: 38, borderRadius: 20, borderWidth: 0.5, borderColor: '#fff', marginBottom: 1 },
-  headerAvatarFallback: { width: 40, height: 40, borderRadius: 20, backgroundColor: ACCENT, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#fff', marginBottom: 8 },
+  headerAvatarImg: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: '#fff' },
+  headerAvatarFallback: { width: 40, height: 40, borderRadius: 20, backgroundColor: ACCENT, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#fff' },
   headerAvatarTxt: { fontSize: 14, fontWeight: '800', color: '#fff' },
 })
 
