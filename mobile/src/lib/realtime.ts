@@ -3,6 +3,19 @@ import { createClient, type RealtimeChannel } from '@supabase/supabase-js'
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
 
+type ChatMessage = {
+  id: string
+  senderUserId: string
+  recipientUserId?: string
+  body: string
+  status: 'sending' | 'sent' | 'delivered' | 'read' | 'failed'
+  createdAt: string
+}
+
+type RealtimeHandlers = {
+  onNewMessage?: (message: ChatMessage) => void
+}
+
 let client: ReturnType<typeof createClient> | null = null
 
 function getClient() {
@@ -13,14 +26,18 @@ function getClient() {
 
 export function subscribeToUserChannel(
   userId: string,
-  handlers: { onNewMessage?: (payload: any) => void },
+  handlers: RealtimeHandlers,
 ): (() => void) | null {
   const supabase = getClient()
   if (!supabase || !userId) return null
 
   const channel: RealtimeChannel = supabase.channel(`user:${userId}`)
   if (handlers.onNewMessage) {
-    channel.on('broadcast', { event: 'new_message' }, ({ payload }) => handlers.onNewMessage?.(payload))
+    channel.on('broadcast', { event: 'new_message' }, ({ payload }) => {
+      if (payload && typeof payload === 'object') {
+        handlers.onNewMessage?.(payload as ChatMessage)
+      }
+    })
   }
   channel.subscribe()
 
