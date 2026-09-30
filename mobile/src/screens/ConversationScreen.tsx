@@ -8,9 +8,35 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { MaterialIcons } from '@expo/vector-icons'
 import { useRoute, useNavigation } from '@react-navigation/native'
 import { apiFetch } from '../lib/api'
+import { getCurrentUserId } from '../lib/auth'
+import { subscribeToUserChannel } from '../lib/realtime'
 
 const ACCENT = '#5B7FFF'
 const BG = '#0a0a0a'
+
+type MessageStatus = 'sending' | 'sent' | 'delivered' | 'read' | 'failed'
+
+type ChatMessage = {
+  id: string
+  senderUserId: string
+  recipientUserId?: string
+  body: string
+  createdAt: string
+  status: MessageStatus
+}
+
+function generateClientId() {
+  return `local-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
+
+function mergeMessages(current: ChatMessage[], incoming: ChatMessage[]): ChatMessage[] {
+  const byId = new Map<string, ChatMessage>()
+  for (const m of incoming) byId.set(m.id, m)
+  const stillPending = current.filter((m) => (m.status === 'sending' || m.status === 'failed') && !byId.has(m.id))
+  const merged = [...incoming, ...stillPending]
+  merged.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+  return merged
+}
 
 function Avatar({ uri, username, size = 32 }: { uri?: string | null; username?: string; size?: number }) {
   const initials = (username || '?').slice(0, 1).toUpperCase()
@@ -24,6 +50,8 @@ function Avatar({ uri, username, size = 32 }: { uri?: string | null; username?: 
 }
 
 function StatusTicks({ status }: { status?: string }) {
+  if (status === 'sending') return <MaterialIcons name="schedule" size={13} color="rgba(255,255,255,0.35)" style={{ marginLeft: 2 }} />
+  if (status === 'failed') return <MaterialIcons name="error-outline" size={13} color="#ff6b6b" style={{ marginLeft: 2 }} />
   if (status === 'read') return <MaterialIcons name="done-all" size={14} color={ACCENT} style={{ marginLeft: 2 }} />
   if (status === 'delivered') return <MaterialIcons name="done-all" size={14} color="rgba(255,255,255,0.35)" style={{ marginLeft: 2 }} />
   return <MaterialIcons name="done" size={14} color="rgba(255,255,255,0.35)" style={{ marginLeft: 2 }} />
@@ -55,10 +83,9 @@ export default function ConversationScreen() {
   const route = useRoute()
   const navigation = useNavigation<any>()
   const { friend } = (route.params as any) || {}
-  const [messages, setMessages] = useState<any[]>([])
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(true)
-  const [sending, setSending] = useState(false)
   const [photoModal, setPhotoModal] = useState(false)
   const [friendStatus, setFriendStatus] = useState<{ isOnline: boolean; lastSeenAt: string | null }>({
     isOnline: friend?.isOnline ?? false,
@@ -68,38 +95,83 @@ export default function ConversationScreen() {
   const modalScale = useRef(new Animated.Value(0.8)).current
   const modalOpacity = useRef(new Animated.Value(0)).current
 
-  const loadMessages = async () => {
+  const loadMessages = async (silent = false) => {
     if (!friend) return
     try {
       const data = await apiFetch('/api/friends/messages', { action: 'list', friendUserId: friend.userId })
-      setMessages(data?.messages || [])
+      const incoming: ChatMessage[] = data?.messages || []
+      setMessages((prev) => mergeMessages(prev, incoming))
     } catch (e) {
-      Alert.alert('Error', (e as Error).message)
+      if (!silent) Alert.alert('Error', (e as Error).message)
     } finally {
       setLoading(false)
     }
   }
 
-  const sendMessage = async () => {
+  const deliverMessage = async (clientId: string, body: string) => {
+    try {
+      const result = await apiFetch('/api/friends/messages', { action: 'send', friendUserId: friend.userId, body })
+      const serverMessage = result?.message
+      setMessages((prev) => prev.map((m) => (
+        m.id === clientId
+          ? (serverMessage ? { ...serverMessage, status: 'sent' as MessageStatus } : { ...m, status: 'sent' as MessageStatus })
+          : m
+      )))
+    } catch (e) {
+      setMessages((prev) => prev.map((m) => (m.id === clientId ? { ...m, status: 'failed' as MessageStatus } : m)))
+    }
+  }
+
+  const sendMessage = () => {
     if (!newMessage.trim() || !friend) return
     const body = newMessage.trim()
-    try {
-      setSending(true)
-      setNewMessage('')
-      await apiFetch('/api/friends/messages', { action: 'send', friendUserId: friend.userId, body })
-      await loadMessages()
-      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100)
-    } catch (e) {
-      Alert.alert('Error', (e as Error).message)
-    } finally {
-      setSending(false)
-    }
+    const clientId = generateClientId()
+    setNewMessage('')
+    setMessages((prev) => [
+      ...prev,
+      { id: clientId, senderUserId: 'local-self', body, createdAt: new Date().toISOString(), status: 'sending' },
+    ])
+    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50)
+    void deliverMessage(clientId, body)
+  }
+
+  const retryMessage = (message: ChatMessage) => {
+    setMessages((prev) => prev.map((m) => (m.id === message.id ? { ...m, status: 'sending' } : m)))
+    void deliverMessage(message.id, message.body)
   }
 
   useEffect(() => {
     loadMessages()
-    const interval = setInterval(loadMessages, 3000)
-    return () => clearInterval(interval)
+
+    let unsubscribe: (() => void) | null = null
+    let cancelled = false
+    getCurrentUserId().then((myUserId) => {
+      if (cancelled || !myUserId) return
+      unsubscribe = subscribeToUserChannel(myUserId, {
+        onNewMessage: (payload) => {
+          if (!friend || payload?.senderUserId !== friend.userId) return
+          setMessages((prev) => mergeMessages(prev, [{
+            id: payload.id,
+            senderUserId: payload.senderUserId,
+            recipientUserId: payload.recipientUserId,
+            body: payload.body,
+            status: payload.status ?? 'sent',
+            createdAt: payload.createdAt,
+          }]))
+          setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50)
+        },
+      })
+    })
+
+    // Fallback poll — realtime is the primary path; this guards against a
+    // dropped/missed channel connection rather than driving normal updates.
+    const interval = setInterval(() => loadMessages(true), 15000)
+
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+      unsubscribe?.()
+    }
   }, [friend])
 
   // Mark self as online, poll friend status
@@ -229,15 +301,21 @@ export default function ConversationScreen() {
 
                       <View style={[s.msgCol, isOwn ? { alignItems: 'flex-end' } : { alignItems: 'flex-start' }]}>
                         {showName && <Text style={s.senderName}>{friend?.username}</Text>}
-                        <View style={[s.bubble, isOwn ? s.bubbleOwn : s.bubbleTheir]}>
+                        <Pressable
+                          disabled={item.status !== 'failed'}
+                          onPress={() => retryMessage(item)}
+                          style={[s.bubble, isOwn ? s.bubbleOwn : s.bubbleTheir, item.status === 'failed' && s.bubbleFailed, item.status === 'sending' && s.bubbleSending]}
+                        >
                           <Text style={[s.bubbleTxt, isOwn ? s.bubbleTxtOwn : s.bubbleTxtTheir]}>{item.body}</Text>
-                        </View>
-                        {showTime && (
+                        </Pressable>
+                        {item.status === 'failed' ? (
+                          <Text style={s.retryLabel}>Tap to retry</Text>
+                        ) : showTime ? (
                           <View style={[s.timeRow, isOwn ? s.timeLabelOwn : s.timeLabelTheir]}>
                             <Text style={s.timeLabel}>{formatTime(new Date(item.createdAt))}</Text>
                             {isOwn && <StatusTicks status={item.status} />}
                           </View>
-                        )}
+                        ) : null}
                       </View>
                     </View>
                   )
@@ -255,14 +333,13 @@ export default function ConversationScreen() {
                 placeholderTextColor="rgba(255,255,255,0.3)"
                 value={newMessage}
                 onChangeText={setNewMessage}
-                editable={!sending}
                 multiline
               />
             </View>
             <TouchableOpacity
-              style={[s.sendBtn, (!newMessage.trim() || sending) && s.sendBtnOff]}
+              style={[s.sendBtn, !newMessage.trim() && s.sendBtnOff]}
               onPress={sendMessage}
-              disabled={!newMessage.trim() || sending}
+              disabled={!newMessage.trim()}
             >
               <MaterialIcons name="arrow-upward" size={22} color="#fff" />
             </TouchableOpacity>
@@ -339,6 +416,9 @@ const s = StyleSheet.create({
   bubbleTxt: { fontSize: 15, lineHeight: 22 },
   bubbleTxtTheir: { color: 'rgba(255,255,255,0.92)' },
   bubbleTxtOwn: { color: '#ffffff' },
+  bubbleSending: { opacity: 0.6 },
+  bubbleFailed: { borderWidth: 1, borderColor: 'rgba(255,107,107,0.5)' },
+  retryLabel: { fontSize: 11, color: '#ff6b6b', fontWeight: '600', marginTop: 3 },
   timeRow: { flexDirection: 'row', alignItems: 'center', marginTop: 3 },
   timeLabel: { fontSize: 10, color: 'rgba(255,255,255,0.3)' },
   timeLabelTheir: { marginLeft: 2 },
