@@ -131,9 +131,10 @@ export default function SignupScreen() {
 
           <View style={styles.field}>
             <View style={{ position: 'relative' }}>
+              <Ionicons name="mail-outline" size={18} color="rgba(255,255,255,0.5)" style={styles.leftIcon} />
               <TextInput
                 ref={emailRef}
-                style={styles.input}
+                style={[styles.input, styles.inputIcon]}
                 placeholder="Email"
                 placeholderTextColor="rgba(255,255,255,0.4)"
                 value={email}
@@ -153,9 +154,10 @@ export default function SignupScreen() {
 
           <View style={styles.field}>
             <View style={{ position: 'relative' }}>
+              <Ionicons name="person-outline" size={18} color="rgba(255,255,255,0.5)" style={styles.leftIcon} />
               <TextInput
                 ref={usernameRef}
-                style={styles.input}
+                style={[styles.input, styles.inputIcon]}
                 placeholder="Username"
                 placeholderTextColor="rgba(255,255,255,0.4)"
                 value={username}
@@ -173,9 +175,10 @@ export default function SignupScreen() {
 
           <View style={styles.field}>
             <View style={[styles.passwordRow, { position: 'relative' }]}>
+              <Ionicons name="lock-closed-outline" size={18} color="rgba(255,255,255,0.5)" style={styles.leftIcon} />
               <TextInput
                 ref={passwordRef}
-                style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                style={[styles.input, styles.inputIcon, { flex: 1, marginBottom: 0, borderWidth: 0 }]}
                 placeholder="Password"
                 placeholderTextColor="rgba(255,255,255,0.4)"
                 value={password}
@@ -196,9 +199,10 @@ export default function SignupScreen() {
 
           <View style={styles.field}>
             <View style={[styles.passwordRow, { position: 'relative' }]}>
+              <Ionicons name="shield-checkmark-outline" size={18} color="rgba(255,255,255,0.5)" style={styles.leftIcon} />
               <TextInput
                 ref={confirmRef}
-                style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                style={[styles.input, styles.inputIcon, { flex: 1, marginBottom: 0, borderWidth: 0 }]}
                 placeholder="Confirm password"
                 placeholderTextColor="rgba(255,255,255,0.4)"
                 value={confirmPassword}
@@ -261,10 +265,12 @@ export default function SignupScreen() {
           )}
 
           <Text style={styles.fieldLabel}>Gender</Text>
-          <TouchableOpacity style={styles.input} onPress={() => { setShowGenderDrop(!showGenderDrop); setShowMonthDrop(false); setShowDayDrop(false); setShowYearDrop(false) }}>
-            <Text style={{ color: gender ? '#fff' : 'rgba(255,255,255,0.4)', fontSize: 15 }}>
+          <TouchableOpacity style={[styles.input, styles.selectRow]} onPress={() => { setShowGenderDrop(!showGenderDrop); setShowMonthDrop(false); setShowDayDrop(false); setShowYearDrop(false) }}>
+            <Ionicons name="people-outline" size={18} color="rgba(255,255,255,0.5)" />
+            <Text style={{ flex: 1, color: gender ? '#fff' : 'rgba(255,255,255,0.4)', fontSize: 15 }}>
               {gender || 'Select gender'}
             </Text>
+            <Ionicons name={showGenderDrop ? 'chevron-up' : 'chevron-down'} size={18} color="rgba(255,255,255,0.5)" />
           </TouchableOpacity>
 
           {showGenderDrop && (
@@ -316,7 +322,7 @@ export default function SignupScreen() {
 
           <TouchableOpacity style={styles.googleButton} activeOpacity={0.85}>
             <View style={styles.googleContent}>
-              <Text style={styles.googleLetter}>G</Text>
+              <Ionicons name="logo-google" size={18} color="#ffffff" />
               <Text style={styles.googleText}>Continue with Google</Text>
             </View>
           </TouchableOpacity>
@@ -364,6 +370,9 @@ const styles = StyleSheet.create({
   },
   passwordRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', borderRadius: 10, paddingRight: 8 },
   eyeButton: { padding: 8 },
+  leftIcon: { position: 'absolute', left: 14, top: 16 },
+  inputIcon: { paddingLeft: 44 },
+  selectRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
 
   dobRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
   dobBtn: { flex: 1, height: 50, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
