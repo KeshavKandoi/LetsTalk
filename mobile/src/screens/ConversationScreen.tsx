@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import {
   Alert, StyleSheet, Text, TextInput,
   TouchableOpacity, View, FlatList, Image, KeyboardAvoidingView, Platform, AppState,
@@ -13,7 +13,7 @@ import { subscribeToUserChannel } from '../lib/realtime'
 
 const ACCENT = '#5B7FFF'
 const BG = '#0a0a0a'
-const MIN_COMPOSER_HEIGHT = 44
+const MIN_COMPOSER_HEIGHT = 22
 const MAX_COMPOSER_HEIGHT = 120
 
 type MessageStatus = 'sending' | 'sent' | 'delivered' | 'read' | 'failed'
@@ -43,68 +43,45 @@ function isSeparator(item: ListItem): item is DateSeparator {
   return 'type' in item && item.type === 'separator'
 }
 
-function buildMessageList(messages: ChatMessage[]): ListItem[] {
-  if (messages.length === 0) return []
-  
-  const sorted = [...messages].sort((a, b) => 
-    new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-  )
-  
-  const result: ListItem[] = []
-  let lastDate = ''
-  
-  for (const msg of sorted) {
-    const msgDate = new Date(msg.createdAt)
-    const localDate = msgDate.toLocaleDateString('en-US', { 
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    })
-    
-    if (localDate !== lastDate) {
-      const label = getDateLabel(msgDate)
-      result.push({
-        type: 'separator',
-        date: localDate,
-        label,
-      })
-      lastDate = localDate
-    }
-    
-    result.push(msg)
-  }
-  
-  return result
+function localDateKey(d: Date) {
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
+}
+
+function compareMessages(a: ChatMessage, b: ChatMessage) {
+  const diff = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  if (diff !== 0) return diff
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
 }
 
 function getDateLabel(date: Date): string {
   const now = new Date()
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-  
-  const msPerDay = 86400000
-  const diffDays = Math.floor((today.getTime() - dateOnly.getTime()) / msPerDay)
-  
-  if (diffDays === 0) return 'TODAY'
-  if (diffDays === 1) return 'YESTERDAY'
-  
-  return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+  const key = localDateKey(date)
+  if (key === localDateKey(now)) return 'TODAY'
+  if (key === localDateKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1))) return 'YESTERDAY'
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+function buildMessageList(messages: ChatMessage[]): ListItem[] {
+  const sorted = [...messages].sort(compareMessages)
+  const ascending: ListItem[] = []
+  let lastKey = ''
+  for (const msg of sorted) {
+    const d = new Date(msg.createdAt)
+    const key = localDateKey(d)
+    if (key !== lastKey) {
+      ascending.push({ type: 'separator', date: key, label: getDateLabel(d) })
+      lastKey = key
+    }
+    ascending.push(msg)
+  }
+  return ascending.reverse()
 }
 
 function mergeMessages(current: ChatMessage[], incoming: ChatMessage[]): ChatMessage[] {
   const byId = new Map<string, ChatMessage>()
-  for (const m of current) {
-    if ((m.status === 'sending' || m.status === 'failed') && m.id.startsWith('local-')) {
-      byId.set(m.id, m)
-    }
-  }
-  for (const m of incoming) {
-    byId.set(m.id, m)
-  }
-  
-  const result = Array.from(byId.values())
-  result.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-  return result
+  for (const m of current) byId.set(m.id, m)
+  for (const m of incoming) byId.set(m.id, m)
+  return Array.from(byId.values())
 }
 
 function Avatar({ uri, username, size = 32 }: { uri?: string | null; username?: string; size?: number }) {
@@ -159,7 +136,7 @@ export default function ConversationScreen() {
   const [inputHeight, setInputHeight] = useState(MIN_COMPOSER_HEIGHT)
   const [loading, setLoading] = useState(true)
   const [photoModal, setPhotoModal] = useState(false)
-  const [showNewMessagesBadge, setShowNewMessagesBadge] = useState(false)
+  const [keyboardOpen, setKeyboardOpen] = useState(false)
   const [newMessagesCount, setNewMessagesCount] = useState(0)
   const [friendStatus, setFriendStatus] = useState<{ isOnline: boolean; lastSeenAt: string | null }>({
     isOnline: friend?.isOnline ?? false,
@@ -167,11 +144,13 @@ export default function ConversationScreen() {
   })
   
   const listRef = useRef<FlatList>(null)
-  const isNearBottomRef = useRef(true)
+  const atBottomRef = useRef(true)
+  const messagesRef = useRef<ChatMessage[]>([])
   const modalScale = useRef(new Animated.Value(0.8)).current
   const modalOpacity = useRef(new Animated.Value(0)).current
 
-  const listItems = buildMessageList(messages)
+  const listItems = useMemo(() => buildMessageList(messages), [messages])
+  messagesRef.current = messages
 
   const loadMessages = useCallback(async (silent = false) => {
     if (!friend) return
@@ -186,28 +165,26 @@ export default function ConversationScreen() {
     }
   }, [friend])
 
-  const scrollToEnd = useCallback(() => {
-    setTimeout(() => {
-      listRef.current?.scrollToEnd({ animated: true })
-    }, 50)
+  const scrollToLatest = useCallback(() => {
+    atBottomRef.current = true
+    listRef.current?.scrollToOffset({ offset: 0, animated: true })
   }, [])
 
   const scrollToNewMessages = useCallback(() => {
-    setShowNewMessagesBadge(false)
     setNewMessagesCount(0)
-    scrollToEnd()
-  }, [scrollToEnd])
+    scrollToLatest()
+  }, [scrollToLatest])
 
   const deliverMessage = useCallback(async (clientId: string, body: string) => {
     try {
       const result = await apiFetch('/api/friends/messages', { action: 'send', friendUserId: friend.userId, body })
       const serverMessage = result?.message as ChatMessage | undefined
-      setMessages((prev) => prev.map((m) => {
-        if (m.id === clientId && serverMessage) {
-          return { ...serverMessage, status: 'sent' as MessageStatus }
-        }
-        return m
-      }))
+      setMessages((prev) => {
+        if (!serverMessage) return prev.map((m) => (m.id === clientId ? { ...m, status: 'sent' as MessageStatus } : m))
+        const rest = prev.filter((m) => m.id !== clientId)
+        if (rest.some((m) => m.id === serverMessage.id)) return rest
+        return [...rest, { ...serverMessage, status: 'sent' as MessageStatus }]
+      })
     } catch (e) {
       setMessages((prev) => prev.map((m) => (m.id === clientId ? { ...m, status: 'failed' as MessageStatus } : m)))
     }
@@ -225,9 +202,9 @@ export default function ConversationScreen() {
       { id: clientId, senderUserId: 'local-self', body, createdAt: new Date().toISOString(), status: 'sending' },
     ])
     
-    scrollToEnd()
+    scrollToLatest()
     void deliverMessage(clientId, body)
-  }, [newMessage, friend, deliverMessage, scrollToEnd])
+  }, [newMessage, friend, deliverMessage, scrollToLatest])
 
   const retryMessage = useCallback((message: ChatMessage) => {
     setMessages((prev) => prev.map((m) => (m.id === message.id ? { ...m, status: 'sending' } : m)))
@@ -235,10 +212,9 @@ export default function ConversationScreen() {
   }, [deliverMessage])
 
   const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent
-    const threshold = 200
-    const distanceFromBottom = contentSize.height - layoutMeasurement.height - contentOffset.y
-    isNearBottomRef.current = distanceFromBottom < threshold
+    const nearBottom = event.nativeEvent.contentOffset.y < 80
+    atBottomRef.current = nearBottom
+    if (nearBottom) setNewMessagesCount(0)
   }, [])
 
   useEffect(() => {
@@ -254,28 +230,16 @@ export default function ConversationScreen() {
         onNewMessage: (payload) => {
           if (payload?.senderUserId !== friend.userId) return
           
-          setMessages((prev) => {
-            const existing = prev.find((m) => m.id === payload.id)
-            if (existing) return prev
-            
-            const updated = mergeMessages(prev, [{
-              id: payload.id,
-              senderUserId: payload.senderUserId,
-              recipientUserId: payload.recipientUserId,
-              body: payload.body,
-              status: payload.status ?? 'sent',
-              createdAt: payload.createdAt,
-            }])
-            
-            if (isNearBottomRef.current) {
-              scrollToEnd()
-            } else {
-              setShowNewMessagesBadge(true)
-              setNewMessagesCount((c) => c + 1)
-            }
-            
-            return updated
-          })
+          if (messagesRef.current.some((m) => m.id === payload.id)) return
+          setMessages((prev) => mergeMessages(prev, [{
+            id: payload.id,
+            senderUserId: payload.senderUserId,
+            recipientUserId: payload.recipientUserId,
+            body: payload.body,
+            status: payload.status ?? 'sent',
+            createdAt: payload.createdAt,
+          }]))
+          if (!atBottomRef.current) setNewMessagesCount((c) => c + 1)
         },
       })
     })
@@ -284,7 +248,7 @@ export default function ConversationScreen() {
       cancelled = true
       unsubscribe?.()
     }
-  }, [friend, loadMessages, scrollToEnd])
+  }, [friend, loadMessages])
 
   useEffect(() => {
     const markOnline = () => apiFetch('/api/friends/online-status', { isOnline: true }).catch(() => {})
@@ -312,6 +276,17 @@ export default function ConversationScreen() {
       sub.remove()
     }
   }, [friend?.userId])
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow'
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide'
+    const show = Keyboard.addListener(showEvent, () => setKeyboardOpen(true))
+    const hide = Keyboard.addListener(hideEvent, () => setKeyboardOpen(false))
+    return () => {
+      show.remove()
+      hide.remove()
+    }
+  }, [])
 
   const openPhoto = useCallback(() => {
     if (!friend?.photoUrl) return
@@ -359,9 +334,10 @@ export default function ConversationScreen() {
 
         <KeyboardAvoidingView
           style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior="padding"
           keyboardVerticalOffset={0}
         >
+          <View style={s.listRegion}>
           {loading && messages.length === 0 ? (
             <View style={s.list}>
               <View style={s.datePill}><Text style={s.datePillTxt}>TODAY</Text></View>
@@ -380,6 +356,9 @@ export default function ConversationScreen() {
               style={s.flatList}
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="on-drag"
+              inverted
+              maintainVisibleContentPosition={{ minIndexForVisible: 1, autoscrollToTopThreshold: 80 }}
+              initialNumToRender={20}
               scrollEventThrottle={16}
               onScroll={handleScroll}
               renderItem={({ item, index }) => {
@@ -393,8 +372,8 @@ export default function ConversationScreen() {
 
                 const msg = item as ChatMessage
                 const isOwn = msg.senderUserId !== friend?.userId
-                const prev = index > 0 && !isSeparator(listItems[index - 1]) ? listItems[index - 1] as ChatMessage : null
-                const next = index < listItems.length - 1 && !isSeparator(listItems[index + 1]) ? listItems[index + 1] as ChatMessage : null
+                const prev = index < listItems.length - 1 && !isSeparator(listItems[index + 1]) ? listItems[index + 1] as ChatMessage : null
+                const next = index > 0 && !isSeparator(listItems[index - 1]) ? listItems[index - 1] as ChatMessage : null
                 const prevSame = prev && prev.senderUserId === msg.senderUserId
                 const nextSame = next && next.senderUserId === msg.senderUserId
                 const showName = !isOwn && !prevSame
@@ -436,14 +415,16 @@ export default function ConversationScreen() {
             />
           )}
 
-          {showNewMessagesBadge && (
+          {newMessagesCount > 0 && (
             <TouchableOpacity style={s.newMessagesBadge} onPress={scrollToNewMessages}>
               <MaterialIcons name="arrow-downward" size={18} color="#fff" />
               <Text style={s.newMessagesText}>{newMessagesCount} new {newMessagesCount === 1 ? 'message' : 'messages'}</Text>
             </TouchableOpacity>
           )}
 
-          <View style={[s.inputArea, { paddingBottom: insets.bottom || 10 }]}>
+          </View>
+
+          <View style={[s.inputArea, { paddingBottom: keyboardOpen ? 10 : Math.max(insets.bottom, 10) }]}>
             <View style={s.inputPill}>
               <TextInput
                 style={[s.input, { height: Math.max(inputHeight, MIN_COMPOSER_HEIGHT) }]}
@@ -452,7 +433,7 @@ export default function ConversationScreen() {
                 value={newMessage}
                 onChangeText={setNewMessage}
                 onContentSizeChange={(e) => {
-                  const newHeight = e.nativeEvent.contentSize.height
+                  const newHeight = Math.ceil(e.nativeEvent.contentSize.height)
                   const clamped = Math.max(MIN_COMPOSER_HEIGHT, Math.min(newHeight, MAX_COMPOSER_HEIGHT))
                   setInputHeight(clamped)
                 }}
@@ -526,7 +507,8 @@ const s = StyleSheet.create({
   headerOffline: { color: 'rgba(255,255,255,0.4)' },
   datePill: { alignSelf: 'center', backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 14, paddingVertical: 4, borderRadius: 999, marginBottom: 16, marginTop: 8 },
   datePillTxt: { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.5)', letterSpacing: 0.8 },
-  list: { paddingHorizontal: 20, paddingBottom: 12, paddingTop: 4 },
+  list: { paddingHorizontal: 20, paddingVertical: 12 },
+  listRegion: { flex: 1 },
   flatList: { flex: 1, backgroundColor: BG },
   msgGroup: { flexDirection: 'row', alignItems: 'flex-end', marginBottom: 3, gap: 8 },
   msgGroupTheir: { justifyContent: 'flex-start' },
@@ -548,11 +530,11 @@ const s = StyleSheet.create({
   timeLabelTheir: { marginLeft: 2 },
   timeLabelOwn: { marginRight: 2 },
   inputArea: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 16, paddingVertical: 10, backgroundColor: BG, gap: 10 },
-  inputPill: { flex: 1, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 26, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', paddingHorizontal: 16, paddingVertical: 8 },
-  input: { fontSize: 15, color: '#ffffff', paddingVertical: 0, lineHeight: 20 },
-  sendBtn: { width: 50, height: 50, borderRadius: 25, backgroundColor: ACCENT, justifyContent: 'center', alignItems: 'center', shadowColor: ACCENT, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
+  inputPill: { flex: 1, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 26, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', paddingHorizontal: 16, paddingVertical: 13 },
+  input: { fontSize: 15, color: '#ffffff', paddingVertical: 0, lineHeight: 20, textAlignVertical: 'top' },
+  sendBtn: { width: 48, height: 48, borderRadius: 24, backgroundColor: ACCENT, justifyContent: 'center', alignItems: 'center', shadowColor: ACCENT, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
   sendBtnOff: { backgroundColor: 'rgba(91,127,255,0.3)', shadowOpacity: 0 },
-  newMessagesBadge: { position: 'absolute', bottom: 70, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: ACCENT, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, shadowColor: ACCENT, shadowOpacity: 0.4, shadowRadius: 8, elevation: 4 },
+  newMessagesBadge: { position: 'absolute', bottom: 12, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: ACCENT, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, shadowColor: ACCENT, shadowOpacity: 0.4, shadowRadius: 8, elevation: 4 },
   newMessagesText: { color: '#fff', fontWeight: '600', fontSize: 14 },
 
   modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center' },
