@@ -522,7 +522,7 @@ const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: BG },
 
   nav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 4, zIndex: 10 },
-  navBrand: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  navBrand: { flexDirection: 'row', alignItems: 'center', gap: 70 },
   navTitle: { fontSize: 22, fontWeight: '700', color: '#fff', letterSpacing: -0.3 },
   navLogo: { width: 30, height: 25 },
 
