@@ -159,9 +159,10 @@ export default function LoginScreen() {
 
           <View style={styles.field}>
             <View style={{ position: 'relative' }}>
+              <Ionicons name="mail-outline" size={18} color="rgba(255,255,255,0.5)" style={styles.leftIcon} />
               <TextInput
                 ref={emailRef}
-                style={styles.input}
+                style={[styles.input, styles.inputIcon]}
                 value={email}
                 onChangeText={setEmail}
                 placeholder="Email"
@@ -181,9 +182,10 @@ export default function LoginScreen() {
 
           <View style={styles.field}>
             <View style={[styles.passwordRow, { position: 'relative' }]}>
+              <Ionicons name="lock-closed-outline" size={18} color="rgba(255,255,255,0.5)" style={styles.leftIcon} />
               <TextInput
                 ref={passwordRef}
-                style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                style={[styles.input, styles.inputIcon, { flex: 1, marginBottom: 0, borderWidth: 0 }]}
                 value={password}
                 onChangeText={setPassword}
                 placeholder="Password"
@@ -238,7 +240,7 @@ export default function LoginScreen() {
               <ActivityIndicator color="#ffffff" />
             ) : (
               <View style={styles.googleContent}>
-                <Text style={styles.googleLetter}>G</Text>
+                <Ionicons name="logo-google" size={18} color="#ffffff" />
                 <Text style={styles.googleText}>Continue with Google</Text>
               </View>
             )}
@@ -287,6 +289,8 @@ const styles = StyleSheet.create({
   },
   passwordRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', borderRadius: 10, paddingRight: 8 },
   eyeButton: { padding: 8 },
+  leftIcon: { position: 'absolute', left: 14, top: 16 },
+  inputIcon: { paddingLeft: 44 },
 
   loginButton: { backgroundColor: '#8B5CF6', height: 50, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
   loginButtonText: { color: '#fff', fontWeight: '700', fontSize: 15 },
