@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, inArray, lt, or, sql } from 'drizzle-orm'
+import { createClient } from '@supabase/supabase-js'
 // agents removed
 import { getRequestHeaders } from '@tanstack/react-start/server'
 import type {
@@ -32,6 +33,8 @@ import {
 import {
   getAppBaseUrl,
   getGoogleMapsApiKey,
+  getSupabaseUrl,
+  getSupabaseAnonKey,
 
   getGoogleMapsMapId,
 } from './env'
@@ -1669,6 +1672,7 @@ export async function getConversationMessages(input: { friendUserId: string; vie
       body: friendMessage.body,
       senderUserId: friendMessage.senderUserId,
       recipientUserId: friendMessage.recipientUserId,
+      status: friendMessage.status,
       createdAt: friendMessage.createdAt,
     })
     .from(friendMessage)
@@ -1697,6 +1701,10 @@ export async function sendConversationMessage(input: {
     throw new Error('Write a message first.')
   }
 
+  if (body.length > 2000) {
+    throw new Error('Message is too long.')
+  }
+
   const requestRecord = await getFriendshipRecordForUserPair(
     session.user.id,
     friendUserId,
@@ -1707,8 +1715,9 @@ export async function sendConversationMessage(input: {
   }
 
   const now = new Date()
+  const id = crypto.randomUUID()
   await db.insert(friendMessage).values({
-    id: crypto.randomUUID(),
+    id,
     friendRequestId: requestRecord.id,
     senderUserId: session.user.id,
     recipientUserId: friendUserId,
@@ -1724,7 +1733,28 @@ export async function sendConversationMessage(input: {
     .set({ updatedAt: now })
     .where(eq(friendRequest.id, requestRecord.id))
 
-  return { success: true }
+  const messagePayload = {
+    id,
+    senderUserId: session.user.id,
+    recipientUserId: friendUserId,
+    body,
+    status: 'sent' as const,
+    createdAt: now.toISOString(),
+  }
+
+  try {
+    const supabase = createClient(getSupabaseUrl(), getSupabaseAnonKey())
+    await supabase.channel(`user:${friendUserId}`).send({
+      type: 'broadcast',
+      event: 'new_message',
+      payload: messagePayload,
+    })
+  } catch {}
+
+  return {
+    success: true,
+    message: messagePayload,
+  }
 }
 
 export async function previewScanJoin(input: { token: string }) {
