@@ -297,10 +297,10 @@ export default function LandingScreen() {
   )
 
   return (
-    <SafeAreaView style={s.container} edges={['top']}>
+    <View style={s.container}>
       <StatusBar style="light" />
 
-      <View style={s.nav}>
+      <View style={[s.nav, { paddingTop: insets.top + 10 }]}>
         <View style={s.navBrand}>
           <Image source={require('../../assets/logo-cropped.png')} style={s.navLogo} contentFit="contain" />
           <Text style={s.navTitle}>Let's Talk</Text>
@@ -486,7 +486,7 @@ export default function LandingScreen() {
           <Text style={[s.navItemLabel, activeTab === 'profile' && s.navItemLabelActive]}>Profile</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   )
 }
 
