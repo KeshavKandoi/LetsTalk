@@ -301,19 +301,23 @@ export default function LandingScreen() {
       <StatusBar style="light" />
 
       <View style={[s.nav, { paddingTop: insets.top + 10 }]}>
-        <View style={s.navBrand}>
+        <View style={s.navSlotLeft}>
           <Image source={require('../../assets/logo-cropped.png')} style={s.navLogo} contentFit="contain" />
+        </View>
+        <View style={s.navSlotCenter}>
           <Text style={s.navTitle}>Let's Talk</Text>
         </View>
-        <TouchableOpacity activeOpacity={0.7} onPress={() => navigation.navigate('AccountMenu' as never)}>
-          {avatarProfile?.photoUrl ? (
-            <Image source={{ uri: avatarProfile.photoUrl }} style={s.headerAvatarImg} cachePolicy="disk" transition={150} />
-          ) : (
-            <View style={s.headerAvatarFallback}>
-              <Text style={s.headerAvatarTxt}>{avatarProfile?.initials || '?'}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
+        <View style={s.navSlotRight}>
+          <TouchableOpacity activeOpacity={0.7} onPress={() => navigation.navigate('AccountMenu' as never)}>
+            {avatarProfile?.photoUrl ? (
+              <Image source={{ uri: avatarProfile.photoUrl }} style={s.headerAvatarImg} cachePolicy="disk" transition={150} />
+            ) : (
+              <View style={s.headerAvatarFallback}>
+                <Text style={s.headerAvatarTxt}>{avatarProfile?.initials || '?'}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
@@ -521,8 +525,10 @@ const wl = StyleSheet.create({
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: BG },
 
-  nav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 4, zIndex: 10 },
-  navBrand: { flexDirection: 'row', alignItems: 'center', gap: 70 },
+  nav: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 4, zIndex: 10, height: 48 },
+  navSlotLeft: { flex: 1, height: '100%', alignItems: 'flex-start', justifyContent: 'center' },
+  navSlotCenter: { flex: 1, height: '100%', alignItems: 'center', justifyContent: 'center' },
+  navSlotRight: { flex: 1, height: '100%', alignItems: 'flex-end', justifyContent: 'center' },
   navTitle: { fontSize: 22, fontWeight: '700', color: '#fff', letterSpacing: -0.3 },
   navLogo: { width: 30, height: 25 },
 
@@ -570,8 +576,8 @@ const s = StyleSheet.create({
   navItemActive: { backgroundColor: ACCENT_DIM, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8 },
   navItemLabel: { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.4)', marginTop: 2, letterSpacing: 0.2 },
   navItemLabelActive: { color: ACCENT },
-  headerAvatarImg: { width: 38, height: 38, borderRadius: 20, borderWidth: 0.5, borderColor: '#fff', marginBottom: 1 },
-  headerAvatarFallback: { width: 40, height: 40, borderRadius: 20, backgroundColor: ACCENT, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#fff', marginBottom: 8 },
+  headerAvatarImg: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: '#fff' },
+  headerAvatarFallback: { width: 40, height: 40, borderRadius: 20, backgroundColor: ACCENT, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#fff' },
   headerAvatarTxt: { fontSize: 14, fontWeight: '800', color: '#fff' },
 })
 
