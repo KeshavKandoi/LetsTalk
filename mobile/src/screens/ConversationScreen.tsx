@@ -357,95 +357,96 @@ export default function ConversationScreen() {
           <View style={s.headerBtn} />
         </View>
 
-        {loading && messages.length === 0 ? (
-          <View style={s.list}>
-            <View style={s.datePill}><Text style={s.datePillTxt}>TODAY</Text></View>
-            <SkeletonBubble align="flex-start" width={160} />
-            <SkeletonBubble align="flex-start" width={110} />
-            <SkeletonBubble align="flex-end" width={140} />
-            <SkeletonBubble align="flex-end" width={90} />
-            <SkeletonBubble align="flex-start" width={180} />
-          </View>
-        ) : (
-          <FlatList
-            ref={listRef}
-            data={listItems}
-            keyExtractor={(item) => isSeparator(item) ? `sep-${item.date}` : item.id}
-            contentContainerStyle={s.list}
-            style={s.flatList}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="on-drag"
-            scrollEventThrottle={16}
-            onScroll={handleScroll}
-            renderItem={({ item, index }) => {
-              if (isSeparator(item)) {
-                return (
-                  <View style={s.datePill}>
-                    <Text style={s.datePillTxt}>{item.label}</Text>
-                  </View>
-                )
-              }
-
-              const msg = item as ChatMessage
-              const isOwn = msg.senderUserId !== friend?.userId
-              const prev = index > 0 && !isSeparator(listItems[index - 1]) ? listItems[index - 1] as ChatMessage : null
-              const next = index < listItems.length - 1 && !isSeparator(listItems[index + 1]) ? listItems[index + 1] as ChatMessage : null
-              const prevSame = prev && prev.senderUserId === msg.senderUserId
-              const nextSame = next && next.senderUserId === msg.senderUserId
-              const showName = !isOwn && !prevSame
-              const showTime = !nextSame
-              const showAvatar = !isOwn && !nextSame
-
-              return (
-                <View style={[s.msgGroup, isOwn ? s.msgGroupOwn : s.msgGroupTheir]}>
-                  {!isOwn && (
-                    <View style={s.avatarCol}>
-                      {showAvatar
-                        ? <Avatar uri={friend?.photoUrl} username={friend?.username} size={32} />
-                        : <View style={{ width: 32 }} />
-                      }
-                    </View>
-                  )}
-
-                  <View style={[s.msgCol, isOwn ? { alignItems: 'flex-end' } : { alignItems: 'flex-start' }]}>
-                    {showName && <Text style={s.senderName}>{friend?.username}</Text>}
-                    <Pressable
-                      disabled={msg.status !== 'failed'}
-                      onPress={() => retryMessage(msg)}
-                      style={[s.bubble, isOwn ? s.bubbleOwn : s.bubbleTheir, msg.status === 'failed' && s.bubbleFailed, msg.status === 'sending' && s.bubbleSending]}
-                    >
-                      <Text style={[s.bubbleTxt, isOwn ? s.bubbleTxtOwn : s.bubbleTxtTheir]}>{msg.body}</Text>
-                    </Pressable>
-                    {msg.status === 'failed' ? (
-                      <Text style={s.retryLabel}>Tap to retry</Text>
-                    ) : showTime ? (
-                      <View style={[s.timeRow, isOwn ? s.timeLabelOwn : s.timeLabelTheir]}>
-                        <Text style={s.timeLabel}>{formatTime(new Date(msg.createdAt))}</Text>
-                        {isOwn && <StatusTicks status={msg.status} />}
-                      </View>
-                    ) : null}
-                  </View>
-                </View>
-              )
-            }}
-          />
-        )}
-
-        {showNewMessagesBadge && (
-          <TouchableOpacity style={s.newMessagesBadge} onPress={scrollToNewMessages}>
-            <MaterialIcons name="arrow-downward" size={18} color="#fff" />
-            <Text style={s.newMessagesText}>{newMessagesCount} new {newMessagesCount === 1 ? 'message' : 'messages'}</Text>
-          </TouchableOpacity>
-        )}
-
         <KeyboardAvoidingView
+          style={{ flex: 1 }}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           keyboardVerticalOffset={0}
         >
+          {loading && messages.length === 0 ? (
+            <View style={s.list}>
+              <View style={s.datePill}><Text style={s.datePillTxt}>TODAY</Text></View>
+              <SkeletonBubble align="flex-start" width={160} />
+              <SkeletonBubble align="flex-start" width={110} />
+              <SkeletonBubble align="flex-end" width={140} />
+              <SkeletonBubble align="flex-end" width={90} />
+              <SkeletonBubble align="flex-start" width={180} />
+            </View>
+          ) : (
+            <FlatList
+              ref={listRef}
+              data={listItems}
+              keyExtractor={(item) => isSeparator(item) ? `sep-${item.date}` : item.id}
+              contentContainerStyle={s.list}
+              style={s.flatList}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              scrollEventThrottle={16}
+              onScroll={handleScroll}
+              renderItem={({ item, index }) => {
+                if (isSeparator(item)) {
+                  return (
+                    <View style={s.datePill}>
+                      <Text style={s.datePillTxt}>{item.label}</Text>
+                    </View>
+                  )
+                }
+
+                const msg = item as ChatMessage
+                const isOwn = msg.senderUserId !== friend?.userId
+                const prev = index > 0 && !isSeparator(listItems[index - 1]) ? listItems[index - 1] as ChatMessage : null
+                const next = index < listItems.length - 1 && !isSeparator(listItems[index + 1]) ? listItems[index + 1] as ChatMessage : null
+                const prevSame = prev && prev.senderUserId === msg.senderUserId
+                const nextSame = next && next.senderUserId === msg.senderUserId
+                const showName = !isOwn && !prevSame
+                const showTime = !nextSame
+                const showAvatar = !isOwn && !nextSame
+
+                return (
+                  <View style={[s.msgGroup, isOwn ? s.msgGroupOwn : s.msgGroupTheir]}>
+                    {!isOwn && (
+                      <View style={s.avatarCol}>
+                        {showAvatar
+                          ? <Avatar uri={friend?.photoUrl} username={friend?.username} size={32} />
+                          : <View style={{ width: 32 }} />
+                        }
+                      </View>
+                    )}
+
+                    <View style={[s.msgCol, isOwn ? { alignItems: 'flex-end' } : { alignItems: 'flex-start' }]}>
+                      {showName && <Text style={s.senderName}>{friend?.username}</Text>}
+                      <Pressable
+                        disabled={msg.status !== 'failed'}
+                        onPress={() => retryMessage(msg)}
+                        style={[s.bubble, isOwn ? s.bubbleOwn : s.bubbleTheir, msg.status === 'failed' && s.bubbleFailed, msg.status === 'sending' && s.bubbleSending]}
+                      >
+                        <Text style={[s.bubbleTxt, isOwn ? s.bubbleTxtOwn : s.bubbleTxtTheir]}>{msg.body}</Text>
+                      </Pressable>
+                      {msg.status === 'failed' ? (
+                        <Text style={s.retryLabel}>Tap to retry</Text>
+                      ) : showTime ? (
+                        <View style={[s.timeRow, isOwn ? s.timeLabelOwn : s.timeLabelTheir]}>
+                          <Text style={s.timeLabel}>{formatTime(new Date(msg.createdAt))}</Text>
+                          {isOwn && <StatusTicks status={msg.status} />}
+                        </View>
+                      ) : null}
+                    </View>
+                  </View>
+                )
+              }}
+            />
+          )}
+
+          {showNewMessagesBadge && (
+            <TouchableOpacity style={s.newMessagesBadge} onPress={scrollToNewMessages}>
+              <MaterialIcons name="arrow-downward" size={18} color="#fff" />
+              <Text style={s.newMessagesText}>{newMessagesCount} new {newMessagesCount === 1 ? 'message' : 'messages'}</Text>
+            </TouchableOpacity>
+          )}
+
           <View style={[s.inputArea, { paddingBottom: insets.bottom || 10 }]}>
             <View style={s.inputPill}>
               <TextInput
-                style={[s.input, { height: inputHeight }]}
+                style={[s.input, { height: Math.max(inputHeight, MIN_COMPOSER_HEIGHT) }]}
                 placeholder="Type a message..."
                 placeholderTextColor="rgba(255,255,255,0.3)"
                 value={newMessage}
@@ -457,6 +458,7 @@ export default function ConversationScreen() {
                 }}
                 multiline
                 maxLength={2000}
+                scrollEnabled={inputHeight >= MAX_COMPOSER_HEIGHT}
               />
             </View>
             <TouchableOpacity
