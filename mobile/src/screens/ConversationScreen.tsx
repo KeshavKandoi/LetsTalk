@@ -1,10 +1,10 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import {
   Alert, StyleSheet, Text, TextInput,
   TouchableOpacity, View, FlatList, Image, KeyboardAvoidingView, Platform, AppState,
-  Keyboard, Pressable, Modal, Animated,
+  Keyboard, Pressable, Modal, Animated, NativeScrollEvent, NativeSyntheticEvent,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { MaterialIcons } from '@expo/vector-icons'
 import { useRoute, useNavigation } from '@react-navigation/native'
 import { apiFetch } from '../lib/api'
@@ -13,6 +13,8 @@ import { subscribeToUserChannel } from '../lib/realtime'
 
 const ACCENT = '#5B7FFF'
 const BG = '#0a0a0a'
+const MIN_COMPOSER_HEIGHT = 44
+const MAX_COMPOSER_HEIGHT = 120
 
 type MessageStatus = 'sending' | 'sent' | 'delivered' | 'read' | 'failed'
 
@@ -25,17 +27,84 @@ type ChatMessage = {
   status: MessageStatus
 }
 
+type DateSeparator = {
+  type: 'separator'
+  date: string
+  label: string
+}
+
+type ListItem = ChatMessage | DateSeparator
+
 function generateClientId() {
   return `local-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
 
+function isSeparator(item: ListItem): item is DateSeparator {
+  return 'type' in item && item.type === 'separator'
+}
+
+function buildMessageList(messages: ChatMessage[]): ListItem[] {
+  if (messages.length === 0) return []
+  
+  const sorted = [...messages].sort((a, b) => 
+    new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  )
+  
+  const result: ListItem[] = []
+  let lastDate = ''
+  
+  for (const msg of sorted) {
+    const msgDate = new Date(msg.createdAt)
+    const localDate = msgDate.toLocaleDateString('en-US', { 
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    })
+    
+    if (localDate !== lastDate) {
+      const label = getDateLabel(msgDate)
+      result.push({
+        type: 'separator',
+        date: localDate,
+        label,
+      })
+      lastDate = localDate
+    }
+    
+    result.push(msg)
+  }
+  
+  return result
+}
+
+function getDateLabel(date: Date): string {
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  
+  const msPerDay = 86400000
+  const diffDays = Math.floor((today.getTime() - dateOnly.getTime()) / msPerDay)
+  
+  if (diffDays === 0) return 'TODAY'
+  if (diffDays === 1) return 'YESTERDAY'
+  
+  return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+}
+
 function mergeMessages(current: ChatMessage[], incoming: ChatMessage[]): ChatMessage[] {
   const byId = new Map<string, ChatMessage>()
-  for (const m of incoming) byId.set(m.id, m)
-  const stillPending = current.filter((m) => (m.status === 'sending' || m.status === 'failed') && !byId.has(m.id))
-  const merged = [...incoming, ...stillPending]
-  merged.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-  return merged
+  for (const m of current) {
+    if ((m.status === 'sending' || m.status === 'failed') && m.id.startsWith('local-')) {
+      byId.set(m.id, m)
+    }
+  }
+  for (const m of incoming) {
+    byId.set(m.id, m)
+  }
+  
+  const result = Array.from(byId.values())
+  result.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+  return result
 }
 
 function Avatar({ uri, username, size = 32 }: { uri?: string | null; username?: string; size?: number }) {
@@ -82,20 +151,29 @@ function SkeletonBubble({ align, width }: { align: 'flex-start' | 'flex-end'; wi
 export default function ConversationScreen() {
   const route = useRoute()
   const navigation = useNavigation<any>()
+  const insets = useSafeAreaInsets()
   const { friend } = (route.params as any) || {}
+  
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [newMessage, setNewMessage] = useState('')
+  const [inputHeight, setInputHeight] = useState(MIN_COMPOSER_HEIGHT)
   const [loading, setLoading] = useState(true)
   const [photoModal, setPhotoModal] = useState(false)
+  const [showNewMessagesBadge, setShowNewMessagesBadge] = useState(false)
+  const [newMessagesCount, setNewMessagesCount] = useState(0)
   const [friendStatus, setFriendStatus] = useState<{ isOnline: boolean; lastSeenAt: string | null }>({
     isOnline: friend?.isOnline ?? false,
     lastSeenAt: friend?.lastSeenAt ?? null,
   })
+  
   const listRef = useRef<FlatList>(null)
+  const isNearBottomRef = useRef(true)
   const modalScale = useRef(new Animated.Value(0.8)).current
   const modalOpacity = useRef(new Animated.Value(0)).current
 
-  const loadMessages = async (silent = false) => {
+  const listItems = buildMessageList(messages)
+
+  const loadMessages = useCallback(async (silent = false) => {
     if (!friend) return
     try {
       const data = await apiFetch('/api/friends/messages', { action: 'list', friendUserId: friend.userId })
@@ -106,75 +184,108 @@ export default function ConversationScreen() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [friend])
 
-  const deliverMessage = async (clientId: string, body: string) => {
+  const scrollToEnd = useCallback(() => {
+    setTimeout(() => {
+      listRef.current?.scrollToEnd({ animated: true })
+    }, 50)
+  }, [])
+
+  const scrollToNewMessages = useCallback(() => {
+    setShowNewMessagesBadge(false)
+    setNewMessagesCount(0)
+    scrollToEnd()
+  }, [scrollToEnd])
+
+  const deliverMessage = useCallback(async (clientId: string, body: string) => {
     try {
       const result = await apiFetch('/api/friends/messages', { action: 'send', friendUserId: friend.userId, body })
-      const serverMessage = result?.message
-      setMessages((prev) => prev.map((m) => (
-        m.id === clientId
-          ? (serverMessage ? { ...serverMessage, status: 'sent' as MessageStatus } : { ...m, status: 'sent' as MessageStatus })
-          : m
-      )))
+      const serverMessage = result?.message as ChatMessage | undefined
+      setMessages((prev) => prev.map((m) => {
+        if (m.id === clientId && serverMessage) {
+          return { ...serverMessage, status: 'sent' as MessageStatus }
+        }
+        return m
+      }))
     } catch (e) {
       setMessages((prev) => prev.map((m) => (m.id === clientId ? { ...m, status: 'failed' as MessageStatus } : m)))
     }
-  }
+  }, [friend.userId])
 
-  const sendMessage = () => {
+  const sendMessage = useCallback(() => {
     if (!newMessage.trim() || !friend) return
     const body = newMessage.trim()
     const clientId = generateClientId()
     setNewMessage('')
+    setInputHeight(MIN_COMPOSER_HEIGHT)
+    
     setMessages((prev) => [
       ...prev,
       { id: clientId, senderUserId: 'local-self', body, createdAt: new Date().toISOString(), status: 'sending' },
     ])
-    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50)
+    
+    scrollToEnd()
     void deliverMessage(clientId, body)
-  }
+  }, [newMessage, friend, deliverMessage, scrollToEnd])
 
-  const retryMessage = (message: ChatMessage) => {
+  const retryMessage = useCallback((message: ChatMessage) => {
     setMessages((prev) => prev.map((m) => (m.id === message.id ? { ...m, status: 'sending' } : m)))
     void deliverMessage(message.id, message.body)
-  }
+  }, [deliverMessage])
+
+  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent
+    const threshold = 200
+    const distanceFromBottom = contentSize.height - layoutMeasurement.height - contentOffset.y
+    isNearBottomRef.current = distanceFromBottom < threshold
+  }, [])
 
   useEffect(() => {
     loadMessages()
 
     let unsubscribe: (() => void) | null = null
     let cancelled = false
+    
     getCurrentUserId().then((myUserId) => {
-      if (cancelled || !myUserId) return
+      if (cancelled || !myUserId || !friend) return
+      
       unsubscribe = subscribeToUserChannel(myUserId, {
         onNewMessage: (payload) => {
-          if (!friend || payload?.senderUserId !== friend.userId) return
-          setMessages((prev) => mergeMessages(prev, [{
-            id: payload.id,
-            senderUserId: payload.senderUserId,
-            recipientUserId: payload.recipientUserId,
-            body: payload.body,
-            status: payload.status ?? 'sent',
-            createdAt: payload.createdAt,
-          }]))
-          setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50)
+          if (payload?.senderUserId !== friend.userId) return
+          
+          setMessages((prev) => {
+            const existing = prev.find((m) => m.id === payload.id)
+            if (existing) return prev
+            
+            const updated = mergeMessages(prev, [{
+              id: payload.id,
+              senderUserId: payload.senderUserId,
+              recipientUserId: payload.recipientUserId,
+              body: payload.body,
+              status: payload.status ?? 'sent',
+              createdAt: payload.createdAt,
+            }])
+            
+            if (isNearBottomRef.current) {
+              scrollToEnd()
+            } else {
+              setShowNewMessagesBadge(true)
+              setNewMessagesCount((c) => c + 1)
+            }
+            
+            return updated
+          })
         },
       })
     })
 
-    // Fallback poll — realtime is the primary path; this guards against a
-    // dropped/missed channel connection rather than driving normal updates.
-    const interval = setInterval(() => loadMessages(true), 15000)
-
     return () => {
       cancelled = true
-      clearInterval(interval)
       unsubscribe?.()
     }
-  }, [friend])
+  }, [friend, loadMessages, scrollToEnd])
 
-  // Mark self as online, poll friend status
   useEffect(() => {
     const markOnline = () => apiFetch('/api/friends/online-status', { isOnline: true }).catch(() => {})
     const markOffline = () => apiFetch('/api/friends/online-status', { isOnline: false }).catch(() => {})
@@ -202,7 +313,7 @@ export default function ConversationScreen() {
     }
   }, [friend?.userId])
 
-  const openPhoto = () => {
+  const openPhoto = useCallback(() => {
     if (!friend?.photoUrl) return
     setPhotoModal(true)
     modalScale.setValue(0.8)
@@ -211,20 +322,18 @@ export default function ConversationScreen() {
       Animated.spring(modalScale, { toValue: 1, useNativeDriver: true, friction: 6 }),
       Animated.timing(modalOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
     ]).start()
-  }
+  }, [friend?.photoUrl])
 
-  const closePhoto = () => {
+  const closePhoto = useCallback(() => {
     Animated.parallel([
       Animated.timing(modalScale, { toValue: 0.8, duration: 150, useNativeDriver: true }),
       Animated.timing(modalOpacity, { toValue: 0, duration: 150, useNativeDriver: true }),
     ]).start(() => setPhotoModal(false))
-  }
+  }, [])
 
   return (
     <View style={s.root}>
-      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-
-        {/* Header */}
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
         <View style={s.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={s.headerBtn}>
             <MaterialIcons name="chevron-left" size={26} color={ACCENT} />
@@ -248,92 +357,106 @@ export default function ConversationScreen() {
           <View style={s.headerBtn} />
         </View>
 
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
-        >
-          <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss}>
-            {loading && messages.length === 0 ? (
-              <View style={s.list}>
-                <View style={s.datePill}><Text style={s.datePillTxt}>TODAY</Text></View>
-                <SkeletonBubble align="flex-start" width={160} />
-                <SkeletonBubble align="flex-start" width={110} />
-                <SkeletonBubble align="flex-end" width={140} />
-                <SkeletonBubble align="flex-end" width={90} />
-                <SkeletonBubble align="flex-start" width={180} />
-              </View>
-            ) : (
-              <FlatList
-                ref={listRef}
-                data={messages}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={s.list}
-                style={{ backgroundColor: BG }}
-                keyboardShouldPersistTaps="handled"
-                keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
-                onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
-                ListHeaderComponent={
+        {loading && messages.length === 0 ? (
+          <View style={s.list}>
+            <View style={s.datePill}><Text style={s.datePillTxt}>TODAY</Text></View>
+            <SkeletonBubble align="flex-start" width={160} />
+            <SkeletonBubble align="flex-start" width={110} />
+            <SkeletonBubble align="flex-end" width={140} />
+            <SkeletonBubble align="flex-end" width={90} />
+            <SkeletonBubble align="flex-start" width={180} />
+          </View>
+        ) : (
+          <FlatList
+            ref={listRef}
+            data={listItems}
+            keyExtractor={(item) => isSeparator(item) ? `sep-${item.date}` : item.id}
+            contentContainerStyle={s.list}
+            style={s.flatList}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            scrollEventThrottle={16}
+            onScroll={handleScroll}
+            renderItem={({ item, index }) => {
+              if (isSeparator(item)) {
+                return (
                   <View style={s.datePill}>
-                    <Text style={s.datePillTxt}>TODAY</Text>
+                    <Text style={s.datePillTxt}>{item.label}</Text>
                   </View>
-                }
-                renderItem={({ item, index }) => {
-                  const isOwn = item.senderUserId !== friend?.userId
-                  const prev = index > 0 ? messages[index - 1] : null
-                  const next = index < messages.length - 1 ? messages[index + 1] : null
-                  const prevSame = prev && prev.senderUserId === item.senderUserId
-                  const nextSame = next && next.senderUserId === item.senderUserId
-                  const showName = !isOwn && !prevSame
-                  const showTime = !nextSame
-                  const showAvatar = !isOwn && !nextSame
+                )
+              }
 
-                  return (
-                    <View style={[s.msgGroup, isOwn ? s.msgGroupOwn : s.msgGroupTheir]}>
-                      {!isOwn && (
-                        <View style={s.avatarCol}>
-                          {showAvatar
-                            ? <Avatar uri={friend?.photoUrl} username={friend?.username} size={32} />
-                            : <View style={{ width: 32 }} />
-                          }
-                        </View>
-                      )}
+              const msg = item as ChatMessage
+              const isOwn = msg.senderUserId !== friend?.userId
+              const prev = index > 0 && !isSeparator(listItems[index - 1]) ? listItems[index - 1] as ChatMessage : null
+              const next = index < listItems.length - 1 && !isSeparator(listItems[index + 1]) ? listItems[index + 1] as ChatMessage : null
+              const prevSame = prev && prev.senderUserId === msg.senderUserId
+              const nextSame = next && next.senderUserId === msg.senderUserId
+              const showName = !isOwn && !prevSame
+              const showTime = !nextSame
+              const showAvatar = !isOwn && !nextSame
 
-                      <View style={[s.msgCol, isOwn ? { alignItems: 'flex-end' } : { alignItems: 'flex-start' }]}>
-                        {showName && <Text style={s.senderName}>{friend?.username}</Text>}
-                        <Pressable
-                          disabled={item.status !== 'failed'}
-                          onPress={() => retryMessage(item)}
-                          style={[s.bubble, isOwn ? s.bubbleOwn : s.bubbleTheir, item.status === 'failed' && s.bubbleFailed, item.status === 'sending' && s.bubbleSending]}
-                        >
-                          <Text style={[s.bubbleTxt, isOwn ? s.bubbleTxtOwn : s.bubbleTxtTheir]}>{item.body}</Text>
-                        </Pressable>
-                        {item.status === 'failed' ? (
-                          <Text style={s.retryLabel}>Tap to retry</Text>
-                        ) : showTime ? (
-                          <View style={[s.timeRow, isOwn ? s.timeLabelOwn : s.timeLabelTheir]}>
-                            <Text style={s.timeLabel}>{formatTime(new Date(item.createdAt))}</Text>
-                            {isOwn && <StatusTicks status={item.status} />}
-                          </View>
-                        ) : null}
-                      </View>
+              return (
+                <View style={[s.msgGroup, isOwn ? s.msgGroupOwn : s.msgGroupTheir]}>
+                  {!isOwn && (
+                    <View style={s.avatarCol}>
+                      {showAvatar
+                        ? <Avatar uri={friend?.photoUrl} username={friend?.username} size={32} />
+                        : <View style={{ width: 32 }} />
+                      }
                     </View>
-                  )
-                }}
-              />
-            )}
-          </Pressable>
+                  )}
 
-          {/* Input */}
-          <View style={s.inputArea}>
+                  <View style={[s.msgCol, isOwn ? { alignItems: 'flex-end' } : { alignItems: 'flex-start' }]}>
+                    {showName && <Text style={s.senderName}>{friend?.username}</Text>}
+                    <Pressable
+                      disabled={msg.status !== 'failed'}
+                      onPress={() => retryMessage(msg)}
+                      style={[s.bubble, isOwn ? s.bubbleOwn : s.bubbleTheir, msg.status === 'failed' && s.bubbleFailed, msg.status === 'sending' && s.bubbleSending]}
+                    >
+                      <Text style={[s.bubbleTxt, isOwn ? s.bubbleTxtOwn : s.bubbleTxtTheir]}>{msg.body}</Text>
+                    </Pressable>
+                    {msg.status === 'failed' ? (
+                      <Text style={s.retryLabel}>Tap to retry</Text>
+                    ) : showTime ? (
+                      <View style={[s.timeRow, isOwn ? s.timeLabelOwn : s.timeLabelTheir]}>
+                        <Text style={s.timeLabel}>{formatTime(new Date(msg.createdAt))}</Text>
+                        {isOwn && <StatusTicks status={msg.status} />}
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
+              )
+            }}
+          />
+        )}
+
+        {showNewMessagesBadge && (
+          <TouchableOpacity style={s.newMessagesBadge} onPress={scrollToNewMessages}>
+            <MaterialIcons name="arrow-downward" size={18} color="#fff" />
+            <Text style={s.newMessagesText}>{newMessagesCount} new {newMessagesCount === 1 ? 'message' : 'messages'}</Text>
+          </TouchableOpacity>
+        )}
+
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={0}
+        >
+          <View style={[s.inputArea, { paddingBottom: insets.bottom || 10 }]}>
             <View style={s.inputPill}>
               <TextInput
-                style={s.input}
+                style={[s.input, { height: inputHeight }]}
                 placeholder="Type a message..."
                 placeholderTextColor="rgba(255,255,255,0.3)"
                 value={newMessage}
                 onChangeText={setNewMessage}
+                onContentSizeChange={(e) => {
+                  const newHeight = e.nativeEvent.contentSize.height
+                  const clamped = Math.max(MIN_COMPOSER_HEIGHT, Math.min(newHeight, MAX_COMPOSER_HEIGHT))
+                  setInputHeight(clamped)
+                }}
                 multiline
+                maxLength={2000}
               />
             </View>
             <TouchableOpacity
@@ -345,10 +468,8 @@ export default function ConversationScreen() {
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
-
       </SafeAreaView>
 
-      {/* Profile photo viewer */}
       <Modal visible={photoModal} transparent animationType="none" onRequestClose={closePhoto}>
         <Pressable style={s.modalBg} onPress={closePhoto}>
           <Animated.View style={[s.modalContent, { opacity: modalOpacity, transform: [{ scale: modalScale }] }]}>
@@ -404,6 +525,7 @@ const s = StyleSheet.create({
   datePill: { alignSelf: 'center', backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 14, paddingVertical: 4, borderRadius: 999, marginBottom: 16, marginTop: 8 },
   datePillTxt: { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.5)', letterSpacing: 0.8 },
   list: { paddingHorizontal: 20, paddingBottom: 12, paddingTop: 4 },
+  flatList: { flex: 1, backgroundColor: BG },
   msgGroup: { flexDirection: 'row', alignItems: 'flex-end', marginBottom: 3, gap: 8 },
   msgGroupTheir: { justifyContent: 'flex-start' },
   msgGroupOwn: { justifyContent: 'flex-end' },
@@ -424,10 +546,12 @@ const s = StyleSheet.create({
   timeLabelTheir: { marginLeft: 2 },
   timeLabelOwn: { marginRight: 2 },
   inputArea: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 16, paddingVertical: 10, backgroundColor: BG, gap: 10 },
-  inputPill: { flex: 1, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 26, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', paddingHorizontal: 16, paddingVertical: 4 },
-  input: { fontSize: 15, color: '#ffffff', paddingVertical: 8, maxHeight: 100 },
+  inputPill: { flex: 1, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 26, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', paddingHorizontal: 16, paddingVertical: 8 },
+  input: { fontSize: 15, color: '#ffffff', paddingVertical: 0, lineHeight: 20 },
   sendBtn: { width: 50, height: 50, borderRadius: 25, backgroundColor: ACCENT, justifyContent: 'center', alignItems: 'center', shadowColor: ACCENT, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
   sendBtnOff: { backgroundColor: 'rgba(91,127,255,0.3)', shadowOpacity: 0 },
+  newMessagesBadge: { position: 'absolute', bottom: 70, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: ACCENT, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, shadowColor: ACCENT, shadowOpacity: 0.4, shadowRadius: 8, elevation: 4 },
+  newMessagesText: { color: '#fff', fontWeight: '600', fontSize: 14 },
 
   modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center' },
   modalContent: { alignItems: 'center', gap: 16 },
