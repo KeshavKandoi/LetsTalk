@@ -139,12 +139,14 @@ export default function LoginScreen() {
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
           <View style={styles.brandBlock}>
-            <Image
-              source={require('../../assets/logo-cropped.png')}
-              style={styles.brandLogo}
-              contentFit="contain"
-              cachePolicy="memory-disk"
-            />
+            <View style={styles.brandLogoBox}>
+              <Image
+                source={require('../../assets/logo-cropped.png')}
+                style={styles.brandLogo}
+                contentFit="contain"
+                cachePolicy="memory-disk"
+              />
+            </View>
           </View>
 
           <Text style={styles.title}>Welcome back</Text>
@@ -268,7 +270,8 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 40 },
 
   brandBlock: { alignItems: 'center', marginBottom: 20 },
-  brandLogo: { width: 120, height: 100 },
+  brandLogoBox: { width: 120, height: 120, borderRadius: 30, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.03)' },
+  brandLogo: { width: 80, height: 80 },
   brandName: { fontSize: 18, fontWeight: '800', color: '#fff', marginTop: 8 },
 
   title: { fontSize: 26, fontWeight: '800', color: '#fff', marginBottom: 4, textAlign: 'center' },
