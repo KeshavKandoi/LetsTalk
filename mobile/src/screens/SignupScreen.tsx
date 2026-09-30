@@ -111,12 +111,14 @@ export default function SignupScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.brandBlock}>
-            <Image
-              source={require('../../assets/logo-cropped.png')}
-              style={styles.brandLogo}
-              contentFit="contain"
-              cachePolicy="memory-disk"
-            />
+            <View style={styles.brandLogoBox}>
+              <Image
+                source={require('../../assets/logo-cropped.png')}
+                style={styles.brandLogo}
+                contentFit="contain"
+                cachePolicy="memory-disk"
+              />
+            </View>
           </View>
 
           <Text style={styles.title}>Create account</Text>
@@ -347,7 +349,8 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 40 },
 
   brandBlock: { alignItems: 'center', marginBottom: 16 },
-  brandLogo: { width: 120, height: 100 },
+  brandLogoBox: { width: 120, height: 120, borderRadius: 30, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.03)' },
+  brandLogo: { width: 80, height: 80 },
   brandName: { fontSize: 18, fontWeight: '800', color: '#fff', marginTop: 8 },
 
   title: { fontSize: 26, fontWeight: '800', color: '#fff', marginBottom: 4, textAlign: 'center' },
