@@ -441,6 +441,9 @@ export default function ConversationScreen() {
                 maxLength={2000}
                 scrollEnabled={inputHeight >= MAX_COMPOSER_HEIGHT}
               />
+              <TouchableOpacity style={s.pillIcon} onPress={() => {}} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}>
+                <MaterialIcons name="attach-file" size={20} color="rgba(255,255,255,0.55)" style={{ transform: [{ rotate: '45deg' }] }} />
+              </TouchableOpacity>
               <TouchableOpacity style={s.pillIcon} onPress={() => {}} hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}>
                 <MaterialIcons name="photo-camera" size={20} color="rgba(255,255,255,0.55)" />
               </TouchableOpacity>
