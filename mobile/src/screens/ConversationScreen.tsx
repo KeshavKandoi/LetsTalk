@@ -13,7 +13,7 @@ import { subscribeToUserChannel } from '../lib/realtime'
 
 const ACCENT = '#5B7FFF'
 const BG = '#0a0a0a'
-const MIN_COMPOSER_HEIGHT = 22
+const MIN_COMPOSER_HEIGHT = 20
 const MAX_COMPOSER_HEIGHT = 120
 
 type MessageStatus = 'sending' | 'sent' | 'delivered' | 'read' | 'failed'
@@ -349,7 +349,7 @@ export default function ConversationScreen() {
               ref={listRef}
               data={listItems}
               keyExtractor={(item) => isSeparator(item) ? `sep-${item.date}` : item.id}
-              contentContainerStyle={s.list}
+              contentContainerStyle={s.listContent}
               style={s.flatList}
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="on-drag"
@@ -506,6 +506,7 @@ const s = StyleSheet.create({
   datePillTxt: { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.5)', letterSpacing: 0.8 },
   list: { paddingHorizontal: 20, paddingVertical: 12 },
   listRegion: { flex: 1 },
+  listContent: { paddingHorizontal: 20, paddingVertical: 12, flexGrow: 1, justifyContent: 'flex-end' },
   flatList: { flex: 1, backgroundColor: BG },
   msgGroup: { flexDirection: 'row', alignItems: 'flex-end', marginBottom: 3, gap: 8 },
   msgGroupTheir: { justifyContent: 'flex-start' },
@@ -527,8 +528,8 @@ const s = StyleSheet.create({
   timeLabelTheir: { marginLeft: 2 },
   timeLabelOwn: { marginRight: 2 },
   inputArea: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 16, paddingVertical: 10, backgroundColor: BG, gap: 10 },
-  inputPill: { flex: 1, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 26, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', paddingHorizontal: 16, paddingVertical: 13 },
-  input: { fontSize: 15, color: '#ffffff', paddingVertical: 0, lineHeight: 20, textAlignVertical: 'top' },
+  inputPill: { flex: 1, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 26, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', paddingHorizontal: 16, paddingVertical: 14 },
+  input: { fontSize: 15, color: '#ffffff', paddingVertical: 0, paddingTop: 0, paddingBottom: 0, lineHeight: 20, textAlignVertical: 'top', includeFontPadding: false },
   sendBtn: { width: 48, height: 48, borderRadius: 24, backgroundColor: ACCENT, justifyContent: 'center', alignItems: 'center', shadowColor: ACCENT, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
   sendBtnOff: { backgroundColor: 'rgba(91,127,255,0.3)', shadowOpacity: 0 },
   newMessagesBadge: { position: 'absolute', bottom: 12, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: ACCENT, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, shadowColor: ACCENT, shadowOpacity: 0.4, shadowRadius: 8, elevation: 4 },
