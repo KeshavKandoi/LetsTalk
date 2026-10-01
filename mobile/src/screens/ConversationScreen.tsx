@@ -1,8 +1,8 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import {
   Alert, StyleSheet, Text, TextInput,
-  TouchableOpacity, View, FlatList, Image, KeyboardAvoidingView, Platform, AppState,
-  Keyboard, Pressable, Modal, Animated, NativeScrollEvent, NativeSyntheticEvent,
+  TouchableOpacity, View, FlatList, Image, Keyboard, KeyboardAvoidingView, Platform, AppState,
+  Pressable, Modal, Animated, NativeScrollEvent, NativeSyntheticEvent,
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { MaterialIcons } from '@expo/vector-icons'
@@ -136,7 +136,6 @@ export default function ConversationScreen() {
   const [inputHeight, setInputHeight] = useState(MIN_COMPOSER_HEIGHT)
   const [loading, setLoading] = useState(true)
   const [photoModal, setPhotoModal] = useState(false)
-  const [keyboardOpen, setKeyboardOpen] = useState(false)
   const [newMessagesCount, setNewMessagesCount] = useState(0)
   const [friendStatus, setFriendStatus] = useState<{ isOnline: boolean; lastSeenAt: string | null }>({
     isOnline: friend?.isOnline ?? false,
@@ -277,11 +276,13 @@ export default function ConversationScreen() {
     }
   }, [friend?.userId])
 
+  const [kbVisible, setKbVisible] = useState(false)
+
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow'
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide'
-    const show = Keyboard.addListener(showEvent, () => setKeyboardOpen(true))
-    const hide = Keyboard.addListener(hideEvent, () => setKeyboardOpen(false))
+    const show = Keyboard.addListener(showEvent, () => setKbVisible(true))
+    const hide = Keyboard.addListener(hideEvent, () => setKbVisible(false))
     return () => {
       show.remove()
       hide.remove()
@@ -332,11 +333,7 @@ export default function ConversationScreen() {
           <View style={s.headerBtn} />
         </View>
 
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior="padding"
-          keyboardVerticalOffset={0}
-        >
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" keyboardVerticalOffset={0} enabled={kbVisible}>
           <View style={s.listRegion}>
           {loading && messages.length === 0 ? (
             <View style={s.list}>
@@ -424,7 +421,7 @@ export default function ConversationScreen() {
 
           </View>
 
-          <View style={[s.inputArea, { paddingBottom: keyboardOpen ? 10 : Math.max(insets.bottom, 10) }]}>
+          <View style={[s.inputArea, { paddingBottom: Math.max(insets.bottom, 10) }]}>
             <View style={s.inputPill}>
               <TextInput
                 style={[s.input, { height: Math.max(inputHeight, MIN_COMPOSER_HEIGHT) }]}
