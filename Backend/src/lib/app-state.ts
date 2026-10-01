@@ -27,6 +27,8 @@ import type {
 } from '@frontend/lib/app-types'
 import { auth } from './auth'
 import { db } from './db'
+import { markMessagesDelivered, markMessagesRead } from './message-status'
+import { notifyNewMessage } from './notifications'
 import { UserAgent } from './agents/user-agent'
 import {
   connectRequestRejection,
@@ -1807,6 +1809,12 @@ export async function sendConversationMessage(input: {
     })
   } catch {}
 
+  void notifyNewMessage({
+    senderUserId: session.user.id,
+    recipientUserId: friendUserId,
+    friendRequestId: requestRecord.id,
+  })
+
   return {
     success: true,
     message: messagePayload,
@@ -2174,52 +2182,12 @@ export async function getGoogleMapsBrowserConfig() {
 
 export async function markMessageAsDelivered(input: { messageId: string; viewerUserId?: string }) {
   const session = input.viewerUserId ? { user: { id: input.viewerUserId } } : await requireCurrentSession()
-  const [message] = await db
-    .select()
-    .from(friendMessage)
-    .where(eq(friendMessage.id, input.messageId))
-    .limit(1)
-  
-  if (!message) throw new Error('Message not found')
-  if (message.recipientUserId !== session.user.id) {
-    throw new Error('Cannot mark others\' messages as delivered')
-  }
-  
-  await db
-    .update(friendMessage)
-    .set({
-      status: 'delivered',
-      updatedAt: new Date(),
-    })
-    .where(eq(friendMessage.id, input.messageId))
-  
-  return { success: true }
+  return markMessagesDelivered({ viewerUserId: session.user.id, messageIds: [input.messageId] })
 }
 
 export async function markMessageAsRead(input: { messageId: string; viewerUserId?: string }) {
   const session = input.viewerUserId ? { user: { id: input.viewerUserId } } : await requireCurrentSession()
-  const [message] = await db
-    .select()
-    .from(friendMessage)
-    .where(eq(friendMessage.id, input.messageId))
-    .limit(1)
-  
-  if (!message) throw new Error('Message not found')
-  if (message.recipientUserId !== session.user.id) {
-    throw new Error('Cannot mark others\' messages as read')
-  }
-  
-  const now = new Date()
-  await db
-    .update(friendMessage)
-    .set({
-      status: 'read',
-      readAt: now,
-      updatedAt: now,
-    })
-    .where(eq(friendMessage.id, input.messageId))
-  
-  return { success: true }
+  return markMessagesRead({ viewerUserId: session.user.id, messageIds: [input.messageId] })
 }
 
 export async function updateUserOnlineStatus(input: { isOnline: boolean }) {
