@@ -421,8 +421,11 @@ export default function ConversationScreen() {
 
           </View>
 
-          <View style={[s.inputArea, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+          <View style={[s.inputArea, { paddingBottom: Math.max(insets.bottom, 10) + 8 }]}>
             <View style={s.inputPill}>
+              <TouchableOpacity style={s.pillIcon} onPress={() => {}} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 8 }}>
+                <MaterialIcons name="emoji-emotions" size={22} color="rgba(255,255,255,0.55)" />
+              </TouchableOpacity>
               <TextInput
                 style={[s.input, { height: Math.max(inputHeight, MIN_COMPOSER_HEIGHT) }]}
                 placeholder="Type a message..."
@@ -438,13 +441,16 @@ export default function ConversationScreen() {
                 maxLength={2000}
                 scrollEnabled={inputHeight >= MAX_COMPOSER_HEIGHT}
               />
+              <TouchableOpacity style={s.pillIcon} onPress={() => {}} hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}>
+                <MaterialIcons name="photo-camera" size={20} color="rgba(255,255,255,0.55)" />
+              </TouchableOpacity>
             </View>
             <TouchableOpacity
-              style={[s.sendBtn, !newMessage.trim() && s.sendBtnOff]}
-              onPress={sendMessage}
-              disabled={!newMessage.trim()}
+              style={s.sendBtn}
+              onPress={newMessage.trim() ? sendMessage : () => {}}
+              activeOpacity={0.8}
             >
-              <MaterialIcons name="arrow-upward" size={22} color="#fff" />
+              <MaterialIcons name={newMessage.trim() ? 'arrow-upward' : 'mic'} size={22} color="#fff" />
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -527,10 +533,11 @@ const s = StyleSheet.create({
   timeLabel: { fontSize: 10, color: 'rgba(255,255,255,0.3)' },
   timeLabelTheir: { marginLeft: 2 },
   timeLabelOwn: { marginRight: 2 },
-  inputArea: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 16, paddingVertical: 10, backgroundColor: BG, gap: 10 },
-  inputPill: { flex: 1, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 26, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', paddingHorizontal: 16, paddingVertical: 14 },
-  input: { fontSize: 15, color: '#ffffff', paddingVertical: 0, paddingTop: 0, paddingBottom: 0, lineHeight: 20, textAlignVertical: 'top', includeFontPadding: false },
+  inputArea: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 14, paddingVertical: 10, backgroundColor: BG, gap: 8 },
+  inputPill: { flex: 1, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 26, borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)', paddingLeft: 14, paddingRight: 14, paddingVertical: 14, flexDirection: 'row', alignItems: 'flex-end', gap: 12 },
+  input: { flex: 1, fontSize: 15, color: '#ffffff', paddingVertical: 0, paddingTop: 0, paddingBottom: 0, lineHeight: 20, textAlignVertical: 'top', includeFontPadding: false },
   sendBtn: { width: 48, height: 48, borderRadius: 24, backgroundColor: ACCENT, justifyContent: 'center', alignItems: 'center', shadowColor: ACCENT, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
+  pillIcon: { width: 22, height: 20, justifyContent: 'center', alignItems: 'center' },
   sendBtnOff: { backgroundColor: 'rgba(91,127,255,0.3)', shadowOpacity: 0 },
   newMessagesBadge: { position: 'absolute', bottom: 12, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: ACCENT, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, shadowColor: ACCENT, shadowOpacity: 0.4, shadowRadius: 8, elevation: 4 },
   newMessagesText: { color: '#fff', fontWeight: '600', fontSize: 14 },
