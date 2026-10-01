@@ -29,7 +29,7 @@
       ],
       "package": "com.keshavkandoi.letstalk",
       "usesCleartextTraffic": true,
-      "softwareKeyboardLayoutMode": "pan"
+      "softwareKeyboardLayoutMode": "resize"
     },
     "web": {
       "favicon": "./assets/favicon.png"
