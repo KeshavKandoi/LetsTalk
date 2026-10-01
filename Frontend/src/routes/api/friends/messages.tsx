@@ -75,32 +75,47 @@ export const Route = createFileRoute('/api/friends/messages')({
       POST: async ({ request }) => {
         try {
           const session = await auth.api.getSession({ headers: (() => { const h = new Headers(Object.fromEntries(request.headers.entries())); const t = (request.headers.get('authorization') || request.headers.get('Authorization') || '').replace('Bearer ',''); if(t) h.set('cookie', 'better-auth.session_token=' + t); return h; })() })
-          if (!session) return json({ error: 'Unauthorized' }, 401)
+          if (!session) {
+            console.log('[CHAT_DEBUG][SEND] authentication failed (no session)')
+            console.log('[CHAT_DEBUG][LOAD] authentication failed (no session)')
+            return json({ error: 'Unauthorized' }, 401)
+          }
 
           const parsed = await parseRequest(request)
           if (parsed instanceof Response) return parsed
 
-          const result = parsed.action === 'send'
-            ? await sendConversationMessage({
-                friendUserId: parsed.friendUserId ?? '',
-                body: parsed.body ?? '',
-                messageType: parsed.messageType,
-                durationMs: parsed.durationMs,
-                file: parsed.file,
-                viewerUserId: session.user.id,
-              })
-            : await getConversationMessages({
-                friendUserId: parsed.friendUserId ?? '',
-                viewerUserId: session.user.id,
-              })
-
-          return json(result)
+          if (parsed.action === 'send') {
+            console.log(`[CHAT_DEBUG][SEND] send started authenticatedUserId=${session.user.id} recipientUserId=${parsed.friendUserId} messageType=${parsed.messageType || 'text'}`)
+            const result = await sendConversationMessage({
+              friendUserId: parsed.friendUserId ?? '',
+              body: parsed.body ?? '',
+              messageType: parsed.messageType,
+              durationMs: parsed.durationMs,
+              file: parsed.file,
+              viewerUserId: session.user.id,
+            })
+            console.log(`[CHAT_DEBUG][SEND] returned response status=200 generatedMessageId=${result.message.id}`)
+            return json(result)
+          } else {
+            console.log(`[CHAT_DEBUG][LOAD] load started authenticatedUserId=${session.user.id} friendUserId=${parsed.friendUserId}`)
+            const result = await getConversationMessages({
+              friendUserId: parsed.friendUserId ?? '',
+              viewerUserId: session.user.id,
+            })
+            console.log(`[CHAT_DEBUG][LOAD] load completed status=200 rowCount=${result.messages.length}`)
+            return json(result)
+          }
         } catch (e) {
-          if (e instanceof ChatMediaError) return json({ error: e.message }, e.status)
+          if (e instanceof ChatMediaError) {
+            console.error(`[CHAT_DEBUG][SEND] send failed status=${e.status} message=${e.message}`)
+            return json({ error: e.message }, e.status)
+          }
           const message = e instanceof Error ? e.message : 'Invalid message.'
+          console.error(`[CHAT_DEBUG][SEND] send failed error=${message}`)
           return json({ error: message }, 400)
         }
       },
     },
   },
 })
+
