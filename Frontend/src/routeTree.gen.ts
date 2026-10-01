@@ -35,6 +35,7 @@ import { Route as ApiPlacesEndConnectionRouteImport } from './routes/api/places/
 import { Route as ApiPlacesDeleteAccountRouteImport } from './routes/api/places/delete-account'
 import { Route as ApiPlacesConnectRequestRouteImport } from './routes/api/places/connect-request'
 import { Route as ApiPlacesChangePasswordRouteImport } from './routes/api/places/change-password'
+import { Route as ApiNotificationsDeviceRouteImport } from './routes/api/notifications/device'
 import { Route as ApiFriendsRespondRouteImport } from './routes/api/friends/respond'
 import { Route as ApiFriendsRequestRouteImport } from './routes/api/friends/request'
 import { Route as ApiFriendsOnlineStatusRouteImport } from './routes/api/friends/online-status'
@@ -181,6 +182,11 @@ const ApiPlacesChangePasswordRoute = ApiPlacesChangePasswordRouteImport.update({
   path: '/api/places/change-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiNotificationsDeviceRoute = ApiNotificationsDeviceRouteImport.update({
+  id: '/api/notifications/device',
+  path: '/api/notifications/device',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiFriendsRespondRoute = ApiFriendsRespondRouteImport.update({
   id: '/api/friends/respond',
   path: '/api/friends/respond',
@@ -271,6 +277,7 @@ export interface FileRoutesByFullPath {
   '/api/friends/online-status': typeof ApiFriendsOnlineStatusRoute
   '/api/friends/request': typeof ApiFriendsRequestRoute
   '/api/friends/respond': typeof ApiFriendsRespondRoute
+  '/api/notifications/device': typeof ApiNotificationsDeviceRoute
   '/api/places/change-password': typeof ApiPlacesChangePasswordRoute
   '/api/places/connect-request': typeof ApiPlacesConnectRequestRoute
   '/api/places/delete-account': typeof ApiPlacesDeleteAccountRoute
@@ -313,6 +320,7 @@ export interface FileRoutesByTo {
   '/api/friends/online-status': typeof ApiFriendsOnlineStatusRoute
   '/api/friends/request': typeof ApiFriendsRequestRoute
   '/api/friends/respond': typeof ApiFriendsRespondRoute
+  '/api/notifications/device': typeof ApiNotificationsDeviceRoute
   '/api/places/change-password': typeof ApiPlacesChangePasswordRoute
   '/api/places/connect-request': typeof ApiPlacesConnectRequestRoute
   '/api/places/delete-account': typeof ApiPlacesDeleteAccountRoute
@@ -356,6 +364,7 @@ export interface FileRoutesById {
   '/api/friends/online-status': typeof ApiFriendsOnlineStatusRoute
   '/api/friends/request': typeof ApiFriendsRequestRoute
   '/api/friends/respond': typeof ApiFriendsRespondRoute
+  '/api/notifications/device': typeof ApiNotificationsDeviceRoute
   '/api/places/change-password': typeof ApiPlacesChangePasswordRoute
   '/api/places/connect-request': typeof ApiPlacesConnectRequestRoute
   '/api/places/delete-account': typeof ApiPlacesDeleteAccountRoute
@@ -400,6 +409,7 @@ export interface FileRouteTypes {
     | '/api/friends/online-status'
     | '/api/friends/request'
     | '/api/friends/respond'
+    | '/api/notifications/device'
     | '/api/places/change-password'
     | '/api/places/connect-request'
     | '/api/places/delete-account'
@@ -442,6 +452,7 @@ export interface FileRouteTypes {
     | '/api/friends/online-status'
     | '/api/friends/request'
     | '/api/friends/respond'
+    | '/api/notifications/device'
     | '/api/places/change-password'
     | '/api/places/connect-request'
     | '/api/places/delete-account'
@@ -484,6 +495,7 @@ export interface FileRouteTypes {
     | '/api/friends/online-status'
     | '/api/friends/request'
     | '/api/friends/respond'
+    | '/api/notifications/device'
     | '/api/places/change-password'
     | '/api/places/connect-request'
     | '/api/places/delete-account'
@@ -527,6 +539,7 @@ export interface RootRouteChildren {
   ApiFriendsOnlineStatusRoute: typeof ApiFriendsOnlineStatusRoute
   ApiFriendsRequestRoute: typeof ApiFriendsRequestRoute
   ApiFriendsRespondRoute: typeof ApiFriendsRespondRoute
+  ApiNotificationsDeviceRoute: typeof ApiNotificationsDeviceRoute
   ApiPlacesChangePasswordRoute: typeof ApiPlacesChangePasswordRoute
   ApiPlacesConnectRequestRoute: typeof ApiPlacesConnectRequestRoute
   ApiPlacesDeleteAccountRoute: typeof ApiPlacesDeleteAccountRoute
@@ -736,6 +749,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPlacesChangePasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/notifications/device': {
+      id: '/api/notifications/device'
+      path: '/api/notifications/device'
+      fullPath: '/api/notifications/device'
+      preLoaderRoute: typeof ApiNotificationsDeviceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/friends/respond': {
       id: '/api/friends/respond'
       path: '/api/friends/respond'
@@ -855,6 +875,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiFriendsOnlineStatusRoute: ApiFriendsOnlineStatusRoute,
   ApiFriendsRequestRoute: ApiFriendsRequestRoute,
   ApiFriendsRespondRoute: ApiFriendsRespondRoute,
+  ApiNotificationsDeviceRoute: ApiNotificationsDeviceRoute,
   ApiPlacesChangePasswordRoute: ApiPlacesChangePasswordRoute,
   ApiPlacesConnectRequestRoute: ApiPlacesConnectRequestRoute,
   ApiPlacesDeleteAccountRoute: ApiPlacesDeleteAccountRoute,
