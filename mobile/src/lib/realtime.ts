@@ -60,29 +60,62 @@ function isStatusEvent(value: unknown): value is MessageStatusEvent {
 export function subscribeToUserChannel(userId: string, handlers: RealtimeHandlers): (() => void) | null {
   const supabase = getClient()
   if (!supabase || !userId) return null
+  const channelName = `user:${userId}`
 
   let entry = subscriptions.get(userId)
   if (!entry) {
+    console.log(`[CHAT_DEBUG][REALTIME] subscription started channel=${channelName}`)
     const handlerSet = new Set<RealtimeHandlers>()
-    const channel = supabase.channel(`user:${userId}`)
+    const channel = supabase.channel(channelName)
+
     channel.on('broadcast', { event: 'new_message' }, ({ payload }) => {
-      if (isChatMessage(payload)) handlerSet.forEach((h) => h.onNewMessage?.(payload))
+      console.log(`[CHAT_DEBUG][REALTIME] received event=new_message channel=${channelName} receivedMessageId=${payload?.id}`)
+      const valid = isChatMessage(payload)
+      console.log(`[CHAT_DEBUG][REALTIME] payload validation result=${valid ? 'success' : 'failed'}`)
+      if (valid) {
+        handlerSet.forEach((h) => {
+          h.onNewMessage?.(payload)
+          console.log(`[CHAT_DEBUG][REALTIME] message state updated messageId=${payload.id}`)
+        })
+      }
     })
+
     channel.on('broadcast', { event: 'message_status' }, ({ payload }) => {
-      if (isStatusEvent(payload)) handlerSet.forEach((h) => h.onMessageStatus?.(payload))
+      console.log(`[CHAT_DEBUG][REALTIME] received event=message_status channel=${channelName}`)
+      const valid = isStatusEvent(payload)
+      console.log(`[CHAT_DEBUG][REALTIME] status payload validation result=${valid ? 'success' : 'failed'}`)
+      if (valid) {
+        handlerSet.forEach((h) => h.onMessageStatus?.(payload))
+      }
     })
-    channel.subscribe()
+
+    channel.subscribe((status, err) => {
+      console.log(`[CHAT_DEBUG][REALTIME] channel=${channelName} subscription status=${status}`, err ? err : '')
+      if (status === 'SUBSCRIBED') {
+        console.log(`[CHAT_DEBUG][REALTIME] SUBSCRIBED channel=${channelName}`)
+      } else if (status === 'CHANNEL_ERROR') {
+        console.error(`[CHAT_DEBUG][REALTIME] CHANNEL_ERROR channel=${channelName}`, err)
+      } else if (status === 'TIMED_OUT') {
+        console.error(`[CHAT_DEBUG][REALTIME] TIMED_OUT channel=${channelName}`)
+      } else if (status === 'CLOSED') {
+        console.log(`[CHAT_DEBUG][REALTIME] CLOSED channel=${channelName}`)
+      }
+    })
+
     entry = { channel, handlers: handlerSet }
     subscriptions.set(userId, entry)
   }
+
   entry.handlers.add(handlers)
   const current = entry
 
   return () => {
     current.handlers.delete(handlers)
     if (current.handlers.size === 0) {
+      console.log(`[CHAT_DEBUG][REALTIME] CLOSED channel=${channelName} (unsubscribing)`)
       subscriptions.delete(userId)
       supabase.removeChannel(current.channel)
     }
   }
 }
+
