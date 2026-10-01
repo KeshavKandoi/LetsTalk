@@ -4,6 +4,7 @@ import { friendMessage, user, userDevice, userProfile } from './db/schema'
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send'
 const TOKEN_PATTERN = /^Expo(nent)?PushToken\[[^\]\s]+\]$/
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const UNREAD = ['sent', 'pending', 'delivered']
 const CHUNK_SIZE = 100
 const REQUEST_TIMEOUT_MS = 8000
@@ -12,17 +13,18 @@ type PushMessage = { to: string; data: Record<string, unknown>; priority: 'high'
 type PushTicket = { status: string; details?: { error?: string } }
 
 export function isValidPushToken(token: unknown): token is string {
-  return typeof token === 'string' && token.length <= 200 && TOKEN_PATTERN.test(token)
+  return typeof token === 'string' && token.length > 0 && token.length <= 200 && (TOKEN_PATTERN.test(token) || UUID_PATTERN.test(token))
 }
 
-export async function registerDevice(input: { userId: string; pushToken: string }) {
+export async function registerDevice(input: { userId: string; pushToken: string; platform?: string }) {
   const now = new Date()
+  const platform = input.platform ?? 'android'
   await db
     .insert(userDevice)
-    .values({ id: crypto.randomUUID(), userId: input.userId, pushToken: input.pushToken, platform: 'android', createdAt: now, updatedAt: now })
+    .values({ id: crypto.randomUUID(), userId: input.userId, pushToken: input.pushToken, platform, createdAt: now, updatedAt: now })
     .onConflictDoUpdate({
       target: userDevice.pushToken,
-      set: { userId: input.userId, platform: 'android', updatedAt: now },
+      set: { userId: input.userId, platform, updatedAt: now },
     })
 }
 
@@ -40,6 +42,7 @@ function previewOf(row: { body: string; messageType: string }) {
 async function sendChunk(chunk: PushMessage[]) {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+  console.log(`[CHAT_DEBUG][PUSH] Expo push request started chunkCount=${chunk.length}`)
   try {
     const res = await fetch(EXPO_PUSH_URL, {
       method: 'POST',
@@ -51,13 +54,29 @@ async function sendChunk(chunk: PushMessage[]) {
       body: JSON.stringify(chunk),
       signal: controller.signal,
     })
-    if (!res.ok) return
-    const json = (await res.json()) as { data?: PushTicket[] }
+    console.log(`[CHAT_DEBUG][PUSH] Expo HTTP status=${res.status}`)
+    if (!res.ok) {
+      const text = await res.text().catch(() => 'No response body')
+      console.error(`[CHAT_DEBUG][PUSH] Expo HTTP error status=${res.status} body=${text.slice(0, 300)}`)
+      return
+    }
+    const json = (await res.json()) as { data?: PushTicket[]; errors?: unknown[] }
+    if (json.errors) {
+      console.error('[CHAT_DEBUG][PUSH] Expo API errors:', JSON.stringify(json.errors).slice(0, 300))
+    }
     const dead: string[] = []
     json.data?.forEach((ticket, index) => {
-      if (ticket.status === 'error' && ticket.details?.error === 'DeviceNotRegistered') dead.push(chunk[index].to)
+      console.log(`[CHAT_DEBUG][PUSH] Expo ticket status=${ticket.status}${ticket.details?.error ? ` error=${ticket.details.error}` : ''}`)
+      if (ticket.status === 'error' && ticket.details?.error === 'DeviceNotRegistered') {
+        dead.push(chunk[index].to)
+      }
     })
-    if (dead.length > 0) await db.delete(userDevice).where(inArray(userDevice.pushToken, dead))
+    if (dead.length > 0) {
+      console.log(`[CHAT_DEBUG][PUSH] Removing ${dead.length} dead push tokens`)
+      await db.delete(userDevice).where(inArray(userDevice.pushToken, dead))
+    }
+  } catch (err) {
+    console.error('[CHAT_DEBUG][PUSH] Expo push request failed:', err instanceof Error ? err.message : err)
   } finally {
     clearTimeout(timeout)
   }
@@ -68,7 +87,8 @@ export async function notifyNewMessage(input: { senderUserId: string; recipientU
     const devices = await db
       .select({ pushToken: userDevice.pushToken })
       .from(userDevice)
-      .where(and(eq(userDevice.userId, input.recipientUserId), eq(userDevice.platform, 'android')))
+      .where(eq(userDevice.userId, input.recipientUserId))
+    console.log(`[CHAT_DEBUG][PUSH] recipient device lookup count=${devices.length} recipientUserId=${input.recipientUserId}`)
     if (devices.length === 0) return
 
     const unread = and(
@@ -104,7 +124,8 @@ export async function notifyNewMessage(input: { senderUserId: string; recipientU
     for (let i = 0; i < messages.length; i += CHUNK_SIZE) {
       await sendChunk(messages.slice(i, i + CHUNK_SIZE))
     }
-  } catch {
-    console.error('[notifications] push failed')
+  } catch (err) {
+    console.error('[CHAT_DEBUG][PUSH] notifyNewMessage failed:', err instanceof Error ? err.message : err)
   }
 }
+
