@@ -1,12 +1,13 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import {
   Alert, StyleSheet, Text, TextInput,
-  TouchableOpacity, View, FlatList, Image, Keyboard, KeyboardAvoidingView, Platform, AppState,
+  TouchableOpacity, View, FlatList, Image, Keyboard, KeyboardAvoidingView, Platform, AppState, BackHandler,
   Pressable, Modal, Animated, NativeScrollEvent, NativeSyntheticEvent,
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { MaterialIcons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
+import { File as FileSystemFile } from 'expo-file-system'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useRoute, useNavigation } from '@react-navigation/native'
 import { apiFetch } from '../lib/api'
@@ -314,7 +315,7 @@ export default function ConversationScreen() {
       form.append('friendUserId', friend.userId)
       form.append('messageType', 'image')
       form.append('body', '')
-      form.append('file', { uri: asset.uri, name: asset.fileName ?? 'photo.jpg', type: asset.mimeType ?? 'image/jpeg' } as unknown as Blob)
+      form.append('file', new FileSystemFile(asset.uri))
       const res = await fetch(`${BASE_URL}/api/friends/messages`, {
         method: 'POST',
         headers: token ? { Cookie: `better-auth.session_token=${token}` } : {},
@@ -361,6 +362,15 @@ export default function ConversationScreen() {
       Alert.alert('Error', 'Could not open your photos.')
     }
   }, [sendImage])
+
+  useEffect(() => {
+    if (!emojiOpen) return
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      setEmojiOpen(false)
+      return true
+    })
+    return () => sub.remove()
+  }, [emojiOpen])
 
   const openPhoto = useCallback(() => {
     if (!friend?.photoUrl) return
@@ -518,6 +528,7 @@ export default function ConversationScreen() {
               <TextInput
                 style={[s.input, { height: Math.max(inputHeight, MIN_COMPOSER_HEIGHT) }]}
                 placeholder="Type a message..."
+                onFocus={() => setEmojiOpen(false)}
                 placeholderTextColor="rgba(255,255,255,0.3)"
                 value={newMessage}
                 onChangeText={setNewMessage}
