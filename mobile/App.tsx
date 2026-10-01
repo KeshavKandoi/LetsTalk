@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { useNetworkCheck } from './src/hooks/useNetworkCheck'
 import { NavigationContainer } from '@react-navigation/native'
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
+import { navigationRef, initNotificationListeners, flushPendingNavigation, registerForPush } from './src/lib/notifications'
+import { startReceipts } from './src/lib/receipts'
 import { getSession, signOut, hasCompletedOnboarding, establishSession, getUserScopedCache } from './src/lib/auth'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { StatusBar } from 'expo-status-bar'
@@ -44,6 +46,7 @@ export default function App() {
   const [showSplash, setShowSplash] = useState(true)
 
   const isConnected = useNetworkCheck()
+  useEffect(() => initNotificationListeners(), [])
   useEffect(() => {
     const init = async () => {
       try {
@@ -52,6 +55,8 @@ export default function App() {
         if (session?.session && session?.user?.emailVerified) {
           const user = await establishSession()
           if (user) {
+            void registerForPush()
+            startReceipts(user.id)
             await Promise.all([
               getUserScopedCache('avatar_profile_cache'),
               getUserScopedCache('landing_nearby_places'),
@@ -84,7 +89,7 @@ export default function App() {
       ) : (
         <>
           <OfflineBanner visible={!isConnected} />
-          <NavigationContainer>
+          <NavigationContainer ref={navigationRef} onReady={flushPendingNavigation} onStateChange={flushPendingNavigation}>
             <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRoute}>
               <Stack.Screen name="Landing" component={LandingScreen} />
               <Stack.Screen name="Login" component={LoginScreen} />
