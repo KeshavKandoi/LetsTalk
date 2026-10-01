@@ -18,3 +18,5 @@ todos.json
 *.keystore
 *.jks
 *.aab
+# Firebase Admin SDK service account
+letstalk-f14a7-firebase-adminsdk-fbsvc-640fbed2c9.json
