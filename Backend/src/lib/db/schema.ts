@@ -1,14 +1,5 @@
 import { relations } from 'drizzle-orm'
-import {
-  boolean,
-  integer,
-  index,
-  pgTable,
-  real,
-  text,
-  timestamp,
-  uniqueIndex,
-} from 'drizzle-orm/pg-core'
+import { boolean, integer, index, pgTable, real, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core'
 
 export const user = pgTable(
   'user',
@@ -218,6 +209,8 @@ export const friendMessage = pgTable(
     status: text('status').notNull().default('pending'),
     sentAt: timestamp('sent_at'),
     readAt: timestamp('read_at'),
+    deliveredAt: timestamp('delivered_at'),
+    clientId: text('client_id'),
     messageType: text('message_type').notNull().default('text'),
     mediaKey: text('media_key'),
     mimeType: text('mime_type'),
@@ -231,6 +224,7 @@ export const friendMessage = pgTable(
     index('friend_message_request_idx').on(table.friendRequestId),
     index('friend_message_sender_idx').on(table.senderUserId),
     index('friend_message_recipient_idx').on(table.recipientUserId),
+    index('friend_message_recipient_status_idx').on(table.recipientUserId, table.status),
   ],
 )
 
@@ -312,3 +306,21 @@ export const accountRelations = relations(account, ({ one }) => ({
 export const userProfileRelations = relations(userProfile, ({ one }) => ({
   user: one(user, { fields: [userProfile.userId], references: [user.id] }),
 }))
+
+export const userDevice = pgTable(
+  'user_device',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    pushToken: text('push_token').notNull(),
+    platform: text('platform').notNull().default('android'),
+    createdAt: timestamp('created_at').notNull(),
+    updatedAt: timestamp('updated_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('user_device_push_token_unique').on(table.pushToken),
+    index('user_device_user_idx').on(table.userId),
+  ],
+)
