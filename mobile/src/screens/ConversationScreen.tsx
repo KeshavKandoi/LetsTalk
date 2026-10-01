@@ -13,6 +13,8 @@ import { useRoute, useNavigation } from '@react-navigation/native'
 import { apiFetch } from '../lib/api'
 import { getCurrentUserId } from '../lib/auth'
 import { subscribeToUserChannel } from '../lib/realtime'
+import { ackDelivered, ackRead } from '../lib/receipts'
+import { dismissConversationNotification, setActiveConversation } from '../lib/notifications'
 
 const ACCENT = '#5B7FFF'
 const BG = '#0a0a0a'
@@ -84,10 +86,27 @@ function buildMessageList(messages: ChatMessage[]): ListItem[] {
   return ascending.reverse()
 }
 
+const GROUP_WINDOW_MS = 5 * 60 * 1000
+const STATUS_RANK: Record<MessageStatus, number> = { failed: -1, sending: 0, sent: 1, delivered: 2, read: 3 }
+
+function maxStatus(a: MessageStatus | undefined, b: MessageStatus): MessageStatus {
+  if (!a) return b
+  return (STATUS_RANK[a] ?? 1) >= (STATUS_RANK[b] ?? 1) ? a : b
+}
+
+function sameGroup(a: ChatMessage, b: ChatMessage | null, friendUserId?: string) {
+  if (!b) return false
+  if ((a.senderUserId === friendUserId) !== (b.senderUserId === friendUserId)) return false
+  return Math.abs(new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) <= GROUP_WINDOW_MS
+}
+
 function mergeMessages(current: ChatMessage[], incoming: ChatMessage[]): ChatMessage[] {
   const byId = new Map<string, ChatMessage>()
   for (const m of current) byId.set(m.id, m)
-  for (const m of incoming) byId.set(m.id, m)
+  for (const m of incoming) {
+    const existing = byId.get(m.id)
+    byId.set(m.id, existing ? { ...m, status: maxStatus(existing.status, m.status) } : m)
+  }
   return Array.from(byId.values())
 }
 
@@ -157,6 +176,7 @@ export default function ConversationScreen() {
 
   const listItems = useMemo(() => buildMessageList(messages), [messages])
   messagesRef.current = messages
+  const statusRef = useRef(new Map<string, MessageStatus>())
 
   const loadMessages = useCallback(async (silent = false) => {
     if (!friend) return
@@ -164,6 +184,15 @@ export default function ConversationScreen() {
       const data = await apiFetch('/api/friends/messages', { action: 'list', friendUserId: friend.userId })
       const incoming: ChatMessage[] = data?.messages || []
       setMessages((prev) => mergeMessages(prev, incoming))
+      const unread = incoming.filter((m) => m.senderUserId === friend.userId && m.status !== 'read')
+      if (unread.length > 0) {
+        if (AppState.currentState === 'active') {
+          void ackRead(friend.userId)
+          void dismissConversationNotification(friend.userId)
+        } else {
+          ackDelivered(unread.map((m) => m.id))
+        }
+      }
     } catch (e) {
       if (!silent) Alert.alert('Error', (e as Error).message)
     } finally {
@@ -189,7 +218,7 @@ export default function ConversationScreen() {
         if (!serverMessage) return prev.map((m) => (m.id === clientId ? { ...m, status: 'sent' as MessageStatus } : m))
         const rest = prev.filter((m) => m.id !== clientId)
         if (rest.some((m) => m.id === serverMessage.id)) return rest
-        return [...rest, { ...serverMessage, status: 'sent' as MessageStatus }]
+        return [...rest, { ...serverMessage, status: maxStatus(statusRef.current.get(serverMessage.id), 'sent') }]
       })
     } catch (e) {
       setMessages((prev) => prev.map((m) => (m.id === clientId ? { ...m, status: 'failed' as MessageStatus } : m)))
@@ -248,6 +277,16 @@ export default function ConversationScreen() {
             media: payload.media,
           }]))
           if (!atBottomRef.current) setNewMessagesCount((c) => c + 1)
+          if (AppState.currentState === 'active') {
+            void ackRead(friend.userId, [payload.id])
+            void dismissConversationNotification(friend.userId)
+          }
+        },
+        onMessageStatus: (event) => {
+          if (event.recipientUserId !== friend.userId) return
+          for (const id of event.messageIds) statusRef.current.set(id, maxStatus(statusRef.current.get(id), event.status))
+          const ids = new Set(event.messageIds)
+          setMessages((prev) => prev.map((m) => (ids.has(m.id) ? { ...m, status: maxStatus(m.status, event.status) } : m)))
         },
       })
     })
@@ -283,6 +322,13 @@ export default function ConversationScreen() {
       clearInterval(statusInterval)
       sub.remove()
     }
+  }, [friend?.userId])
+
+  useEffect(() => {
+    if (!friend?.userId) return
+    setActiveConversation(friend.userId)
+    void dismissConversationNotification(friend.userId)
+    return () => setActiveConversation(null)
   }, [friend?.userId])
 
   const [kbVisible, setKbVisible] = useState(false)
@@ -327,7 +373,7 @@ export default function ConversationScreen() {
       setMessages((prev) => {
         const rest = prev.filter((m) => m.id !== clientId)
         if (rest.some((m) => m.id === server.id)) return rest
-        return [...rest, { ...server, status: 'sent' as MessageStatus }]
+        return [...rest, { ...server, status: maxStatus(statusRef.current.get(server.id), 'sent') }]
       })
     } catch (e) {
       setMessages((prev) => prev.filter((m) => m.id !== clientId))
@@ -454,8 +500,8 @@ export default function ConversationScreen() {
                 const isOwn = msg.senderUserId !== friend?.userId
                 const prev = index < listItems.length - 1 && !isSeparator(listItems[index + 1]) ? listItems[index + 1] as ChatMessage : null
                 const next = index > 0 && !isSeparator(listItems[index - 1]) ? listItems[index - 1] as ChatMessage : null
-                const prevSame = prev && prev.senderUserId === msg.senderUserId
-                const nextSame = next && next.senderUserId === msg.senderUserId
+                const prevSame = sameGroup(msg, prev, friend?.userId)
+                const nextSame = sameGroup(msg, next, friend?.userId)
                 const showName = !isOwn && !prevSame
                 const showTime = !nextSame
                 const showAvatar = !isOwn && !nextSame
