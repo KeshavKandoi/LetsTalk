@@ -6,6 +6,8 @@ import {
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { MaterialIcons } from '@expo/vector-icons'
+import * as ImagePicker from 'expo-image-picker'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useRoute, useNavigation } from '@react-navigation/native'
 import { apiFetch } from '../lib/api'
 import { getCurrentUserId } from '../lib/auth'
@@ -15,6 +17,8 @@ const ACCENT = '#5B7FFF'
 const BG = '#0a0a0a'
 const MIN_COMPOSER_HEIGHT = 20
 const MAX_COMPOSER_HEIGHT = 120
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL
+const EMOJIS = ['😀', '😂', '😍', '🥰', '😊', '😉', '😎', '🤔', '😢', '😭', '😡', '👍', '👎', '🙏', '👏', '🔥', '❤️', '💔', '🎉', '✨', '😴', '🤝', '👋', '💯']
 
 type MessageStatus = 'sending' | 'sent' | 'delivered' | 'read' | 'failed'
 
@@ -25,6 +29,8 @@ type ChatMessage = {
   body: string
   createdAt: string
   status: MessageStatus
+  messageType?: 'text' | 'image' | 'audio'
+  media?: { url: string | null; mimeType?: string | null; fileName?: string | null; fileSize?: number | null; durationMs?: number | null } | null
 }
 
 type DateSeparator = {
@@ -237,6 +243,8 @@ export default function ConversationScreen() {
             body: payload.body,
             status: payload.status ?? 'sent',
             createdAt: payload.createdAt,
+            messageType: payload.messageType,
+            media: payload.media,
           }]))
           if (!atBottomRef.current) setNewMessagesCount((c) => c + 1)
         },
@@ -288,6 +296,71 @@ export default function ConversationScreen() {
       hide.remove()
     }
   }, [])
+
+  const [emojiOpen, setEmojiOpen] = useState(false)
+
+  const sendImage = useCallback(async (asset: ImagePicker.ImagePickerAsset) => {
+    if (!friend) return
+    const clientId = generateClientId()
+    setMessages((prev) => [
+      ...prev,
+      { id: clientId, senderUserId: 'local-self', body: '', createdAt: new Date().toISOString(), status: 'sending', messageType: 'image', media: { url: asset.uri } },
+    ])
+    scrollToLatest()
+    try {
+      const token = await AsyncStorage.getItem('session_token')
+      const form = new FormData()
+      form.append('action', 'send')
+      form.append('friendUserId', friend.userId)
+      form.append('messageType', 'image')
+      form.append('body', '')
+      form.append('file', { uri: asset.uri, name: asset.fileName ?? 'photo.jpg', type: asset.mimeType ?? 'image/jpeg' } as unknown as Blob)
+      const res = await fetch(`${BASE_URL}/api/friends/messages`, {
+        method: 'POST',
+        headers: token ? { Cookie: `better-auth.session_token=${token}` } : {},
+        body: form,
+      })
+      const data = (await res.json()) as { message?: ChatMessage; error?: string }
+      if (!res.ok || !data.message) throw new Error(data.error || 'Upload failed.')
+      const server = data.message
+      setMessages((prev) => {
+        const rest = prev.filter((m) => m.id !== clientId)
+        if (rest.some((m) => m.id === server.id)) return rest
+        return [...rest, { ...server, status: 'sent' as MessageStatus }]
+      })
+    } catch (e) {
+      setMessages((prev) => prev.filter((m) => m.id !== clientId))
+      Alert.alert('Could not send photo', e instanceof Error ? e.message : 'Please try again.')
+    }
+  }, [friend, scrollToLatest])
+
+  const openCamera = useCallback(async () => {
+    try {
+      const perm = await ImagePicker.requestCameraPermissionsAsync()
+      if (!perm.granted) {
+        Alert.alert('Camera permission needed', 'Allow camera access in Settings to take photos.')
+        return
+      }
+      const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.7 })
+      if (!result.canceled && result.assets[0]) void sendImage(result.assets[0])
+    } catch {
+      Alert.alert('Error', 'Could not open the camera.')
+    }
+  }, [sendImage])
+
+  const openGallery = useCallback(async () => {
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync()
+      if (!perm.granted) {
+        Alert.alert('Photos permission needed', 'Allow photo access in Settings to share pictures.')
+        return
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 })
+      if (!result.canceled && result.assets[0]) void sendImage(result.assets[0])
+    } catch {
+      Alert.alert('Error', 'Could not open your photos.')
+    }
+  }, [sendImage])
 
   const openPhoto = useCallback(() => {
     if (!friend?.photoUrl) return
@@ -395,7 +468,13 @@ export default function ConversationScreen() {
                         onPress={() => retryMessage(msg)}
                         style={[s.bubble, isOwn ? s.bubbleOwn : s.bubbleTheir, msg.status === 'failed' && s.bubbleFailed, msg.status === 'sending' && s.bubbleSending]}
                       >
-                        <Text style={[s.bubbleTxt, isOwn ? s.bubbleTxtOwn : s.bubbleTxtTheir]}>{msg.body}</Text>
+                        {msg.messageType === 'image' && msg.media?.url ? (
+                          <Image source={{ uri: msg.media.url }} style={s.imageBubble} resizeMode="cover" />
+                        ) : msg.messageType === 'audio' ? (
+                          <Text style={[s.bubbleTxt, isOwn ? s.bubbleTxtOwn : s.bubbleTxtTheir]}>Voice message</Text>
+                        ) : (
+                          <Text style={[s.bubbleTxt, isOwn ? s.bubbleTxtOwn : s.bubbleTxtTheir]}>{msg.body}</Text>
+                        )}
                       </Pressable>
                       {msg.status === 'failed' ? (
                         <Text style={s.retryLabel}>Tap to retry</Text>
@@ -421,9 +500,19 @@ export default function ConversationScreen() {
 
           </View>
 
+          {emojiOpen && (
+            <View style={s.emojiPanel}>
+              {EMOJIS.map((e) => (
+                <TouchableOpacity key={e} style={s.emojiItem} onPress={() => setNewMessage((t) => (t + e).slice(0, 2000))}>
+                  <Text style={s.emojiTxt}>{e}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
           <View style={[s.inputArea, { paddingBottom: Math.max(insets.bottom, 10) + 8 }]}>
             <View style={s.inputPill}>
-              <TouchableOpacity style={s.pillIcon} onPress={() => {}} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 8 }}>
+              <TouchableOpacity style={s.pillIcon} onPress={() => { Keyboard.dismiss(); setEmojiOpen((v) => !v) }} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 8 }}>
                 <MaterialIcons name="emoji-emotions" size={22} color="rgba(255,255,255,0.55)" />
               </TouchableOpacity>
               <TextInput
@@ -441,10 +530,10 @@ export default function ConversationScreen() {
                 maxLength={2000}
                 scrollEnabled={inputHeight >= MAX_COMPOSER_HEIGHT}
               />
-              <TouchableOpacity style={s.pillIcon} onPress={() => {}} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}>
+              <TouchableOpacity style={s.pillIcon} onPress={openGallery} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}>
                 <MaterialIcons name="attach-file" size={20} color="rgba(255,255,255,0.55)" style={{ transform: [{ rotate: '45deg' }] }} />
               </TouchableOpacity>
-              <TouchableOpacity style={s.pillIcon} onPress={() => {}} hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}>
+              <TouchableOpacity style={s.pillIcon} onPress={openCamera} hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}>
                 <MaterialIcons name="photo-camera" size={20} color="rgba(255,255,255,0.55)" />
               </TouchableOpacity>
             </View>
@@ -541,6 +630,10 @@ const s = StyleSheet.create({
   input: { flex: 1, fontSize: 15, color: '#ffffff', paddingVertical: 0, paddingTop: 0, paddingBottom: 0, lineHeight: 20, textAlignVertical: 'top', includeFontPadding: false },
   sendBtn: { width: 48, height: 48, borderRadius: 24, backgroundColor: ACCENT, justifyContent: 'center', alignItems: 'center', shadowColor: ACCENT, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
   pillIcon: { width: 22, height: 20, justifyContent: 'center', alignItems: 'center' },
+  imageBubble: { width: 200, height: 200, borderRadius: 12 },
+  emojiPanel: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', paddingHorizontal: 14, paddingVertical: 8, backgroundColor: BG, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)' },
+  emojiItem: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
+  emojiTxt: { fontSize: 24 },
   sendBtnOff: { backgroundColor: 'rgba(91,127,255,0.3)', shadowOpacity: 0 },
   newMessagesBadge: { position: 'absolute', bottom: 12, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: ACCENT, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, shadowColor: ACCENT, shadowOpacity: 0.4, shadowRadius: 8, elevation: 4 },
   newMessagesText: { color: '#fff', fontWeight: '600', fontSize: 14 },
