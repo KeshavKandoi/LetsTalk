@@ -2,6 +2,18 @@ ALTER TABLE "friend_message" ADD COLUMN IF NOT EXISTS "delivered_at" timestamp;
 --> statement-breakpoint
 ALTER TABLE "friend_message" ADD COLUMN IF NOT EXISTS "client_id" text;
 --> statement-breakpoint
+ALTER TABLE "friend_message" ADD COLUMN IF NOT EXISTS "message_type" text DEFAULT 'text' NOT NULL;
+--> statement-breakpoint
+ALTER TABLE "friend_message" ADD COLUMN IF NOT EXISTS "media_key" text;
+--> statement-breakpoint
+ALTER TABLE "friend_message" ADD COLUMN IF NOT EXISTS "mime_type" text;
+--> statement-breakpoint
+ALTER TABLE "friend_message" ADD COLUMN IF NOT EXISTS "file_name" text;
+--> statement-breakpoint
+ALTER TABLE "friend_message" ADD COLUMN IF NOT EXISTS "file_size" integer;
+--> statement-breakpoint
+ALTER TABLE "friend_message" ADD COLUMN IF NOT EXISTS "duration_ms" integer;
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "friend_message_recipient_status_idx" ON "friend_message" USING btree ("recipient_user_id", "status");
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "user_device" (
