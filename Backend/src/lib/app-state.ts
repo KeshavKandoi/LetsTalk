@@ -1,5 +1,15 @@
 import { and, asc, desc, eq, inArray, lt, or, sql } from 'drizzle-orm'
 import { createClient } from '@supabase/supabase-js'
+import {
+  ChatMediaError,
+  isMessageType,
+  previewOf,
+  removeChatMedia,
+  toMessageDto,
+  uploadChatMedia,
+  validateChatMedia,
+  type UploadedFile,
+} from './chat-media'
 // agents removed
 import { getRequestHeaders } from '@tanstack/react-start/server'
 import type {
@@ -1516,6 +1526,7 @@ export async function listFriends(input?: { viewerUserId?: string }) {
         .select({
           friendRequestId: friendMessage.friendRequestId,
           body: friendMessage.body,
+          messageType: friendMessage.messageType,
           createdAt: friendMessage.createdAt,
         })
         .from(friendMessage)
@@ -1533,7 +1544,7 @@ export async function listFriends(input?: { viewerUserId?: string }) {
     friends: acceptedRows.map((row) => ({
       id: row.id,
       ...mapFriendUser(row),
-      lastMessage: latestMessageByRequestId.get(row.id)?.body ?? null,
+      lastMessage: previewOf(latestMessageByRequestId.get(row.id)),
       isOnline: row.isOnline ?? false,
       lastSeenAt: row.lastSeenAt ?? null,
     })),
@@ -1669,18 +1680,26 @@ export async function getConversationMessages(input: { friendUserId: string; vie
   const messageRows = await db
     .select({
       id: friendMessage.id,
+      friendRequestId: friendMessage.friendRequestId,
       body: friendMessage.body,
       senderUserId: friendMessage.senderUserId,
       recipientUserId: friendMessage.recipientUserId,
       status: friendMessage.status,
+      messageType: friendMessage.messageType,
+      mediaKey: friendMessage.mediaKey,
+      mimeType: friendMessage.mimeType,
+      fileName: friendMessage.fileName,
+      fileSize: friendMessage.fileSize,
+      durationMs: friendMessage.durationMs,
       createdAt: friendMessage.createdAt,
+      updatedAt: friendMessage.updatedAt,
     })
     .from(friendMessage)
     .where(eq(friendMessage.friendRequestId, requestRecord.id))
     .orderBy(asc(friendMessage.createdAt))
 
   return {
-    messages: messageRows,
+    messages: await Promise.all(messageRows.map((row) => toMessageDto(row))),
   }
 }
 
@@ -1688,17 +1707,27 @@ export async function sendConversationMessage(input: {
   friendUserId: string
   body: string
   viewerUserId?: string
+  messageType?: string
+  file?: UploadedFile
+  durationMs?: number | null
 }) {
   const session = input.viewerUserId ? { user: { id: input.viewerUserId } } : await requireCurrentSession()
   const friendUserId = input.friendUserId.trim()
+  const messageType = input.messageType ?? 'text'
+  if (!isMessageType(messageType)) {
+    throw new ChatMediaError(400, 'Invalid message.')
+  }
   const body = input.body.replace(/\s+/g, ' ').trim()
 
   if (!friendUserId) {
     throw new Error('Choose a friend first.')
   }
 
-  if (!body) {
-    throw new Error('Write a message first.')
+  if (messageType === 'text') {
+    if (input.file) throw new ChatMediaError(400, 'Invalid message.')
+    if (!body) throw new Error('Write a message first.')
+  } else if (!input.file) {
+    throw new ChatMediaError(400, 'Invalid message.')
   }
 
   if (body.length > 2000) {
@@ -1711,36 +1740,63 @@ export async function sendConversationMessage(input: {
   )
 
   if (!requestRecord || requestRecord.status !== 'accepted') {
-    throw new Error('You can only message accepted friends.')
+    throw new ChatMediaError(403, 'You are not allowed to message this user.')
   }
+
+  const media =
+    messageType === 'text' || !input.file
+      ? null
+      : validateChatMedia(messageType, input.file, input.durationMs)
 
   const now = new Date()
   const id = crypto.randomUUID()
-  await db.insert(friendMessage).values({
-    id,
-    friendRequestId: requestRecord.id,
-    senderUserId: session.user.id,
-    recipientUserId: friendUserId,
-    body,
-    status: 'sent',
-    sentAt: now,
-    createdAt: now,
-    updatedAt: now,
-  })
+  const stored = media ? await uploadChatMedia(requestRecord.id, id, media) : null
+
+  try {
+    await db.insert(friendMessage).values({
+      id,
+      friendRequestId: requestRecord.id,
+      senderUserId: session.user.id,
+      recipientUserId: friendUserId,
+      body,
+      status: 'sent',
+      messageType,
+      mediaKey: stored?.key ?? null,
+      mimeType: media?.mime ?? null,
+      fileName: media?.fileName ?? null,
+      fileSize: media?.size ?? null,
+      durationMs: media?.durationMs ?? null,
+      sentAt: now,
+      createdAt: now,
+      updatedAt: now,
+    })
+  } catch {
+    if (stored) await removeChatMedia(stored.key)
+    console.error('[chat] message insert failed')
+    throw new ChatMediaError(500, 'Could not send message.')
+  }
 
   await db
     .update(friendRequest)
     .set({ updatedAt: now })
     .where(eq(friendRequest.id, requestRecord.id))
 
-  const messagePayload = {
+  const messagePayload = await toMessageDto({
     id,
+    friendRequestId: requestRecord.id,
     senderUserId: session.user.id,
     recipientUserId: friendUserId,
     body,
-    status: 'sent' as const,
-    createdAt: now.toISOString(),
-  }
+    status: 'sent',
+    messageType,
+    mediaKey: stored?.key ?? null,
+    mimeType: media?.mime ?? null,
+    fileName: media?.fileName ?? null,
+    fileSize: media?.size ?? null,
+    durationMs: media?.durationMs ?? null,
+    createdAt: now,
+    updatedAt: now,
+  })
 
   try {
     const supabase = createClient(getSupabaseUrl(), getSupabaseAnonKey())
