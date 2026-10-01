@@ -542,7 +542,7 @@ const s = StyleSheet.create({
   rowSectionTitle: { fontSize: 15, fontWeight: '800', color: '#fff', letterSpacing: -0.2 },
   seeAll: { fontSize: 13, fontWeight: '600', color: ACCENT },
   cardRow: { flexDirection: 'row', gap: 12, paddingRight: 20 },
-  placeCardRow: { flexDirection: 'row', gap: PLACE_CARD_GAP, paddingHorizontal: CONTENT_HORIZONTAL_PADDING },
+  placeCardRow: { flexDirection: 'row', gap: PLACE_CARD_GAP, paddingRight: CONTENT_HORIZONTAL_PADDING },
 
   personCard: { width: 200, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: BORDER },
   personAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: ACCENT_DIM, alignItems: 'center', justifyContent: 'center' },
