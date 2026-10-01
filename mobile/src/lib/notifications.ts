@@ -122,19 +122,54 @@ export async function dismissConversationNotification(friendUserId: string) {
 }
 
 export async function registerForPush() {
-  if (Platform.OS !== 'android' || !Device.isDevice) return
+  console.log(`[CHAT_DEBUG][PUSH] registerForPush started platform=${Platform.OS} isDevice=${Device.isDevice}`)
+  if (Platform.OS !== 'android') {
+    console.log(`[CHAT_DEBUG][PUSH] registerForPush skipped: Platform.OS is ${Platform.OS}`)
+    return
+  }
   try {
     await ensureChannel()
     let { status } = await Notifications.getPermissionsAsync()
-    if (status !== 'granted') ({ status } = await Notifications.requestPermissionsAsync())
-    if (status !== 'granted') return
+    console.log(`[CHAT_DEBUG][PUSH] permission result=${status}`)
+    if (status !== 'granted') {
+      const res = await Notifications.requestPermissionsAsync()
+      status = res.status
+      console.log(`[CHAT_DEBUG][PUSH] requested permission result=${status}`)
+    }
+    if (status !== 'granted') {
+      console.log('[CHAT_DEBUG][PUSH] permission not granted')
+      return
+    }
+
     const extra = Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined
     const projectId = extra?.eas?.projectId ?? Constants.easConfig?.projectId
-    if (!projectId) return
-    const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId })
-    await apiFetch('/api/notifications/device', { action: 'register', pushToken: token, platform: 'android' })
-    await AsyncStorage.setItem(PUSH_TOKEN_KEY, token)
-  } catch {}
+    console.log(`[CHAT_DEBUG][PUSH] project ID ${projectId ? 'exists' : 'missing'}`)
+    if (!projectId) {
+      console.error('[CHAT_DEBUG][PUSH] project ID missing')
+      return
+    }
+
+    let token: string
+    try {
+      const tokenRes = await Notifications.getExpoPushTokenAsync({ projectId })
+      token = tokenRes.data
+      console.log('[CHAT_DEBUG][PUSH] token generated')
+    } catch (tokenErr) {
+      console.error('[CHAT_DEBUG][PUSH] token generation failed:', tokenErr instanceof Error ? tokenErr.message : tokenErr)
+      return
+    }
+
+    console.log('[CHAT_DEBUG][PUSH] device registration started')
+    try {
+      await apiFetch('/api/notifications/device', { action: 'register', pushToken: token, platform: 'android' })
+      console.log('[CHAT_DEBUG][PUSH] device registered')
+      await AsyncStorage.setItem(PUSH_TOKEN_KEY, token)
+    } catch (regErr) {
+      console.error('[CHAT_DEBUG][PUSH] device registration failed:', regErr instanceof Error ? regErr.message : regErr)
+    }
+  } catch (err) {
+    console.error('[CHAT_DEBUG][PUSH] registerForPush error:', err instanceof Error ? err.message : err)
+  }
 }
 
 export async function unregisterPush() {
@@ -189,3 +224,4 @@ export function initNotificationListeners() {
     responded.remove()
   }
 }
+
