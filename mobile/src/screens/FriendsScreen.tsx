@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { getUserScopedCache, setUserScopedCache } from '../lib/auth'
+import { getUserScopedCache, setUserScopedCache, getCachedMyState, getMyPhotoUrl } from '../lib/auth'
 import {
   Image, Modal,
   View, Text, StyleSheet, TouchableOpacity, Alert,
@@ -53,6 +53,8 @@ export default function FriendsScreen() {
   const [incoming, setIncoming] = useState<IncomingRequest[]>([])
   const [pending, setPending] = useState<PendingRequest[]>([])
   const [rejected, setRejected] = useState<RejectedRequest[]>([])
+  const [myPhoto, setMyPhoto] = useState<string | null>(null)
+  const [myInitials, setMyInitials] = useState('?')
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -63,6 +65,15 @@ export default function FriendsScreen() {
     getUserScopedCache<string[]>('dismissed_rejected_requests')
       .then((cached) => { if (cached) setDismissedRejected(cached) })
       .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    getCachedMyState().then((cached) => {
+      if (!cached) return
+      setMyPhoto(getMyPhotoUrl(cached))
+      const uname = cached.session?.user?.username || cached.session?.user?.name
+      if (uname) setMyInitials(String(uname).slice(0, 2).toUpperCase())
+    }).catch(() => {})
   }, [])
 
   const dismissRejected = (requestId: string) => {
@@ -193,7 +204,15 @@ export default function FriendsScreen() {
             <Text style={s.headerTitle}>Friends</Text>
             <Text style={s.headerSub}>{friends.length} {friends.length === 1 ? 'friend' : 'friends'}</Text>
           </View>
-          <View style={s.iconBtn} />
+          <View style={s.headerAvatarRing}>
+            {myPhoto ? (
+              <Image source={{ uri: myPhoto }} style={s.headerAvatarImg} />
+            ) : (
+              <View style={s.headerAvatarFallback}>
+                <Text style={s.headerAvatarTxt}>{myInitials}</Text>
+              </View>
+            )}
+          </View>
         </View>
 
         <View style={s.tabsWrap}>
@@ -207,9 +226,12 @@ export default function FriendsScreen() {
                   }],
                 },
               ]}
-            />
-            {([['friends', 'Friends'], ['requests', 'Requests']] as const).map(([key, label]) => (
+            >
+              <LinearGradient colors={['#7c93ff', ACCENT]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.tabIndicatorGradient} />
+            </Animated.View>
+            {([['friends', 'Friends', 'people'], ['requests', 'Requests', 'person-add-alt']] as const).map(([key, label, icon]) => (
               <TouchableOpacity key={key} style={s.tab} onPress={() => switchTab(key as any)} activeOpacity={0.8}>
+                <MaterialIcons name={icon as any} size={17} color={tab === key ? '#fff' : MID} />
                 <Text style={[s.tabTxt, tab === key && s.tabTxtActive]}>{label}</Text>
                 {key === 'requests' && requestCount > 0 && (
                   <View style={s.tabBadge}>
@@ -248,6 +270,7 @@ export default function FriendsScreen() {
                   >
                     <Avatar
                       user={friend}
+                      size={44}
                       onPress={friend.photoUrl ? () => openPhoto(friend.photoUrl!, friend.username) : undefined}
                     />
                     <View style={{ flex: 1, marginLeft: 12 }}>
@@ -390,35 +413,40 @@ export default function FriendsScreen() {
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: BG_BOTTOM },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10 },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: '#fff' },
-  headerSub: { fontSize: 12, fontWeight: '600', color: MID, marginTop: 1 },
-  iconBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.06)' },
+  headerTitle: { fontSize: 24, fontWeight: '800', color: '#fff' },
+  headerSub: { fontSize: 13, fontWeight: '600', color: MID, marginTop: 2 },
+  iconBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.08)' },
+  headerAvatarRing: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: 'rgba(130,150,255,0.7)', alignItems: 'center', justifyContent: 'center', shadowColor: ACCENT, shadowOpacity: 0.6, shadowRadius: 8, shadowOffset: { width: 0, height: 0 }, elevation: 6 },
+  headerAvatarImg: { width: 40, height: 40, borderRadius: 20 },
+  headerAvatarFallback: { width: 40, height: 40, borderRadius: 20, backgroundColor: ACCENT, alignItems: 'center', justifyContent: 'center' },
+  headerAvatarTxt: { color: '#fff', fontWeight: '800', fontSize: 14 },
 
-  tabsWrap: { paddingHorizontal: 16, marginTop: 8 },
-  tabs: { flexDirection: 'row', padding: 4, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: BORDER, position: 'relative' },
-  tabIndicator: { position: 'absolute', top: 4, bottom: 4, width: 150, borderRadius: 12, backgroundColor: ACCENT },
-  tab: { flex: 1, borderRadius: 12, paddingVertical: 11, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 },
-  tabTxt: { color: MID, fontWeight: '800', fontSize: 14 },
+  tabsWrap: { paddingHorizontal: 16, marginTop: 12 },
+  tabs: { flexDirection: 'row', padding: 5, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: BORDER, position: 'relative' },
+  tabIndicator: { position: 'absolute', top: 5, bottom: 5, width: 150, borderRadius: 16, overflow: 'hidden', shadowColor: ACCENT, shadowOpacity: 0.7, shadowRadius: 10, shadowOffset: { width: 0, height: 0 }, elevation: 8 },
+  tabIndicatorGradient: { flex: 1, borderRadius: 16 },
+  tab: { flex: 1, borderRadius: 16, paddingVertical: 13, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 7 },
+  tabTxt: { color: MID, fontWeight: '800', fontSize: 15 },
   tabTxtActive: { color: '#fff' },
   tabBadge: { backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 999, minWidth: 18, height: 18, paddingHorizontal: 5, alignItems: 'center', justifyContent: 'center' },
   tabBadgeTxt: { color: '#fff', fontSize: 10, fontWeight: '900' },
 
-  hintRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingTop: 12, paddingBottom: 4 },
-  hintTxt: { color: MID, fontSize: 12, fontWeight: '600' },
+  hintRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingTop: 16, paddingBottom: 8 },
+  hintTxt: { color: MID, fontSize: 13, fontWeight: '600' },
 
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  scroll: { padding: 16, paddingTop: 8, paddingBottom: 60 },
+  scroll: { padding: 16, paddingTop: 12, paddingBottom: 60 },
 
-  row: { flexDirection: 'row', alignItems: 'center', backgroundColor: CARD, borderRadius: 18, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: BORDER },
+  row: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.055)', borderRadius: 20, paddingVertical: 14, paddingHorizontal: 18, marginBottom: 12, borderWidth: 1, borderColor: BORDER },
   rowInner: { flexDirection: 'row', alignItems: 'center' },
 
   avatarRing: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(91,127,255,0.15)' },
   avatar: { backgroundColor: ACCENT, justifyContent: 'center', alignItems: 'center' },
   avatarTxt: { color: '#fff', fontWeight: '900' },
 
-  name: { color: '#fff', fontWeight: '700', fontSize: 15, marginBottom: 2 },
+  name: { color: '#fff', fontWeight: '800', fontSize: 17, marginBottom: 3 },
   mood: { color: MID, fontWeight: '600', fontSize: 12.5 },
-  messagePreview: { color: MID, fontWeight: '600', fontSize: 12.5 },
+  messagePreview: { color: MID, fontWeight: '600', fontSize: 13.5 },
 
   groupLabel: { color: MID, fontSize: 11, fontWeight: '900', letterSpacing: 1.2, marginBottom: 8, marginTop: 4, marginLeft: 2 },
 
