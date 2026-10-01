@@ -1,5 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { apiFetch } from './api'
+import { registerForPush, unregisterPush } from './notifications'
+import { startReceipts, stopReceipts } from './receipts'
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL
 const SESSION_TOKEN_KEY = 'session_token'
@@ -28,6 +30,8 @@ export async function signIn(username: string, password: string, forceLogin = fa
   else throw new Error('Login did not return a valid session.')
   const user = await establishSession()
   if (!user) throw new Error('Could not verify your session after login.')
+  void registerForPush()
+  startReceipts(user.id)
   return data
 }
 
@@ -109,6 +113,8 @@ export async function getSession() {
 }
 
 export async function signOut() {
+  stopReceipts()
+  await unregisterPush()
   const token = await getStoredSessionToken()
   try {
     await fetch(`${BASE_URL}/api/auth/sign-out`, {
