@@ -10,6 +10,8 @@ type ChatMessage = {
   body: string
   status: 'sending' | 'sent' | 'delivered' | 'read' | 'failed'
   createdAt: string
+  messageType?: 'text' | 'image' | 'audio'
+  media?: { url: string | null; mimeType?: string | null; fileName?: string | null; fileSize?: number | null; durationMs?: number | null } | null
 }
 
 type RealtimeHandlers = {
