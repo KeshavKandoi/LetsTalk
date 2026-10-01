@@ -1,9 +1,15 @@
 import { createFileRoute } from '@tanstack/react-router'
-import {
-  markMessageAsDelivered,
-  markMessageAsRead,
-} from '@backend/lib/app-state'
+import { markMessagesDelivered, markMessagesRead } from '@backend/lib/message-status'
+import { ChatMediaError } from '@backend/lib/chat-media'
 import { auth } from '@backend/lib/auth'
+
+function json(payload: unknown, status = 200) {
+  return new Response(JSON.stringify(payload), { status, headers: { 'Content-Type': 'application/json' } })
+}
+
+function stringList(value: unknown) {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string') ? (value as string[]) : null
+}
 
 export const Route = createFileRoute('/api/friends/message-status')({
   server: {
@@ -11,19 +17,33 @@ export const Route = createFileRoute('/api/friends/message-status')({
       POST: async ({ request }) => {
         try {
           const session = await auth.api.getSession({ headers: (() => { const h = new Headers(Object.fromEntries(request.headers.entries())); const t = (request.headers.get('authorization') || request.headers.get('Authorization') || '').replace('Bearer ',''); if(t) h.set('cookie', 'better-auth.session_token=' + t); return h; })() })
-          if (!session) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
-          
-          const body = await request.json() as { messageId?: string; action?: 'delivered' | 'read' }
-          
-          const result = body.action === 'delivered'
-            ? await markMessageAsDelivered({ messageId: body.messageId ?? '', viewerUserId: session.user.id })
-            : body.action === 'read'
-              ? await markMessageAsRead({ messageId: body.messageId ?? '', viewerUserId: session.user.id })
-              : { error: 'Invalid action' }
-          
-          return new Response(JSON.stringify(result), { headers: { 'Content-Type': 'application/json' } })
-        } catch (e: any) {
-          return new Response(JSON.stringify({ error: e.message }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+          if (!session) return json({ error: 'Unauthorized' }, 401)
+
+          let body: { action?: unknown; messageId?: unknown; messageIds?: unknown; friendUserId?: unknown }
+          try {
+            body = (await request.json()) as typeof body
+          } catch {
+            return json({ error: 'Invalid request.' }, 400)
+          }
+
+          const ids = stringList(body.messageIds) ?? (typeof body.messageId === 'string' ? [body.messageId] : null)
+
+          if (body.action === 'delivered') {
+            if (!ids) return json({ error: 'Invalid request.' }, 400)
+            return json(await markMessagesDelivered({ viewerUserId: session.user.id, messageIds: ids }))
+          }
+
+          if (body.action === 'read') {
+            const friendUserId = typeof body.friendUserId === 'string' && body.friendUserId ? body.friendUserId : undefined
+            if (!friendUserId && !ids) return json({ error: 'Invalid request.' }, 400)
+            return json(await markMessagesRead({ viewerUserId: session.user.id, friendUserId, messageIds: ids ?? undefined }))
+          }
+
+          return json({ error: 'Invalid action.' }, 400)
+        } catch (e) {
+          if (e instanceof ChatMediaError) return json({ error: e.message }, e.status)
+          console.error('[message-status] failed')
+          return json({ error: 'Request failed.' }, 500)
         }
       },
     },
