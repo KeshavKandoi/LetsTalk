@@ -1,49 +1,22 @@
-import { createClient } from '@supabase/supabase-js'
 import { getSupabaseAnonKey, getSupabaseUrl } from './env'
 
 export async function publishUserEvent(userId: string, event: string, payload: object) {
-  const channelName = `user:${userId}`
-  console.log(`[CHAT_DEBUG][REALTIME] broadcast started recipientUserId=${userId} channel=${channelName} event=${event}`)
-
+  const topic = `user:${userId}`
   try {
-    const supabase = createClient(getSupabaseUrl(), getSupabaseAnonKey())
-    const channel = supabase.channel(channelName)
-
-    await new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        supabase.removeChannel(channel).catch(() => {})
-        reject(new Error(`Subscription to ${channelName} timed out`))
-      }, 5000)
-
-      channel.subscribe(async (status, err) => {
-        if (status === 'SUBSCRIBED') {
-          try {
-            const result = await channel.send({ type: 'broadcast', event, payload })
-            clearTimeout(timer)
-            await supabase.removeChannel(channel)
-            if (result === 'ok') {
-              console.log(`[CHAT_DEBUG][REALTIME] broadcast result=ok recipientUserId=${userId} channel=${channelName} event=${event}`)
-              resolve()
-            } else {
-              console.error(`[CHAT_DEBUG][REALTIME] broadcast result=${result} recipientUserId=${userId} channel=${channelName} event=${event}`)
-              reject(new Error(`Broadcast send status: ${result}`))
-            }
-          } catch (sendErr) {
-            clearTimeout(timer)
-            await supabase.removeChannel(channel)
-            console.error(`[CHAT_DEBUG][REALTIME] broadcast error channel=${channelName}:`, sendErr)
-            reject(sendErr)
-          }
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          clearTimeout(timer)
-          await supabase.removeChannel(channel)
-          console.error(`[CHAT_DEBUG][REALTIME] broadcast status=${status} channel=${channelName}`, err || '')
-          reject(err || new Error(`Channel status ${status}`))
-        }
-      })
+    const key = getSupabaseAnonKey()
+    const res = await fetch(`${getSupabaseUrl()}/realtime/v1/api/broadcast`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: key, Authorization: `Bearer ${key}` },
+      body: JSON.stringify({ messages: [{ topic, event, payload, private: false }] }),
+      signal: AbortSignal.timeout(5000),
     })
+    if (!res.ok) {
+      console.error(`[REALTIME] broadcast failed status=${res.status} topic=${topic} event=${event} body=${(await res.text()).slice(0, 200)}`)
+      return false
+    }
+    return true
   } catch (error) {
-    console.error(`[CHAT_DEBUG][REALTIME] broadcast error recipientUserId=${userId} channel=${channelName} event=${event}:`, error)
+    console.error(`[REALTIME] broadcast error topic=${topic} event=${event}:`, error)
+    return false
   }
 }
-
