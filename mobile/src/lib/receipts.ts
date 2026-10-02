@@ -16,7 +16,7 @@ async function flush() {
   for (let i = 0; i < ids.length; i += CHUNK) {
     try {
       await apiFetch('/api/friends/message-status', { action: 'delivered', messageIds: ids.slice(i, i + CHUNK) })
-    } catch {}
+    } catch (e) { console.warn('[RECEIPTS] delivered ack failed:', e instanceof Error ? e.message : e) }
   }
 }
 
@@ -28,7 +28,7 @@ export function ackDelivered(ids: string[]) {
 export async function ackRead(friendUserId: string, messageIds?: string[]) {
   try {
     await apiFetch('/api/friends/message-status', { action: 'read', friendUserId, ...(messageIds ? { messageIds } : {}) })
-  } catch {}
+  } catch (e) { console.warn('[RECEIPTS] read ack failed:', e instanceof Error ? e.message : e) }
 }
 
 export function startReceipts(userId: string) {
