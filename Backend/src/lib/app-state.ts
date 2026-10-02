@@ -1,5 +1,4 @@
 import { and, asc, desc, eq, inArray, lt, or, sql } from 'drizzle-orm'
-import { createClient } from '@supabase/supabase-js'
 import {
   ChatMediaError,
   isMessageType,
@@ -29,6 +28,7 @@ import { auth } from './auth'
 import { db } from './db'
 import { markMessagesDelivered, markMessagesRead } from './message-status'
 import { notifyNewMessage } from './notifications'
+import { publishUserEvent } from './realtime-publish'
 import { UserAgent } from './agents/user-agent'
 import {
   connectRequestRejection,
@@ -45,8 +45,6 @@ import {
 import {
   getAppBaseUrl,
   getGoogleMapsApiKey,
-  getSupabaseUrl,
-  getSupabaseAnonKey,
 
   getGoogleMapsMapId,
 } from './env'
@@ -1800,14 +1798,7 @@ export async function sendConversationMessage(input: {
     updatedAt: now,
   })
 
-  try {
-    const supabase = createClient(getSupabaseUrl(), getSupabaseAnonKey())
-    await supabase.channel(`user:${friendUserId}`).send({
-      type: 'broadcast',
-      event: 'new_message',
-      payload: messagePayload,
-    })
-  } catch {}
+  await publishUserEvent(friendUserId, 'new_message', messagePayload)
 
   void notifyNewMessage({
     senderUserId: session.user.id,
