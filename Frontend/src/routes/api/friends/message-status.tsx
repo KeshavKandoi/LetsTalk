@@ -27,6 +27,7 @@ export const Route = createFileRoute('/api/friends/message-status')({
           }
 
           const ids = stringList(body.messageIds) ?? (typeof body.messageId === 'string' ? [body.messageId] : null)
+          console.log(`[STATUS] action=${String(body.action)} user=${session.user.id} ids=${ids ? ids.length : 0} friend=${String(body.friendUserId ?? '')}`)
 
           if (body.action === 'delivered') {
             if (!ids) return json({ error: 'Invalid request.' }, 400)
