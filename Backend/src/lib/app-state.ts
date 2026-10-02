@@ -419,17 +419,21 @@ async function getFriendshipRecordForUserPair(
     .select()
     .from(friendRequest)
     .where(
-      or(
-        and(
-          eq(friendRequest.requesterUserId, userId),
-          eq(friendRequest.recipientUserId, otherUserId),
-        ),
-        and(
-          eq(friendRequest.requesterUserId, otherUserId),
-          eq(friendRequest.recipientUserId, userId),
+      and(
+        eq(friendRequest.status, 'accepted'),
+        or(
+          and(
+            eq(friendRequest.requesterUserId, userId),
+            eq(friendRequest.recipientUserId, otherUserId),
+          ),
+          and(
+            eq(friendRequest.requesterUserId, otherUserId),
+            eq(friendRequest.recipientUserId, userId),
+          ),
         ),
       ),
     )
+    .orderBy(desc(friendRequest.updatedAt))
     .limit(1)
 
   return requestRecord ?? null
