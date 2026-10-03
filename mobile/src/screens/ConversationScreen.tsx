@@ -221,6 +221,7 @@ export default function ConversationScreen() {
         return [...rest, { ...serverMessage, status: maxStatus(statusRef.current.get(serverMessage.id), 'sent') }]
       })
     } catch (e) {
+      console.warn('[CHAT_FLOW][SEND] send failed:', e instanceof Error ? e.message : e)
       setMessages((prev) => prev.map((m) => (m.id === clientId ? { ...m, status: 'failed' as MessageStatus } : m)))
     }
   }, [friend.userId])
@@ -288,6 +289,7 @@ export default function ConversationScreen() {
           const ids = new Set(event.messageIds)
           setMessages((prev) => prev.map((m) => (ids.has(m.id) ? { ...m, status: maxStatus(m.status, event.status) } : m)))
         },
+        onReconnect: () => { void loadMessages(true) },
       })
     })
 
@@ -330,6 +332,13 @@ export default function ConversationScreen() {
     void dismissConversationNotification(friend.userId)
     return () => setActiveConversation(null)
   }, [friend?.userId])
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void loadMessages(true)
+    })
+    return () => sub.remove()
+  }, [loadMessages])
 
   const [kbVisible, setKbVisible] = useState(false)
 
