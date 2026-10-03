@@ -14,7 +14,9 @@ export const Route = createFileRoute('/api/places/photo')({
           }
 
           const googleUrl = `https://places.googleapis.com/v1/${name}/media?maxWidthPx=400&key=${getGoogleMapsApiKey()}`
+          console.log('[MAP_LIFECYCLE][PHOTO_START] backend name=' + name.slice(0, 40))
           const response = await fetch(googleUrl)
+          console.log('[MAP_LIFECYCLE][PHOTO_END] backend ok=' + response.ok)
 
           if (!response.ok) {
             return new Response('Photo not available', { status: 404 })
