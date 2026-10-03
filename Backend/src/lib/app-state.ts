@@ -1774,16 +1774,21 @@ export async function sendConversationMessage(input: {
       createdAt: now,
       updatedAt: now,
     })
-  } catch {
+  } catch (insertError) {
     if (stored) await removeChatMedia(stored.key)
-    console.error('[chat] message insert failed')
+    const info = insertError as { code?: string; cause?: { code?: string } }
+    console.error(`[CHAT_FLOW][SEND] insert failed sender=${session.user.id} recipient=${friendUserId} code=${info?.cause?.code ?? info?.code ?? 'unknown'}`)
     throw new ChatMediaError(500, 'Could not send message.')
   }
 
-  await db
-    .update(friendRequest)
-    .set({ updatedAt: now })
-    .where(eq(friendRequest.id, requestRecord.id))
+  try {
+    await db
+      .update(friendRequest)
+      .set({ updatedAt: now })
+      .where(eq(friendRequest.id, requestRecord.id))
+  } catch {
+    console.error(`[CHAT_FLOW][SEND] friend_request touch failed conversationId=${requestRecord.id}`)
+  }
 
   const messagePayload = await toMessageDto({
     id,
@@ -1802,17 +1807,21 @@ export async function sendConversationMessage(input: {
     updatedAt: now,
   })
 
-  await publishUserEvent(friendUserId, 'new_message', messagePayload)
-
-  void notifyNewMessage({
+  const pushPromise = notifyNewMessage({
     senderUserId: session.user.id,
     recipientUserId: friendUserId,
     friendRequestId: requestRecord.id,
+  })
+  const realtimeDelivered = await publishUserEvent(friendUserId, 'new_message', messagePayload)
+  console.log(`[CHAT_FLOW][SEND] persisted messageId=${id} sender=${session.user.id} recipient=${friendUserId} realtime=${realtimeDelivered ? 'ok' : 'failed'}`)
+  void pushPromise.then((push) => {
+    console.log(`[CHAT_FLOW][SEND] push messageId=${id} devices=${push.devices} sent=${push.sent} failed=${push.failed}`)
   })
 
   return {
     success: true,
     message: messagePayload,
+    realtime: { delivered: realtimeDelivered },
   }
 }
 
