@@ -28,7 +28,7 @@ import { auth } from './auth'
 import { db } from './db'
 import { markMessagesDelivered, markMessagesRead } from './message-status'
 import { notifyNewMessage } from './notifications'
-import { publishUserEvent } from './realtime-publish'
+import { relayPersistedMessage } from './chat-realtime'
 import { UserAgent } from './agents/user-agent'
 import {
   connectRequestRejection,
@@ -1812,7 +1812,15 @@ export async function sendConversationMessage(input: {
     recipientUserId: friendUserId,
     friendRequestId: requestRecord.id,
   })
-  const realtimeDelivered = await publishUserEvent(friendUserId, 'new_message', messagePayload)
+  const realtimeDelivered = await relayPersistedMessage({
+    message: messagePayload as unknown as Record<string, unknown>,
+    messageId: id,
+    friendRequestId: requestRecord.id,
+    senderUserId: session.user.id,
+    recipientUserId: friendUserId,
+    messageType,
+    createdAt: now.toISOString(),
+  })
   console.log(`[CHAT_FLOW][SEND] persisted messageId=${id} sender=${session.user.id} recipient=${friendUserId} realtime=${realtimeDelivered ? 'ok' : 'failed'}`)
   void pushPromise.then((push) => {
     console.log(`[CHAT_FLOW][SEND] push messageId=${id} devices=${push.devices} sent=${push.sent} failed=${push.failed}`)
