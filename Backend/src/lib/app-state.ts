@@ -1936,6 +1936,7 @@ export async function searchNearbyPlacesForLocation(input: {
   const cacheKey = getNearbyGoogleCacheKey(input.latitude, input.longitude)
   const cached = nearbyGooglePlacesCache.get(cacheKey)
   const cacheHit = cached && cached.expiresAt > Date.now()
+  console.log('[MAP_LIFECYCLE][NEARBY_START] backend cacheHit=' + Boolean(cacheHit) + ' googleCall=' + !cacheHit + ' keyConfigured=' + Boolean(process.env.GOOGLE_MAPS_API_KEY))
 
   let places: NearbyPlace[]
 
