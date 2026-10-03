@@ -399,7 +399,7 @@ export default function LandingScreen() {
                   onPress={() => navigation.navigate('Onboarding' as never)}
                 >
                   {p.photoUrl ? (
-                    <Image source={{ uri: p.photoUrl }} style={s.placeThumbImg} contentFit="cover" cachePolicy="memory-disk" />
+                    <Image source={{ uri: p.photoUrl.startsWith('/') ? process.env.EXPO_PUBLIC_API_URL + p.photoUrl : p.photoUrl }} style={s.placeThumbImg} contentFit="cover" cachePolicy="memory-disk" />
                   ) : (
                     <View style={s.placeThumb} />
                   )}
