@@ -36,6 +36,7 @@
 		"drizzle-orm": "^0.45.2",
 		"jsqr": "^1.4.0",
 		"lucide-react": "^0.545.0",
+		"nats": "^2.29.3",
 		"postgres": "^3.4.9",
 		"qrcode": "^1.5.4",
 		"react": "^19.2.0",
