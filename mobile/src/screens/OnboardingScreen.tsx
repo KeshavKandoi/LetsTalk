@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, ActivityIndicator, TextInput,
@@ -73,15 +73,24 @@ export default function OnboardingScreen() {
   const [isSearching, setIsSearching] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
 
-  const fetchNearbyPlaces = async () => {
+  const selectedPlaceRef = useRef<NearbyPlace | null>(null)
+  selectedPlaceRef.current = selectedPlace
+  const focusedRef = useRef(false)
+  const requestSeqRef = useRef(0)
+
+  const fetchNearbyPlaces = async (source: string = 'manual') => {
+    const seq = ++requestSeqRef.current
+    const stale = () => seq !== requestSeqRef.current || !focusedRef.current
+    const cancelled = (stage: string) => console.log('[MAP_LIFECYCLE][NEARBY_CANCELLED] screen=Onboarding source=' + source + ' stage=' + stage)
+    console.log('[MAP_LIFECYCLE][NEARBY_START] screen=Onboarding source=' + source)
     setPlacesLoading(true)
     setError('')
     setSelectedPlace(null)
     try {
       const { status } = await Location.requestForegroundPermissionsAsync()
+      if (stale()) { cancelled('permission'); return }
       if (status !== 'granted') {
         setError('Location permission denied. Please enable in Settings.')
-        setPlacesLoading(false)
         return
       }
       let coords: { latitude: number; longitude: number } | null = null
@@ -92,18 +101,22 @@ export default function OnboardingScreen() {
         const fresh = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Lowest })
         coords = fresh.coords
       }
+      if (stale()) { cancelled('location'); return }
       setUserCoords(coords)
       const result = await apiFetch('/api/places/nearby', {
         latitude: coords.latitude,
         longitude: coords.longitude,
       })
+      if (stale()) { cancelled('response'); return }
       const list = Array.isArray(result) ? result : []
       setPlaces(list)
       AsyncStorage.setItem('cached_nearby_places', JSON.stringify(list)).catch(() => {})
+      console.log('[MAP_LIFECYCLE][NEARBY_END] screen=Onboarding source=' + source + ' count=' + list.length)
     } catch (e: any) {
+      if (stale()) { cancelled('error'); return }
       setError(e.message || 'Could not load nearby places.')
     } finally {
-      setPlacesLoading(false)
+      if (!stale()) setPlacesLoading(false)
     }
   }
 
@@ -124,16 +137,27 @@ export default function OnboardingScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      focusedRef.current = true
+      console.log('[MAP_LIFECYCLE][FOCUS] screen=Onboarding')
       AsyncStorage.getItem('cached_nearby_places').then(cached => {
-        if (cached) {
+        if (cached && focusedRef.current) {
           try { setPlaces(JSON.parse(cached)) } catch {}
         }
       })
-      fetchNearbyPlaces()
+      fetchNearbyPlaces('focus')
+      console.log('[MAP_LIFECYCLE][POLL_START] screen=Onboarding intervalMs=30000')
       const interval = setInterval(() => {
-        if (!selectedPlace) fetchNearbyPlaces()
+        if (!focusedRef.current || selectedPlaceRef.current) return
+        fetchNearbyPlaces('poll')
       }, 30000)
-      return () => clearInterval(interval)
+      return () => {
+        focusedRef.current = false
+        requestSeqRef.current++
+        clearInterval(interval)
+        setPlacesLoading(false)
+        console.log('[MAP_LIFECYCLE][BLUR] screen=Onboarding')
+        console.log('[MAP_LIFECYCLE][POLL_STOP] screen=Onboarding')
+      }
     }, [])
   )
 
@@ -237,7 +261,7 @@ export default function OnboardingScreen() {
                   <MaterialIcons name="close" size={18} color="rgba(255,255,255,0.5)" />
                 </TouchableOpacity>
               ) : (
-                <TouchableOpacity onPress={fetchNearbyPlaces} disabled={placesLoading}>
+                <TouchableOpacity onPress={() => fetchNearbyPlaces('manual')} disabled={placesLoading}>
                   {placesLoading
                     ? <ActivityIndicator size="small" color={AMBER} />
                     : <MaterialIcons name="my-location" size={18} color={AMBER} />
@@ -251,7 +275,7 @@ export default function OnboardingScreen() {
                 <MaterialIcons name="location-off" size={40} color="rgba(255,255,255,0.2)" />
                 <Text style={s.emptyText}>{isSearching ? 'No places match your search' : 'No places found nearby'}</Text>
                 {!isSearching && (
-                  <TouchableOpacity style={s.retryBtn} onPress={fetchNearbyPlaces}>
+                  <TouchableOpacity style={s.retryBtn} onPress={() => fetchNearbyPlaces('manual')}>
                     <Text style={s.retryBtnText}>Try again</Text>
                   </TouchableOpacity>
                 )}
@@ -265,7 +289,7 @@ export default function OnboardingScreen() {
                 return (
                 <TouchableOpacity key={place.placeId} style={s.placeCard} onPress={() => setSelectedPlace(place)} activeOpacity={0.85}>
                   {place.photoUrl ? (
-                    <Image source={{ uri: place.photoUrl.startsWith('/') ? process.env.EXPO_PUBLIC_API_URL + place.photoUrl : place.photoUrl }} onError={() => console.warn('[MAP_DEBUG][PHOTO] card image failed to load')} style={s.placeCardBg} contentFit="cover" cachePolicy="memory-disk" />
+                    <Image onLoadStart={() => console.log('[MAP_LIFECYCLE][PHOTO_START] screen=Onboarding card')} onLoad={() => console.log('[MAP_LIFECYCLE][PHOTO_END] screen=Onboarding card')} source={{ uri: place.photoUrl.startsWith('/') ? process.env.EXPO_PUBLIC_API_URL + place.photoUrl : place.photoUrl }} onError={() => console.warn('[MAP_DEBUG][PHOTO] card image failed to load')} style={s.placeCardBg} contentFit="cover" cachePolicy="memory-disk" />
                   ) : (
                     <LinearGradient
                       colors={['rgba(232,130,74,0.35)', 'rgba(30,20,15,0.9)']}
@@ -328,7 +352,7 @@ export default function OnboardingScreen() {
             {/* Selected place */}
             <View style={s.selectedCard}>
               {selectedPlace.photoUrl ? (
-                <Image source={{ uri: selectedPlace.photoUrl.startsWith('/') ? process.env.EXPO_PUBLIC_API_URL + selectedPlace.photoUrl : selectedPlace.photoUrl }} style={s.selectedPhoto} contentFit="cover" cachePolicy="memory-disk" />
+                <Image onLoadStart={() => console.log('[MAP_LIFECYCLE][PHOTO_START] screen=Onboarding selected')} onLoad={() => console.log('[MAP_LIFECYCLE][PHOTO_END] screen=Onboarding selected')} source={{ uri: selectedPlace.photoUrl.startsWith('/') ? process.env.EXPO_PUBLIC_API_URL + selectedPlace.photoUrl : selectedPlace.photoUrl }} style={s.selectedPhoto} contentFit="cover" cachePolicy="memory-disk" />
               ) : (
                 <View style={s.selectedCardLeft}>
                   <MaterialIcons name="place" size={20} color={AMBER} />
