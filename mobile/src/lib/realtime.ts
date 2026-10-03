@@ -128,7 +128,7 @@ function openChannel(userId: string, entry: Subscription) {
         entry.retryTimer = null
       }
       console.log(`[CHAT_FLOW][REALTIME] SUBSCRIBED topic=${topic} reconnected=${reconnected}`)
-      if (reconnected) dispatch(entry, (h) => h.onReconnect?.())
+      dispatch(entry, (h) => h.onReconnect?.())
       return
     }
     if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
