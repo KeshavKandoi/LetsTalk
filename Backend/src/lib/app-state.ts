@@ -1897,7 +1897,7 @@ function mapGooglePlace(result: GoogleNearbyPlace): NearbyPlace | null {
 
   const photoName = result.photos?.[0]?.name
   const photoUrl = photoName
-    ? `${getAppBaseUrl()}/api/places/photo?name=${encodeURIComponent(photoName)}`
+    ? `/api/places/photo?name=${encodeURIComponent(photoName)}`
     : null
 
   return {
@@ -1990,6 +1990,7 @@ export async function searchNearbyPlacesForLocation(input: {
     places = (payload.places ?? [])
       .map(mapGooglePlace)
       .filter((value): value is NearbyPlace => value !== null)
+    console.log('[MAP_DEBUG][PHOTO] google=' + (payload.places?.length ?? 0) + ' mapped=' + places.length + ' withPhoto=' + places.filter((p) => p.photoUrl).length)
 
     nearbyGooglePlacesCache.set(cacheKey, {
       data: places,
