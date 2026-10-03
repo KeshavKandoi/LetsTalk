@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL
 const REQUEST_TIMEOUT_MS = 15000
+console.log('[CHAT_FLOW] api base=' + BASE_URL)
 
 export function isNetworkError(error: unknown) {
   const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase()
