@@ -23,6 +23,7 @@ export const auth = betterAuth({
     'http://localhost:3000',
     'http://127.0.0.1:3000',
     'http://192.168.29.59:3000',
+    'http://192.168.68.105:3000',
     'https://letstalks.app',
   ],
   database: drizzleAdapter(db, {
