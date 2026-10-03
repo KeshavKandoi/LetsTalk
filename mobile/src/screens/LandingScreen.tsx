@@ -176,7 +176,9 @@ export default function LandingScreen() {
           })
           const { latitude, longitude } = loc.coords
 
+          console.log('[MAP_LIFECYCLE][NEARBY_START] screen=Landing source=mount')
           const places = await apiFetch('/api/places/nearby', { latitude, longitude })
+          console.log('[MAP_LIFECYCLE][NEARBY_END] screen=Landing source=mount cancelled=' + cancelled)
           if (cancelled) return
           const placesList = Array.isArray(places) ? places : []
           const withDistance = placesList.map((p: any) => ({
@@ -399,7 +401,7 @@ export default function LandingScreen() {
                   onPress={() => navigation.navigate('Onboarding' as never)}
                 >
                   {p.photoUrl ? (
-                    <Image source={{ uri: p.photoUrl.startsWith('/') ? process.env.EXPO_PUBLIC_API_URL + p.photoUrl : p.photoUrl }} style={s.placeThumbImg} contentFit="cover" cachePolicy="memory-disk" />
+                    <Image onLoadStart={() => console.log('[MAP_LIFECYCLE][PHOTO_START] screen=Landing thumb')} onLoad={() => console.log('[MAP_LIFECYCLE][PHOTO_END] screen=Landing thumb')} source={{ uri: p.photoUrl.startsWith('/') ? process.env.EXPO_PUBLIC_API_URL + p.photoUrl : p.photoUrl }} style={s.placeThumbImg} contentFit="cover" cachePolicy="memory-disk" />
                   ) : (
                     <View style={s.placeThumb} />
                   )}
