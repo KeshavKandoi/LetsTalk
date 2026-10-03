@@ -265,7 +265,7 @@ export default function OnboardingScreen() {
                 return (
                 <TouchableOpacity key={place.placeId} style={s.placeCard} onPress={() => setSelectedPlace(place)} activeOpacity={0.85}>
                   {place.photoUrl ? (
-                    <Image source={{ uri: place.photoUrl }} style={s.placeCardBg} contentFit="cover" cachePolicy="memory-disk" />
+                    <Image source={{ uri: place.photoUrl.startsWith('/') ? process.env.EXPO_PUBLIC_API_URL + place.photoUrl : place.photoUrl }} onError={() => console.warn('[MAP_DEBUG][PHOTO] card image failed to load')} style={s.placeCardBg} contentFit="cover" cachePolicy="memory-disk" />
                   ) : (
                     <LinearGradient
                       colors={['rgba(232,130,74,0.35)', 'rgba(30,20,15,0.9)']}
@@ -328,7 +328,7 @@ export default function OnboardingScreen() {
             {/* Selected place */}
             <View style={s.selectedCard}>
               {selectedPlace.photoUrl ? (
-                <Image source={{ uri: selectedPlace.photoUrl }} style={s.selectedPhoto} contentFit="cover" cachePolicy="memory-disk" />
+                <Image source={{ uri: selectedPlace.photoUrl.startsWith('/') ? process.env.EXPO_PUBLIC_API_URL + selectedPlace.photoUrl : selectedPlace.photoUrl }} style={s.selectedPhoto} contentFit="cover" cachePolicy="memory-disk" />
               ) : (
                 <View style={s.selectedCardLeft}>
                   <MaterialIcons name="place" size={20} color={AMBER} />
