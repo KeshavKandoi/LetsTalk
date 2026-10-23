@@ -12,8 +12,6 @@ export const Route = createFileRoute('/api/friends/notifications')({
           const session = await auth.api.getSession({ headers: (() => { const h = new Headers(Object.fromEntries(request.headers.entries())); const t = (request.headers.get('authorization') || request.headers.get('Authorization') || '').replace('Bearer ',''); if(t) h.set('cookie', 'better-auth.session_token=' + t); return h; })() })
           if (!session) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
           const userId = session.user.id
-
-          // Friend requests - join only the OTHER user
           const friendRows = await db
             .select({
               id: friendRequest.id,
@@ -36,9 +34,6 @@ export const Route = createFileRoute('/api/friends/notifications')({
               eq(friendRequest.recipientUserId, userId),
             ))
             .orderBy(desc(friendRequest.updatedAt))
-            // only last 30 days handled in filter below
-
-          // QR scan connections - join only the OTHER user
           const scanRows = await db
             .select({
               id: handoffConnection.id,
@@ -74,8 +69,6 @@ export const Route = createFileRoute('/api/friends/notifications')({
               notifications.push({ id: `fd-${row.id}`, type: 'friend_removed', message: `${otherUsername} removed you from friends`, time: row.updatedAt })
             }
           }
-
-          // Deduplicate scan connections by pair
           const seenPairs = new Set<string>()
           for (const row of scanRows) {
             const otherId = row.requesterUserId === userId ? row.recipientUserId : row.requesterUserId

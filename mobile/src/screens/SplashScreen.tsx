@@ -46,7 +46,7 @@ export default function SplashScreen({ onComplete, duration = 4000 }: any) {
   return (
     <View style={styles.container}>
       <View style={styles.scene}>
-        {/* Left Figure */}
+
         <Animated.View style={[styles.figure, leftArmStyle]}>
           <View style={[styles.head, styles.headLeft]} />
           <View style={[styles.body, styles.bodyLeft]} />
@@ -55,7 +55,7 @@ export default function SplashScreen({ onComplete, duration = 4000 }: any) {
           <View style={[styles.leg, styles.legLeftRight]} />
         </Animated.View>
 
-        {/* Right Figure */}
+
         <Animated.View style={[styles.figure, rightArmStyle]}>
           <View style={[styles.head, styles.headRight]} />
           <View style={[styles.body, styles.bodyRight]} />
@@ -64,7 +64,7 @@ export default function SplashScreen({ onComplete, duration = 4000 }: any) {
           <View style={[styles.leg, styles.legRightRight]} />
         </Animated.View>
 
-        {/* Center Glow */}
+
         <Animated.View style={[styles.glow, { opacity: glowOpacity }]}>
           <Image source={require('../../assets/logo-cropped.png')} style={styles.logo} resizeMode="contain" />
         </Animated.View>

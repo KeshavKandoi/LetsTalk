@@ -21,7 +21,6 @@ export default function ScannerModal({ onClose, onConnected }: Props) {
 
   useEffect(() => {
     if (!permission?.granted) requestPermission()
-    // Animate scan line
     Animated.loop(
       Animated.sequence([
         Animated.timing(scanLine, { toValue: 1, duration: 2000, useNativeDriver: true }),
@@ -77,7 +76,7 @@ export default function ScannerModal({ onClose, onConnected }: Props) {
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
       <View style={s.overlay}>
         <View style={s.sheet}>
-          {/* Header */}
+
           <View style={s.header}>
             <View>
               {!preview && <Text style={s.label}>SCAN QR</Text>}
@@ -88,10 +87,9 @@ export default function ScannerModal({ onClose, onConnected }: Props) {
             </TouchableOpacity>
           </View>
 
-        
+
 
           {preview ? (
-            /* Preview card */
             <View style={s.previewCard}>
               <Text style={s.previewLabel}>Friend request sent to</Text>
               <Text style={s.previewName}>{preview.counterpart?.username}</Text>
@@ -109,7 +107,6 @@ export default function ScannerModal({ onClose, onConnected }: Props) {
               </TouchableOpacity>
             </View>
           ) : (
-            /* Camera view */
             permission?.granted ? (
               <View style={s.cameraWrap}>
                 <CameraView
@@ -118,7 +115,7 @@ export default function ScannerModal({ onClose, onConnected }: Props) {
                   onBarcodeScanned={handleBarCodeScanned}
                   barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
                 />
-                {/* Scan frame overlay */}
+
                 <View style={s.scanOverlay}>
                   <View style={s.scanFrame}>
                     <View style={[s.corner, s.cornerTL]} />

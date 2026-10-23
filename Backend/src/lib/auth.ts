@@ -41,7 +41,6 @@ export const auth = betterAuth({
             const { db } = await import('./db')
             const { session: sessionTable } = await import('./db/schema')
             const { and, eq, ne } = await import('drizzle-orm')
-            // Delete all other sessions for this user except the new one
             await db.delete(sessionTable).where(
               and(
                 eq(sessionTable.userId, session.userId),

@@ -521,12 +521,12 @@ export default function PlaceViewScreen() {
 
   return (
     <View style={s.root}>
-      {/* Decorative background circles */}
+
       <View style={s.bgCircle1} />
       <View style={s.bgCircle2} />
 
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        {/* Header */}
+
         <View style={s.header}>
           <TouchableOpacity style={[s.leaveBtn, leaving && s.leaveBtnDisabled]} onPress={handleLeave} disabled={leaving}>
             <Text style={s.leaveText}>Leave Place</Text>
@@ -540,7 +540,7 @@ export default function PlaceViewScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadState() }} tintColor={AMBER} />}
           showsVerticalScrollIndicator={false}
         >
-          {/* Error / Notice */}
+
           {error ? (
             <TouchableOpacity style={s.errorBox} onPress={() => setError('')}>
               <MaterialIcons name="error-outline" size={15} color="#ff6b6b" style={{ marginRight: 6 }} />
@@ -554,7 +554,7 @@ export default function PlaceViewScreen() {
             </TouchableOpacity>
           ) : null}
 
-          {/* Active Connection Banner */}
+
           {activeConnection && (
             <View style={s.gradBorderWrap}>
               <LinearGradient
@@ -624,7 +624,7 @@ export default function PlaceViewScreen() {
             </View>
           )}
 
-          {/* Place Card */}
+
           <View style={s.gradBorderWrap}>
             <LinearGradient
               colors={['#ffffff', '#f5e6c8', '#e8b84a', '#f5e6c8', '#ffffff']}
@@ -654,7 +654,7 @@ export default function PlaceViewScreen() {
           </View>
           </View>
 
-          {/* Your Status */}
+
           <View style={s.gradBorderWrap}>
             <LinearGradient
               colors={['#ffffff', '#f5e6c8', '#e8b84a', '#f5e6c8', '#ffffff']}
@@ -692,10 +692,10 @@ export default function PlaceViewScreen() {
           </View>
           </View>
 
-          {/* People Nearby */}
+
           <Text style={s.sectionTitle}>People Nearby</Text>
 
-          {/* Participant Cards */}
+
           {availableParticipants.length > 0
             ? availableParticipants.map((p) => {
                 const request = requestByUserId.get(p.userId)
@@ -705,7 +705,7 @@ export default function PlaceViewScreen() {
                 const canSendConnectRequest = isReady && (profile.isVerifiedOnSite !== false) && !activeConnection && p.status === 'ready' && p.isVerifiedOnSite
                 return (
                   <View key={p.userId} style={[s.personCard, p.status === 'ready' && s.personCardReady]}>
-                    {/* Header row */}
+
                     <View style={s.personCardHeader}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         {isMe && <View style={s.youBadge}><Text style={s.youBadgeText}>YOU</Text></View>}
@@ -721,7 +721,7 @@ export default function PlaceViewScreen() {
                       </View>
                     </View>
 
-                    {/* Avatar + info */}
+
                     <View style={s.personCardMain}>
                       <View style={s.personAvatarWrap}>
                         {renderAvatar(p, 46)}
@@ -738,10 +738,10 @@ export default function PlaceViewScreen() {
                       </View>
                     </View>
 
-                    {/* Divider */}
+
                     <View style={s.personDivider} />
 
-                    {/* Action buttons */}
+
                     {!isMe ? (
                       <View style={s.personBtns}>
                         <TouchableOpacity style={s.viewProfileBtn} onPress={() => setSelectedPerson(p)}>
@@ -794,7 +794,7 @@ export default function PlaceViewScreen() {
               </View>
               </View>
             )}
-          {/* Help Someone Find You */}
+
           <View style={s.findCard}>
             <Text style={s.findCardTitle}>Help Someone Find You</Text>
             <Text style={s.findCardHint}>Sharing your spot makes it easier for people to walk up and say hi!</Text>
@@ -848,7 +848,7 @@ export default function PlaceViewScreen() {
         </ScrollView>
       </SafeAreaView>
 
-      {/* QR Modal */}
+
       <Modal visible={qrVisible} transparent animationType="fade" onRequestClose={() => setQrVisible(false)}>
         <TouchableOpacity style={s.modalOverlay} activeOpacity={1} onPress={() => setQrVisible(false)}>
           <View style={s.qrModal}>
@@ -870,7 +870,7 @@ export default function PlaceViewScreen() {
         </TouchableOpacity>
       </Modal>
 
-      {/* Scanner Modal */}
+
       {scannerVisible && (
         <ScannerModal
           onClose={() => setScannerVisible(false)}
@@ -883,7 +883,7 @@ export default function PlaceViewScreen() {
         />
       )}
 
-      {/* Report Modal */}
+
       <Modal visible={reportModalVisible} transparent animationType="fade" onRequestClose={() => setReportModalVisible(false)}>
         <TouchableOpacity style={s.modalOverlay} activeOpacity={1} onPress={() => setReportModalVisible(false)}>
           <TouchableOpacity activeOpacity={1} style={s.reportModal}>
@@ -917,7 +917,7 @@ export default function PlaceViewScreen() {
         </TouchableOpacity>
       </Modal>
 
-      {/* Person Profile Modal */}
+
       <Modal visible={!!selectedPerson} transparent animationType="slide" onRequestClose={() => setSelectedPerson(null)}>
         <TouchableOpacity style={s.personOverlay} activeOpacity={1} onPress={() => setSelectedPerson(null)}>
           <TouchableOpacity activeOpacity={1} style={s.personModal}>
@@ -981,22 +981,16 @@ const s = StyleSheet.create({
   bgCircle2: { position: 'absolute', bottom: 60, left: -120, width: 350, height: 350, borderRadius: 175, backgroundColor: 'transparent' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   scroll: { padding: 16, paddingBottom: 48 },
-
-  // Header
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(232,130,74,0.1)' },
   logo: { fontSize: 20, fontWeight: '900', color: '#ffffff', letterSpacing: -0.5 },
   leaveBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5, borderColor: '#ffffff', backgroundColor: '#ef4444' },
   leaveBtnDisabled: { opacity: 0.5 },
   leaveText: { color: '#ffffff', fontWeight: '700', fontSize: 13 },
-
-  // Alerts
   errorBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(186,26,26,0.12)', borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(186,26,26,0.25)' },
   errorText: { color: '#ff6b6b', fontSize: 13, flex: 1 },
   noticeBox: { backgroundColor: 'rgba(232,130,74,0.1)', borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)' },
   noticeText: { color: '#ffd700', fontSize: 14, fontWeight: '600' },
   noticeDismiss: { color: 'rgba(255,215,0,0.5)', fontSize: 11, marginTop: 3 },
-
-  // Connection Banner
   connectionBanner: { backgroundColor: '#0c0c0c', borderRadius: 18, padding: 18, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 8 },
   gradBorderWrap: { borderRadius: 20, padding: 2, marginBottom: 14, overflow: 'hidden', position: 'relative' },
   gradBorderGradient: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
@@ -1035,8 +1029,6 @@ const s = StyleSheet.create({
   reportSubmitBtn: { flex: 1, borderRadius: 50, paddingVertical: 13, alignItems: 'center', backgroundColor: '#dc2626' },
   reportSubmitBtnDisabled: { backgroundColor: 'rgba(220,38,38,0.3)' },
   reportSubmitBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
-
-  // Place Card
   placeCard: { backgroundColor: '#000000', borderRadius: 20, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(232,130,74,0.15)' },
   livePill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(0,180,80,0.1)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start', marginBottom: 10 },
   liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#00b050' },
@@ -1048,13 +1040,9 @@ const s = StyleSheet.create({
   statBorderLeft: { borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.25)' },
   statVal: { fontSize: 22, fontWeight: '900', color: '#ffffff' },
   statLabel: { fontSize: 11, color: '#ffffff', fontWeight: '600', marginTop: 2 },
-
-  // Card
   card: { backgroundColor: '#000000', borderRadius: 20, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(232,130,74,0.12)' },
   cardTitle: { fontSize: 16, fontWeight: '800', color: '#fff', marginBottom: 6 },
   cardHint: { fontSize: 13, color: 'rgba(255,255,255,0.45)', lineHeight: 19, marginBottom: 14 },
-
-  // Ready Button
   readyBtnWrap: {
     borderRadius: 50,
     shadowColor: '#000',
@@ -1075,8 +1063,6 @@ const s = StyleSheet.create({
   readyBtnActive: { borderRadius: 50, paddingVertical: 16, alignItems: 'center', backgroundColor: 'transparent', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.5)' },
   readyBtnText: { color: '#1f4a2c', fontWeight: '700', fontSize: 16 },
   readyBtnTextActive: { color: 'rgba(255,255,255,0.7)' },
-
-  // Finder
   hintRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
   hintChip: { borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.04)' },
   hintChipActive: { backgroundColor: 'rgba(232,130,74,0.15)', borderColor: AMBER },
@@ -1109,8 +1095,6 @@ const s = StyleSheet.create({
   shareSpotBtnActive: { borderRadius: 50, paddingVertical: 16, alignItems: 'center', backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)' },
   shareSpotBtnText: { color: '#1f4a2c', fontWeight: '700', fontSize: 16 },
   shareSpotBtnTextActive: { color: '#ef4444' },
-
-  // People
   sectionTitle: { fontSize: 18, fontWeight: '800', color: '#fff', marginBottom: 12, paddingHorizontal: 2 },
   requestsBox: { backgroundColor: '#000000', borderRadius: 16, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)' },
   requestsTitle: { fontSize: 13, fontWeight: '800', color: AMBER, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.8 },
@@ -1123,8 +1107,6 @@ const s = StyleSheet.create({
   declineBtnText: { color: '#ef4444', fontSize: 13, fontWeight: '700' },
   actionBtnReject: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)', alignItems: 'center', justifyContent: 'center' },
   actionBtnRejectText: { color: '#ef4444', fontSize: 15, fontWeight: '700' },
-
-  // Person Card
   personCard: { backgroundColor: '#000000', borderRadius: 16, paddingHorizontal: 12, paddingTop: 6, paddingBottom: 0, marginBottom: 8, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.8)' },
   personCardReady: { borderColor: 'rgba(255,255,255,0.8)', backgroundColor: 'rgba(232,130,74,0.04)' },
   personCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
@@ -1171,8 +1153,6 @@ const s = StyleSheet.create({
   emptyEmoji: { fontSize: 32, marginBottom: 8 },
   emptyTitle: { fontSize: 15, fontWeight: '700', color: '#fff', marginBottom: 4 },
   emptyHint: { fontSize: 13, color: 'rgba(255,255,255,0.35)', textAlign: 'center' },
-
-  // Modals
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'center', alignItems: 'center' },
   qrModal: { backgroundColor: '#0f0a06', borderRadius: 24, padding: 28, alignItems: 'center', width: '85%', borderWidth: 1, borderColor: 'rgba(232,130,74,0.2)' },
   qrModalTitle: { fontSize: 18, fontWeight: '800', color: '#fff', marginBottom: 20 },

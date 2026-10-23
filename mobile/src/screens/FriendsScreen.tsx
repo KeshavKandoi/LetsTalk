@@ -387,7 +387,7 @@ export default function FriendsScreen() {
         )}
       </Animated.View>
 
-      {/* Photo viewer modal */}
+
       <Modal visible={!!photoModal} transparent animationType="none" onRequestClose={closePhoto}>
         <TouchableOpacity style={s.modalBg} activeOpacity={1} onPress={closePhoto}>
           <Animated.View style={[s.modalContent, { opacity: modalOpacity, transform: [{ scale: modalScale }] }]}>

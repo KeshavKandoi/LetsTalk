@@ -29,14 +29,14 @@ export default function AboutUsScreen() {
       </SafeAreaView>
 
       <View style={s.mainContent}>
-          {/* Big hero text at bottom like the reference */}
+
           <View style={s.heroText}>
             <Text style={s.tagSmall}>Real People. Real Places.</Text>
             <Text style={s.heroTitle}>Connect with{'\n'}Clarity &{'\n'}Purpose.</Text>
             <Text style={s.heroSub}>Every conversation should have meaning. LetsTalk brings people together at real places for real conversations.</Text>
           </View>
 
-          {/* Bottom links */}
+
           <View style={s.bottomLinks}>
             <TouchableOpacity style={s.linkRow} onPress={() => Linking.openURL('https://policy-2epo.onrender.com/Terms_condition.html')}>
               <MaterialIcons name="description" size={16} color={MUTED} />

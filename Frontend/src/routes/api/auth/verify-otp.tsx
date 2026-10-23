@@ -1,6 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router'
-
-// Retired: OTP verification is handled by Better Auth's emailOTP plugin.
 export const Route = createFileRoute('/api/auth/verify-otp')({
   server: {
     handlers: {

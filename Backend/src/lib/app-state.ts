@@ -9,7 +9,6 @@ import {
   validateChatMedia,
   type UploadedFile,
 } from './chat-media'
-// agents removed
 import { getRequestHeaders } from '@tanstack/react-start/server'
 import type {
   ActiveConnectionState,
@@ -148,8 +147,8 @@ function assertCoordinates(input: { latitude?: number; longitude?: number }) {
   return { latitude: input.latitude as number, longitude: input.longitude as number }
 }
 
-const READY_STALE_MS = 15_000 // 15 seconds without a heartbeat
-const CONVERSATION_STALE_MS = 60_000 // 60 seconds
+const READY_STALE_MS = 15_000
+const CONVERSATION_STALE_MS = 60_000
 const CONNECT_REQUEST_BLOCK_MS = 20 * 60_000
 
 async function getReadyCountByPlaceIds(placeIds: string[]) {
@@ -386,7 +385,6 @@ function buildQrUrl(token: string) {
 }
 
 function normalizeFriendPair(scannerId: string, scannedUserId: string) {
-  // Sort for deduplication — same pair always maps to same row
   const sorted = scannerId < scannedUserId
     ? { requesterUserId: scannerId, recipientUserId: scannedUserId }
     : { requesterUserId: scannedUserId, recipientUserId: scannerId }
@@ -414,7 +412,6 @@ async function getFriendshipRecordForUserPair(
   userId: string,
   otherUserId: string,
 ) {
-  // Search both directions since we no longer sort pairs
   const [requestRecord] = await db
     .select()
     .from(friendRequest)
@@ -1055,10 +1052,6 @@ export async function connectFromScan(input: { token: string }) {
   if (!viewerProfile?.currentPlaceId || viewerProfile.currentPlaceId !== preview.placeId) {
     throw new Error('You need to be checked into the same place first.')
   }
-
-  // If the viewer is already in a conversation, check whether it's with the SAME
-  // person they're scanning right now. If so, this scan is confirming/verifying
-  // the existing connection rather than starting a new one.
   const existingScanConnection = await getActiveConnectionForUser(session.user.id)
   if (existingScanConnection && existingScanConnection.counterpart.userId === preview.counterpart.userId) {
     await db
@@ -1422,8 +1415,6 @@ export async function createFriendRequest(input: { token?: string }) {
       ),
     )
     .limit(1)
-
-  // Neither side is auto-accepted — both must manually accept
   const requesterAccepted = existingRequest?.requesterAccepted ?? false
   const recipientAccepted = existingRequest?.recipientAccepted ?? false
   const nextStatus = requesterAccepted && recipientAccepted ? 'accepted' : 'pending'
@@ -1453,8 +1444,6 @@ export async function createFriendRequest(input: { token?: string }) {
         updatedAt: now,
       },
     })
-
-  // Mark the existing in-person connection as QR-verified (visible to both users)
   if (input.token) {
     const verifyPair = normalizeFriendPair(session.user.id, targetUserId)
     await db
@@ -1555,7 +1544,6 @@ export async function listFriends(input?: { viewerUserId?: string }) {
     incoming: rows
       .filter((row) => {
         if (row.status !== 'pending') return false
-        // Show as incoming if I haven't accepted yet (regardless of who scanned)
         const iAmRequester = row.requesterUserId === session.user.id
         return iAmRequester ? !row.requesterAccepted : !row.recipientAccepted
       })
@@ -1566,7 +1554,6 @@ export async function listFriends(input?: { viewerUserId?: string }) {
     pending: rows
       .filter((row) => {
         if (row.status !== 'pending') return false
-        // I have already accepted, waiting on the other person
         const iAmRequester = row.requesterUserId === session.user.id
         return iAmRequester ? row.requesterAccepted : row.recipientAccepted
       })
@@ -1807,11 +1794,6 @@ export async function sendConversationMessage(input: {
     updatedAt: now,
   })
 
-  const pushPromise = notifyNewMessage({
-    senderUserId: session.user.id,
-    recipientUserId: friendUserId,
-    friendRequestId: requestRecord.id,
-  })
   const realtimeDelivered = await relayPersistedMessage({
     message: messagePayload as unknown as Record<string, unknown>,
     messageId: id,
@@ -1822,9 +1804,12 @@ export async function sendConversationMessage(input: {
     createdAt: now.toISOString(),
   })
   console.log(`[CHAT_FLOW][SEND] persisted messageId=${id} sender=${session.user.id} recipient=${friendUserId} realtime=${realtimeDelivered ? 'ok' : 'failed'}`)
-  void pushPromise.then((push) => {
-    console.log(`[CHAT_FLOW][SEND] push messageId=${id} devices=${push.devices} sent=${push.sent} failed=${push.failed}`)
+  const push = await notifyNewMessage({
+    senderUserId: session.user.id,
+    recipientUserId: friendUserId,
+    friendRequestId: requestRecord.id,
   })
+  console.log(`[CHAT_FLOW][SEND] push messageId=${id} devices=${push.devices} sent=${push.sent} failed=${push.failed}`)
 
   return {
     success: true,
@@ -2191,9 +2176,6 @@ export async function getGoogleMapsBrowserConfig() {
   }
 }
 
-
-// ===== WHATSAPP-LIKE FEATURES =====
-
 export async function markMessageAsDelivered(input: { messageId: string; viewerUserId?: string }) {
   const session = input.viewerUserId ? { user: { id: input.viewerUserId } } : await requireCurrentSession()
   return markMessagesDelivered({ viewerUserId: session.user.id, messageIds: [input.messageId] })
@@ -2207,7 +2189,7 @@ export async function markMessageAsRead(input: { messageId: string; viewerUserId
 export async function updateUserOnlineStatus(input: { isOnline: boolean }) {
   const session = await requireCurrentSession()
   const now = new Date()
-  
+
   await db
     .insert(userActivity)
     .values({
@@ -2224,7 +2206,7 @@ export async function updateUserOnlineStatus(input: { isOnline: boolean }) {
         updatedAt: now,
       },
     })
-  
+
   return { success: true }
 }
 
@@ -2234,13 +2216,13 @@ export async function getUserOnlineStatus(input: { userId: string }) {
     .from(userActivity)
     .where(eq(userActivity.userId, input.userId))
     .limit(1)
-  
+
   if (!activity) {
     return { isOnline: false, lastSeenAt: null }
   }
-  
+
   return {
-    isOnline: activity.isOnline,
+    isOnline: activity.isOnline && Date.now() - activity.updatedAt.getTime() < 45000,
     lastSeenAt: activity.lastSeenAt,
   }
 }
@@ -2248,18 +2230,18 @@ export async function getUserOnlineStatus(input: { userId: string }) {
 export async function getConversationMessagesWithStatus(input: { friendUserId: string }) {
   const session = await requireCurrentSession()
   const friendUserId = input.friendUserId.trim()
-  
+
   if (!friendUserId) throw new Error('Choose a friend first.')
-  
+
   const requestRecord = await getFriendshipRecordForUserPair(
     session.user.id,
     friendUserId,
   )
-  
+
   if (!requestRecord || requestRecord.status !== 'accepted') {
     throw new Error('You can only message accepted friends.')
   }
-  
+
   const messages = await db
     .select({
       id: friendMessage.id,
@@ -2275,7 +2257,7 @@ export async function getConversationMessagesWithStatus(input: { friendUserId: s
     .from(friendMessage)
     .where(eq(friendMessage.friendRequestId, requestRecord.id))
     .orderBy(asc(friendMessage.createdAt))
-  
+
   return messages
 }
 

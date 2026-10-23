@@ -60,7 +60,6 @@ export default function EditProfileScreen() {
       setUploadingPhoto(true)
       try {
         const uri = result.assets[0].uri
-        // Read as base64
         const base64 = await FileSystem.readAsStringAsync(uri, {
           encoding: FileSystem.EncodingType.Base64,
         })
@@ -126,7 +125,7 @@ export default function EditProfileScreen() {
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* Photo */}
+
         <View style={s.card}>
           <View style={s.photoCenter}>
             <TouchableOpacity onPress={pickPhoto} disabled={uploadingPhoto} activeOpacity={0.85}>
@@ -156,7 +155,7 @@ export default function EditProfileScreen() {
 
         <View style={s.sectionDivider} />
 
-        {/* About */}
+
         <View style={s.card}>
           <Text style={s.label}>ABOUT</Text>
           <Text style={s.sublabel}>Tell others about yourself</Text>

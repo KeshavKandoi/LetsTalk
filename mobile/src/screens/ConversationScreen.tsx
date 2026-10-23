@@ -156,7 +156,7 @@ export default function ConversationScreen() {
   const navigation = useNavigation<any>()
   const insets = useSafeAreaInsets()
   const { friend } = (route.params as any) || {}
-  
+
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [inputHeight, setInputHeight] = useState(MIN_COMPOSER_HEIGHT)
@@ -167,7 +167,7 @@ export default function ConversationScreen() {
     isOnline: friend?.isOnline ?? false,
     lastSeenAt: friend?.lastSeenAt ?? null,
   })
-  
+
   const listRef = useRef<FlatList>(null)
   const atBottomRef = useRef(true)
   const messagesRef = useRef<ChatMessage[]>([])
@@ -232,12 +232,12 @@ export default function ConversationScreen() {
     const clientId = generateClientId()
     setNewMessage('')
     setInputHeight(MIN_COMPOSER_HEIGHT)
-    
+
     setMessages((prev) => [
       ...prev,
       { id: clientId, senderUserId: 'local-self', body, createdAt: new Date().toISOString(), status: 'sending' },
     ])
-    
+
     scrollToLatest()
     void deliverMessage(clientId, body)
   }, [newMessage, friend, deliverMessage, scrollToLatest])
@@ -258,14 +258,14 @@ export default function ConversationScreen() {
 
     let unsubscribe: (() => void) | null = null
     let cancelled = false
-    
+
     getCurrentUserId().then((myUserId) => {
       if (cancelled || !myUserId || !friend) return
-      
+
       unsubscribe = subscribeToUserChannel(myUserId, {
         onNewMessage: (payload) => {
           if (payload?.senderUserId !== friend.userId) return
-          
+
           if (messagesRef.current.some((m) => m.id === payload.id)) return
           setMessages((prev) => mergeMessages(prev, [{
             id: payload.id,
@@ -300,8 +300,6 @@ export default function ConversationScreen() {
   }, [friend, loadMessages])
 
   useEffect(() => {
-    const markOnline = () => apiFetch('/api/friends/online-status', { isOnline: true }).catch(() => {})
-    const markOffline = () => apiFetch('/api/friends/online-status', { isOnline: false }).catch(() => {})
     const pollFriendStatus = async () => {
       if (!friend?.userId) return
       try {
@@ -310,17 +308,16 @@ export default function ConversationScreen() {
       } catch {}
     }
 
-    markOnline()
-    pollFriendStatus()
-    const statusInterval = setInterval(pollFriendStatus, 15000)
+    void pollFriendStatus()
+    const statusInterval = setInterval(() => {
+      if (AppState.currentState === 'active') void pollFriendStatus()
+    }, 15000)
 
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') markOnline()
-      else markOffline()
+      if (state === 'active') void pollFriendStatus()
     })
 
     return () => {
-      markOffline()
       clearInterval(statusInterval)
       sub.remove()
     }
@@ -337,7 +334,13 @@ export default function ConversationScreen() {
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') void loadMessages(true)
     })
-    return () => sub.remove()
+    const refresh = setInterval(() => {
+      if (AppState.currentState === 'active') void loadMessages(true)
+    }, 15000)
+    return () => {
+      sub.remove()
+      clearInterval(refresh)
+    }
   }, [loadMessages])
 
   const [kbVisible, setKbVisible] = useState(false)

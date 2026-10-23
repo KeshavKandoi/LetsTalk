@@ -11,8 +11,6 @@ if (!url) throw new Error('Missing DATABASE_URL in .env')
 
 const client = postgres(url, { ssl: 'require' })
 export const db = drizzle(client, { schema })
-
-// Auto-migrate on startup
 const migrationClient = postgres(url, { ssl: 'require', max: 1 })
 const migrationsFolder = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),

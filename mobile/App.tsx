@@ -51,7 +51,6 @@ export default function App() {
     const init = async () => {
       try {
         const session = await getSession()
-        // ✅ Only auto-login if session exists AND email is verified
         if (session?.session && session?.user?.emailVerified) {
           const user = await establishSession()
           if (user) {

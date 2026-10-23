@@ -34,8 +34,6 @@ export const Route = createFileRoute('/api/places/upload-photo')({
           if (new TextEncoder().encode(rawBody).byteLength > MAX_REQUEST_BYTES) return new Response(JSON.stringify({ error: 'Photo is too large.' }), { status: 413, headers: { 'Content-Type': 'application/json' } })
           const body = JSON.parse(rawBody) as { photoBase64?: unknown }
           if (typeof body.photoBase64 !== 'string' || !body.photoBase64) return new Response(JSON.stringify({ error: 'No photo provided.' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
-
-          // Convert base64 to buffer
           const match = body.photoBase64.match(/^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/]+={0,2})$/)
           if (!match) return new Response(JSON.stringify({ error: 'Unsupported image format.' }), { status: 415, headers: { 'Content-Type': 'application/json' } })
           const base64Data = match[2]
@@ -45,8 +43,6 @@ export const Route = createFileRoute('/api/places/upload-photo')({
           }
 
           const fileName = `${session.user.id}.jpg`
-
-          // Upload to Supabase Storage
           const { error: uploadError } = await supabase.storage
             .from('avatars')
             .upload(fileName, buffer, {
@@ -55,16 +51,8 @@ export const Route = createFileRoute('/api/places/upload-photo')({
             })
 
           if (uploadError) throw new Error('storage upload failed')
-
-          // Get public URL and version it so replacing the photo always
-          // produces a new URL string. This is what actually invalidates
-          // every image cache (mobile, CDN) since the storage key itself
-          // is reused (upsert: true) and would otherwise return the exact
-          // same public URL as before.
           const { data } = supabase.storage.from('avatars').getPublicUrl(fileName)
           const photoUrl = `${data.publicUrl}?v=${Date.now()}`
-
-          // Save URL to DB - insert if not exists, update if exists
           const [existing] = await db
             .select()
             .from(userProfile)

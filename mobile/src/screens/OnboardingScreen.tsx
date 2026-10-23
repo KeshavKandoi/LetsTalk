@@ -349,7 +349,7 @@ export default function OnboardingScreen() {
               </View>
             ) : null}
 
-            {/* Selected place */}
+
             <View style={s.selectedCard}>
               {selectedPlace.photoUrl ? (
                 <Image onLoadStart={() => console.log('[MAP_LIFECYCLE][PHOTO_START] screen=Onboarding selected')} onLoad={() => console.log('[MAP_LIFECYCLE][PHOTO_END] screen=Onboarding selected')} source={{ uri: selectedPlace.photoUrl.startsWith('/') ? process.env.EXPO_PUBLIC_API_URL + selectedPlace.photoUrl : selectedPlace.photoUrl }} style={s.selectedPhoto} contentFit="cover" cachePolicy="memory-disk" />
@@ -367,7 +367,7 @@ export default function OnboardingScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Stats */}
+
             {previewLoading && !preview && <ActivityIndicator color={AMBER} style={{ marginVertical: 12 }} />}
             {preview && (
               <View style={s.statsRow}>
@@ -385,7 +385,7 @@ export default function OnboardingScreen() {
             )}
 
 
-            {/* Intent */}
+
             <View style={s.sectionCard}>
               <Text style={s.sectionLabel}>What do you want to talk about?</Text>
               <TextInput

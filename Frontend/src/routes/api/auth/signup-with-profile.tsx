@@ -44,8 +44,6 @@ export const Route = createFileRoute('/api/auth/signup-with-profile')({
           if (!created[0] || created[0].email.trim().toLowerCase() !== email) {
             return new Response(JSON.stringify({ error: 'Signup failed' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
           }
-
-          // Step 2: Save dob and gender to user_profile
           let age = null
           if (dob) {
             const birth = new Date(dob)
@@ -54,9 +52,6 @@ export const Route = createFileRoute('/api/auth/signup-with-profile')({
             const m = today.getMonth() - birth.getMonth()
             if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--
           }
-
-          
-          // Try insert first, if it fails, update
           try {
             await db.insert(userProfile).values({
               userId: signupData.user.id,
@@ -66,7 +61,6 @@ export const Route = createFileRoute('/api/auth/signup-with-profile')({
               updatedAt: new Date(),
             })
           } catch {
-            // If row exists, update it
             const { eq } = await import('drizzle-orm')
             await db.update(userProfile)
               .set({
@@ -76,8 +70,6 @@ export const Route = createFileRoute('/api/auth/signup-with-profile')({
               })
               .where(eq(userProfile.userId, signupData.user.id))
           }
-
-          // Update username in user table
           await db.update(user)
             .set({ username: username || null })
             .where(eq(user.id, signupData.user.id))

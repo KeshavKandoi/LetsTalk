@@ -12,15 +12,13 @@ export const Route = createFileRoute('/api/friends/online-status')({
         try {
           const session = await auth.api.getSession({ headers: (() => { const h = new Headers(Object.fromEntries(request.headers.entries())); const t = (request.headers.get('authorization') || request.headers.get('Authorization') || '').replace('Bearer ',''); if(t) h.set('cookie', 'better-auth.session_token=' + t); return h; })() })
           if (!session) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
-          
+
           const body = await request.json() as { isOnline?: boolean; userId?: string }
-          
+
           if (body.userId) {
-            // Get status of another user
             const result = await getUserOnlineStatus({ userId: body.userId })
             return new Response(JSON.stringify(result), { headers: { 'Content-Type': 'application/json' } })
           } else {
-            // Update own status
             const result = await updateUserOnlineStatus({ isOnline: body.isOnline ?? false })
             return new Response(JSON.stringify(result), { headers: { 'Content-Type': 'application/json' } })
           }

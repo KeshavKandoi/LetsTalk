@@ -35,9 +35,7 @@ export default function DrawerMenu({ visible, onClose }: Props) {
   const fadeAnim   = useRef(new Animated.Value(0)).current
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(false)
-
-  // One animation value per row: header + menu items + logout
-  const TOTAL_ROWS = MENU_ITEMS.length + 2 // header, items, logout
+  const TOTAL_ROWS = MENU_ITEMS.length + 2
   const rowAnims = useRef(Array.from({ length: TOTAL_ROWS }, () => new Animated.Value(30))).current
   const rowFades = useRef(Array.from({ length: TOTAL_ROWS }, () => new Animated.Value(0))).current
 
@@ -59,17 +57,14 @@ export default function DrawerMenu({ visible, onClose }: Props) {
   useEffect(() => {
     if (visible) {
       resetRows()
-      // Start animation immediately
       Animated.parallel([
         Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, friction: 12, tension: 120 }),
         Animated.timing(fadeAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
       ]).start()
       animateRowsIn()
-      // Load from cache first (instant), then fetch fresh data
       getCachedMyState().then(cached => {
         if (cached) setProfile(cached)
       })
-      // Fetch fresh data in background
       refreshMyState()
         .then(data => { if (data) setProfile(data) })
         .catch(() => {})
@@ -112,7 +107,7 @@ export default function DrawerMenu({ visible, onClose }: Props) {
 
       <Animated.View style={[s.drawer, { transform: [{ translateX: slideAnim }] }]}>
 
-        {/* Header row - animated first */}
+
         <Animated.View style={[s.header, {
           opacity: rowFades[0],
           transform: [{ translateX: rowAnims[0] }]
@@ -147,7 +142,7 @@ export default function DrawerMenu({ visible, onClose }: Props) {
           }
         </Animated.View>
 
-        {/* Menu items - each animated one by one */}
+
         <View style={s.menuList}>
           {MENU_ITEMS.map((item, index) => (
             <Animated.View key={item.label} style={{
@@ -164,7 +159,7 @@ export default function DrawerMenu({ visible, onClose }: Props) {
             </Animated.View>
           ))}
 
-          {/* Logout / Auth - last animated */}
+
           <Animated.View style={{
             opacity: rowFades[MENU_ITEMS.length + 1],
             transform: [{ translateX: rowAnims[MENU_ITEMS.length + 1] }]

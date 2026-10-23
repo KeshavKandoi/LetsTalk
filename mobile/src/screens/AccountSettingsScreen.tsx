@@ -183,7 +183,7 @@ export default function AccountSettingsScreen() {
         {section === 'password' && (
           <View style={s.darkCard}>
 
-            {/* Step 1 - Send OTP */}
+
             {step === 'request' && (
               <>
                 <View style={s.stepIcon}>
@@ -197,7 +197,7 @@ export default function AccountSettingsScreen() {
               </>
             )}
 
-            {/* Step 2 - Enter OTP */}
+
             {step === 'verify' && (
               <>
                 <View style={s.stepIcon}>
@@ -224,7 +224,7 @@ export default function AccountSettingsScreen() {
               </>
             )}
 
-            {/* Step 3 - New Password */}
+
             {step === 'newpass' && (
               <>
                 <View style={s.stepIcon}>

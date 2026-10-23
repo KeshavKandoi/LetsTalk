@@ -141,7 +141,7 @@ function App() {
   }
 
   if (!session) {
-    
+
     return <LandingPage onLogin={() => router.navigate({ to: "/login" })} onSignup={() => router.navigate({ to: "/signup" })} />
   }
 

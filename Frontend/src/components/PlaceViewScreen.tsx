@@ -212,7 +212,6 @@ async function playFinderCue() {
   if (typeof window !== 'undefined') {
     const AudioContextCtor =
       window.AudioContext ||
-      // Safari.
       ('webkitAudioContext' in window
         ? ((window as Window & {
             webkitAudioContext?: typeof AudioContext
@@ -244,7 +243,6 @@ async function playFinderCue() {
           void audioContext.close().catch(() => undefined)
         }, 450)
       } catch {
-        // Ignore blocked audio contexts and rely on vibration/visual cues.
       }
     }
   }
